@@ -1,0 +1,404 @@
+"""Archivos de las pruebas en vivo (SQLite, aparte de la base del bot).
+
+- `history/live_v3.db` (`LiveStore`): las pruebas que definio el dueno, sus posiciones abiertas,
+  sus operaciones cerradas y un registro de eventos (senales, rechazos, avisos del feed).
+- `history/ticks_v3.db` (`TickStore`): cada operacion del canal `trade` del WebSocket publico
+  (hora en ms, precio, cantidad y lado). Es la historia segundo a segundo que Bitunix no entrega
+  gratis hacia atras; medido el 2026-11-11, BTC trae ~2 operaciones por segundo por este canal.
+
+Los comandos y el proceso corredor abren el mismo archivo: `LiveStore` usa WAL y transacciones
+cortas, y el corredor relee las pruebas cada pocos segundos.
+"""
+
+from __future__ import annotations
+
+import json
+import sqlite3
+import time
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+from app.live.config import TestConfig
+from app.live.paper import ClosedTrade, PaperPosition
+
+_LIVE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS live_tests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    config_json TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('active', 'stopped')),
+    created_at_ms INTEGER NOT NULL,
+    stopped_at_ms INTEGER
+);
+CREATE TABLE IF NOT EXISTS live_positions (
+    test_id INTEGER NOT NULL,
+    symbol TEXT NOT NULL,
+    position_json TEXT NOT NULL,
+    PRIMARY KEY (test_id, symbol)
+);
+CREATE TABLE IF NOT EXISTS live_trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    test_id INTEGER NOT NULL,
+    symbol TEXT NOT NULL,
+    side TEXT NOT NULL,
+    entry_time_ms INTEGER NOT NULL,
+    exit_time_ms INTEGER NOT NULL,
+    entry_price REAL NOT NULL,
+    exit_price REAL NOT NULL,
+    pnl_net_usdt REAL NOT NULL,
+    close_reason TEXT NOT NULL,
+    trade_json TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_live_trades_test ON live_trades (test_id, exit_time_ms);
+CREATE TABLE IF NOT EXISTS live_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts_ms INTEGER NOT NULL,
+    test_id INTEGER,
+    symbol TEXT,
+    kind TEXT NOT NULL,
+    detail TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_live_events_test ON live_events (test_id, ts_ms);
+CREATE TABLE IF NOT EXISTS live_heartbeat (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    ts_ms INTEGER NOT NULL,
+    detail TEXT NOT NULL
+);
+"""
+
+_TICK_SCHEMA = """
+CREATE TABLE IF NOT EXISTS ticks (
+    symbol TEXT NOT NULL,
+    ts_ms INTEGER NOT NULL,
+    price REAL NOT NULL,
+    qty REAL NOT NULL,
+    side TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ticks_symbol_ts ON ticks (symbol, ts_ms);
+"""
+
+
+@dataclass(frozen=True)
+class StoredTest:
+    """Una prueba guardada.
+
+    Attributes:
+        id: identificador.
+        config: su configuracion.
+        status: `active` o `stopped`.
+        created_at_ms: cuando se creo (solo cuentan las operaciones posteriores).
+        stopped_at_ms: cuando se detuvo, o `None`.
+    """
+    id: int
+    config: TestConfig
+    status: str
+    created_at_ms: int
+    stopped_at_ms: int | None
+
+
+def _connect(path: Path, read_only: bool, schema: str) -> sqlite3.Connection:
+    if read_only:
+        return sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True, timeout=10)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, timeout=10)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.executescript(schema)
+    return conn
+
+
+class LiveStore:
+    """Pruebas, posiciones, operaciones y eventos de las pruebas en vivo.
+
+    Args:
+        path: ruta del archivo; se crea con su esquema si no existe.
+        read_only: abre en `mode=ro` (para los reportes).
+    """
+
+    def __init__(self, path: str | Path, read_only: bool = False) -> None:
+        self.path = Path(path)
+        self._conn = _connect(self.path, read_only, _LIVE_SCHEMA)
+
+    def close(self) -> None:
+        """Cierra la conexion."""
+        self._conn.close()
+
+    def __enter__(self) -> LiveStore:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.close()
+
+    # --- pruebas ---
+
+    def add_test(self, config: TestConfig, now_ms: int | None = None) -> int:
+        """Guarda una prueba nueva, activa desde ahora.
+
+        Args:
+            config: configuracion ya validada.
+            now_ms: instante de creacion; por defecto, el reloj.
+
+        Returns:
+            El id de la prueba.
+
+        Efectos:
+            Escribe `live_tests`.
+        """
+        now = int(time.time() * 1000) if now_ms is None else now_ms
+        with self._conn:
+            cur = self._conn.execute(
+                "INSERT INTO live_tests (name, config_json, status, created_at_ms) "
+                "VALUES (?, ?, 'active', ?)", (config.name, config.to_json(), now))
+        return int(cur.lastrowid)
+
+    def stop_test(self, test_id: int, now_ms: int | None = None) -> bool:
+        """Detiene una prueba activa (no borra nada; no se puede reanudar).
+
+        Args:
+            test_id: la prueba.
+            now_ms: instante; por defecto, el reloj.
+
+        Returns:
+            `True` si estaba activa y quedo detenida.
+
+        Efectos:
+            Escribe `live_tests`.
+        """
+        now = int(time.time() * 1000) if now_ms is None else now_ms
+        with self._conn:
+            cur = self._conn.execute(
+                "UPDATE live_tests SET status = 'stopped', stopped_at_ms = ? "
+                "WHERE id = ? AND status = 'active'", (now, test_id))
+        return cur.rowcount == 1
+
+    def tests(self, only_active: bool = False) -> list[StoredTest]:
+        """Las pruebas guardadas, por id.
+
+        Args:
+            only_active: solo las activas.
+
+        Returns:
+            La lista de pruebas (las que tengan una configuracion ilegible se omiten).
+
+        Efectos:
+            Lee `live_tests`.
+        """
+        sql = "SELECT id, config_json, status, created_at_ms, stopped_at_ms FROM live_tests"
+        if only_active:
+            sql += " WHERE status = 'active'"
+        out = []
+        for row in self._conn.execute(sql + " ORDER BY id"):
+            try:
+                cfg = TestConfig.from_json(row[1])
+            except (ValueError, TypeError):
+                continue
+            out.append(StoredTest(int(row[0]), cfg, row[2], int(row[3]), row[4]))
+        return out
+
+    # --- posiciones ---
+
+    def save_position(self, test_id: int, symbol: str, pos: PaperPosition) -> None:
+        """Guarda (o reemplaza) la posicion abierta de una prueba en una moneda.
+
+        Args:
+            test_id: la prueba.
+            symbol: la moneda.
+            pos: la posicion.
+
+        Efectos:
+            Escribe `live_positions`.
+        """
+        with self._conn:
+            self._conn.execute("INSERT OR REPLACE INTO live_positions VALUES (?, ?, ?)",
+                               (test_id, symbol, json.dumps(pos.to_dict())))
+
+    def delete_position(self, test_id: int, symbol: str) -> None:
+        """Borra la posicion abierta de una prueba en una moneda.
+
+        Args:
+            test_id: la prueba.
+            symbol: la moneda.
+
+        Efectos:
+            Escribe `live_positions`.
+        """
+        with self._conn:
+            self._conn.execute("DELETE FROM live_positions WHERE test_id = ? AND symbol = ?",
+                               (test_id, symbol))
+
+    def positions(self) -> dict[tuple[int, str], PaperPosition]:
+        """Todas las posiciones abiertas guardadas.
+
+        Returns:
+            Un diccionario `(test_id, symbol) -> posicion`.
+
+        Efectos:
+            Lee `live_positions`.
+        """
+        out = {}
+        for test_id, symbol, text in self._conn.execute(
+                "SELECT test_id, symbol, position_json FROM live_positions"):
+            out[(int(test_id), symbol)] = PaperPosition.from_dict(json.loads(text))
+        return out
+
+    # --- operaciones y eventos ---
+
+    def record_trade(self, test_id: int, symbol: str, trade: ClosedTrade) -> None:
+        """Guarda una operacion cerrada y borra su posicion, en una sola transaccion.
+
+        Args:
+            test_id: la prueba.
+            symbol: la moneda.
+            trade: la operacion.
+
+        Efectos:
+            Escribe `live_trades` y `live_positions`.
+        """
+        with self._conn:
+            self._conn.execute(
+                "INSERT INTO live_trades (test_id, symbol, side, entry_time_ms, exit_time_ms, "
+                "entry_price, exit_price, pnl_net_usdt, close_reason, trade_json) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (test_id, symbol, trade.side, trade.entry_time_ms, trade.exit_time_ms,
+                 trade.entry_price, trade.exit_price, trade.pnl_net_usdt, trade.close_reason,
+                 json.dumps(asdict(trade))))
+            self._conn.execute("DELETE FROM live_positions WHERE test_id = ? AND symbol = ?",
+                               (test_id, symbol))
+
+    def trades(self, test_id: int) -> list[tuple[str, ClosedTrade]]:
+        """Las operaciones cerradas de una prueba, en orden de salida.
+
+        Args:
+            test_id: la prueba.
+
+        Returns:
+            Pares `(moneda, operacion)`.
+
+        Efectos:
+            Lee `live_trades`.
+        """
+        rows = self._conn.execute(
+            "SELECT symbol, trade_json FROM live_trades WHERE test_id = ? "
+            "ORDER BY exit_time_ms, id", (test_id,))
+        return [(symbol, ClosedTrade(**json.loads(text))) for symbol, text in rows]
+
+    def log(self, kind: str, detail: str, test_id: int | None = None,
+            symbol: str | None = None, now_ms: int | None = None) -> None:
+        """Anota un evento (senal, rechazo, aviso del feed).
+
+        Args:
+            kind: tipo corto, p. ej. `SIGNAL`, `REFUSED`, `STALE`, `OPEN`, `CLOSE`.
+            detail: texto.
+            test_id: la prueba, si aplica.
+            symbol: la moneda, si aplica.
+            now_ms: instante; por defecto, el reloj.
+
+        Efectos:
+            Escribe `live_events`.
+        """
+        now = int(time.time() * 1000) if now_ms is None else now_ms
+        with self._conn:
+            self._conn.execute(
+                "INSERT INTO live_events (ts_ms, test_id, symbol, kind, detail) "
+                "VALUES (?, ?, ?, ?, ?)", (now, test_id, symbol, kind, detail))
+
+    def events(self, test_id: int | None = None, limit: int = 50) -> list[tuple]:
+        """Los ultimos eventos, del mas nuevo al mas viejo.
+
+        Args:
+            test_id: solo los de esa prueba, o `None` para todos.
+            limit: cuantos.
+
+        Returns:
+            Tuplas `(ts_ms, test_id, symbol, kind, detail)`.
+
+        Efectos:
+            Lee `live_events`.
+        """
+        if test_id is None:
+            cur = self._conn.execute(
+                "SELECT ts_ms, test_id, symbol, kind, detail FROM live_events "
+                "ORDER BY id DESC LIMIT ?", (limit,))
+        else:
+            cur = self._conn.execute(
+                "SELECT ts_ms, test_id, symbol, kind, detail FROM live_events "
+                "WHERE test_id = ? ORDER BY id DESC LIMIT ?", (test_id, limit))
+        return list(cur)
+
+    def beat(self, detail: str, now_ms: int | None = None) -> None:
+        """Anota que el corredor sigue vivo.
+
+        Args:
+            detail: resumen corto del estado.
+            now_ms: instante; por defecto, el reloj.
+
+        Efectos:
+            Escribe `live_heartbeat`.
+        """
+        now = int(time.time() * 1000) if now_ms is None else now_ms
+        with self._conn:
+            self._conn.execute("INSERT OR REPLACE INTO live_heartbeat VALUES (1, ?, ?)",
+                               (now, detail))
+
+    def heartbeat(self) -> tuple[int, str] | None:
+        """El ultimo latido del corredor.
+
+        Returns:
+            `(ts_ms, detalle)`, o `None` si nunca corrio.
+
+        Efectos:
+            Lee `live_heartbeat`.
+        """
+        row = self._conn.execute("SELECT ts_ms, detail FROM live_heartbeat WHERE id = 1").fetchone()
+        return None if row is None else (int(row[0]), row[1])
+
+
+class TickStore:
+    """El archivo de ticks del canal `trade` (solo se agrega).
+
+    Args:
+        path: ruta del archivo; se crea con su esquema si no existe.
+        read_only: abre en `mode=ro`.
+    """
+
+    def __init__(self, path: str | Path, read_only: bool = False) -> None:
+        self.path = Path(path)
+        self._conn = _connect(self.path, read_only, _TICK_SCHEMA)
+
+    def close(self) -> None:
+        """Cierra la conexion."""
+        self._conn.close()
+
+    def append(self, rows: list[tuple[str, int, float, float, str]]) -> int:
+        """Agrega ticks en una transaccion.
+
+        Args:
+            rows: tuplas `(symbol, ts_ms, price, qty, side)`.
+
+        Returns:
+            Cuantos se escribieron.
+
+        Efectos:
+            Escribe `ticks`.
+        """
+        if not rows:
+            return 0
+        with self._conn:
+            self._conn.executemany("INSERT INTO ticks VALUES (?, ?, ?, ?, ?)", rows)
+        return len(rows)
+
+    def count(self, symbol: str | None = None) -> int:
+        """Cuantos ticks hay guardados.
+
+        Args:
+            symbol: solo los de esa moneda, o `None` para todos.
+
+        Returns:
+            La cantidad.
+
+        Efectos:
+            Lee `ticks`.
+        """
+        if symbol is None:
+            return int(self._conn.execute("SELECT COUNT(*) FROM ticks").fetchone()[0])
+        return int(self._conn.execute("SELECT COUNT(*) FROM ticks WHERE symbol = ?",
+                                      (symbol,)).fetchone()[0])

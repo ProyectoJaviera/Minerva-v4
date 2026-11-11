@@ -91,7 +91,7 @@ no se pasa la serie de BTC.
 
 - **Referencia pdoc:** [`api/app/explorer/confluence.html`](../api/app/explorer/confluence.html)
 - **Importa (internos):** `app.candidates.common`, `app.candidates.sfp_reversal`, `app.indicators._pine`, `app.research.combos`, `app.research.round3`, `app.strategies.base`
-- **Lo importan:** `app.api.routes.explorer`, `app.explorer.service`
+- **Lo importan:** `app.api.routes.explorer`, `app.explorer.service`, `app.live.config`, `app.live.runner`, `scripts.live_tests`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno

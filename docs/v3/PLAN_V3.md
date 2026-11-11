@@ -78,6 +78,8 @@ minuto.
 1. **Fase 0, aislamiento (hecha):** nombres propios, puerto 8002, candados contra la v1 y la v2.
 2. **Fase 1, backtest en tiempo real (hecha la base):** archivo de minutos, descarga incremental y
    motor de repetición minuto a minuto (`app/replay/`), con pruebas y ejemplos.
+3. **Fase 1a, pruebas en vivo (hecha la base):** paper hacia adelante tick a tick, configurable por el dueño
+   ([PRUEBAS_EN_VIVO.md](PRUEBAS_EN_VIVO.md)), con grabación de los ticks.
 3. **Fase 1b, feed en tiempo real:** cliente WebSocket multicanal (sobre `app/market/bitunix_ws.py`), con
    reconexión, salud por canal y bloqueo de nuevas entradas si el feed está viejo; velas de 1 minuto armadas
    localmente y comparadas con las de REST; grabación opcional de `trade` y `tickers`.

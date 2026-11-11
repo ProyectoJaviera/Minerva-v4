@@ -179,7 +179,7 @@ base local. Nunca envía una orden real.
 
 - **Referencia pdoc:** [`api/app/execution/pnl.html`](../api/app/execution/pnl.html)
 - **Importa (internos):** `app.persistence.models`
-- **Lo importan:** `app.backtesting.engine`, `app.execution.paper_backend`, `app.replay.engine`, `app.trading.fills`, `app.trading.paper_execution`, `app.trading.shadow_book`
+- **Lo importan:** `app.backtesting.engine`, `app.execution.paper_backend`, `app.live.paper`, `app.replay.engine`, `app.trading.fills`, `app.trading.paper_execution`, `app.trading.shadow_book`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno

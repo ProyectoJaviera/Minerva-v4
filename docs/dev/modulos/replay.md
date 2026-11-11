@@ -51,7 +51,7 @@ alineación cambia todas las velas armadas.
 
 - **Referencia pdoc:** [`api/app/replay/candles.html`](../api/app/replay/candles.html)
 - **Importa (internos):** `app.replay.minute_store`
-- **Lo importan:** `app.replay.engine`, `scripts.replay_backtest`
+- **Lo importan:** `app.live.book`, `app.replay.engine`, `scripts.replay_backtest`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno

@@ -1174,7 +1174,7 @@ almacén de certificados del sistema): con `httpx` a secas falla detrás de la i
 
 - **Referencia pdoc:** [`api/scripts/download_minutes.html`](../api/scripts/download_minutes.html)
 - **Importa (internos):** `app.config`, `app.market.bitunix_rest`, `app.replay.download`, `app.replay.minute_store`, `app.research.forward`
-- **Lo importan:** `scripts.replay_backtest`
+- **Lo importan:** `scripts.live_tests`, `scripts.replay_backtest`
 - **Configuración que lee:** `BITUNIX_REST_BASE_URL`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -1206,3 +1206,26 @@ funding todavía no se incluye.
 - **Tablas que crea o altera:** ninguno
 - **Pruebas que lo importan o citan:** ninguno
 <!-- /hechos:scripts/replay_backtest.py -->
+
+### `scripts/live_tests.py`
+
+**Responsabilidad.** Los comandos de las pruebas en vivo: `indicators`, `add`, `list`, `report`, `stop` y `run` (el corredor).
+
+**Funciones y clases clave.** `main()`, `cmd_run()`, `cmd_add()`, `cmd_list_or_report()`, `cmd_stop()` y `summarize()`.
+
+**Invariantes — no romper.** Rechaza archivos de la v1 y de la v2. `run` solo usa la red pública.
+
+**Trampas conocidas.** Las pruebas solo operan mientras `run` está andando.
+
+<!-- hechos:scripts/live_tests.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/scripts/live_tests.html`](../api/scripts/live_tests.html)
+- **Importa (internos):** `app.config`, `app.explorer.confluence`, `app.live.config`, `app.live.runner`, `app.live.store`, `app.market.bitunix_rest`, `app.market.bitunix_ws`, `app.research.forward`, `scripts.download_minutes`
+- **Lo importan:** ninguno
+- **Configuración que lee:** `BITUNIX_RATE_LIMIT_PER_SEC`, `BITUNIX_REST_BASE_URL`, `BITUNIX_WS_PUBLIC_URL`
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`
+<!-- /hechos:scripts/live_tests.py -->

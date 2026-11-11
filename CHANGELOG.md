@@ -7,6 +7,12 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v3: pruebas en vivo configurables — 2026-11-11
+
+- `scripts/live_tests.py`: pruebas de paper trading hacia adelante con el precio en tiempo real de Bitunix. Se eligen
+  monedas, marco, indicadores y filtros, salida y modo (al cierre o dentro de la vela); `run` las opera tick a tick.
+- Graba cada operación del mercado en `history/ticks_v3.db`. Ver `docs/v3/PRUEBAS_EN_VIVO.md`.
+
 ## Minerva v3: backtest en tiempo real — 2026-11-11
 
 - Repetición minuto a minuto (`app/replay/`): la estrategia puede entrar dentro de la vela, con stop, límite o a

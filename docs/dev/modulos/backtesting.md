@@ -121,7 +121,7 @@ respecto del `fundingInterval`, en vez de aplicarlo en los horarios reales de *s
 
 - **Referencia pdoc:** [`api/app/backtesting/funding.html`](../api/app/backtesting/funding.html)
 - **Importa (internos):** `app.persistence.models`
-- **Lo importan:** `app.backtesting.engine`, `app.replay.engine`, `app.trading.signal_generator`
+- **Lo importan:** `app.backtesting.engine`, `app.live.book`, `app.replay.engine`, `app.trading.signal_generator`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -151,7 +151,7 @@ respecto del `fundingInterval`, en vez de aplicarlo en los horarios reales de *s
 
 - **Referencia pdoc:** [`api/app/backtesting/liquidation.html`](../api/app/backtesting/liquidation.html)
 - **Importa (internos):** `app.persistence.models`
-- **Lo importan:** `app.backtesting.engine`, `app.replay.engine`, `app.trading.levels`, `app.trading.position_monitor`
+- **Lo importan:** `app.backtesting.engine`, `app.live.paper`, `app.replay.engine`, `app.trading.levels`, `app.trading.position_monitor`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno

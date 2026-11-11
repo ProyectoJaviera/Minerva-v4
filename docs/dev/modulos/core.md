@@ -145,7 +145,7 @@ loop**: cada registro se encola sin esperar jamás y dos hilos independientes (a
 
 - **Referencia pdoc:** [`api/app/core/logging.html`](../api/app/core/logging.html)
 - **Importa (internos):** `app.config`
-- **Lo importan:** 40 módulos (api 3, backtesting 2, core 2, execution 1, llm 1, main 1, market 7, memory 2, news 3, scripts 7, telegram 5, trading 6)
+- **Lo importan:** 41 módulos (api 3, backtesting 2, core 2, execution 1, live 1, llm 1, main 1, market 7, memory 2, news 3, scripts 7, telegram 5, trading 6)
 - **Configuración que lee:** `LOG_DIR`, `LOG_LEVEL`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
