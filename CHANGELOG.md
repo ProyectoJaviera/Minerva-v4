@@ -7,6 +7,13 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v3: un solo Minerva en el servidor — 2026-11-11
+
+- `scripts/verify_v1_identity.py` demuestra que la medición de la v3 es idéntica a la de la v1.0 (141 archivos
+  iguales, dos solo ampliados y el mismo prompt congelado).
+- `docs/v3/MUDANZA_NETBOOK_V3.md`: la v3 reemplaza a la v1 en el netbook, con la base y el `.env` de la v1, las
+  tareas de captura de la v2 y vuelta atrás.
+
 ## Minerva v3: pruebas en vivo dentro de la app — 2026-11-11
 
 - El corredor de las pruebas en vivo arranca dentro del contenedor `minerva-v3`; pestaña «En vivo» del dashboard

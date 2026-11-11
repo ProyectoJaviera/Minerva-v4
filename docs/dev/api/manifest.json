@@ -231,7 +231,8 @@
     "scripts/v2_round3.py": "3d1f6f3d5e45f92c9237160be29e6d74fad2a6007a40749ee99558e36df1bfec",
     "scripts/v2_round3_reserved.py": "91ce61afa4275fc7a5e000376a17ba0d9293a9dcc8c08111eacddaf0672a5529",
     "scripts/v2_round4.py": "5f7b8c0924d70d5562d3a740228dcd85046665a41e6f6b0c817316649280c44c",
-    "scripts/v2_tradingview_check.py": "c890267e808e55e8ff6897796ab6debc476171f1f5352498537d222a5fcfe8dc"
+    "scripts/v2_tradingview_check.py": "c890267e808e55e8ff6897796ab6debc476171f1f5352498537d222a5fcfe8dc",
+    "scripts/verify_v1_identity.py": "69af0f1c17bb74427b20e7ff49e44ddf3c8a8d54d96ca8d6df5ea277bb3a7f56"
   },
   "generador": "scripts/build_dev_docs.py",
   "paginas": {
@@ -417,8 +418,8 @@
     "app/trading/slippage.html": "16247e493c851d586b76e86e31708a6d153158ae3aec0fdf48a65f4747c01155",
     "app/trading/stop_engine.html": "f6569285d01184c62e32a0ceb25e97c37958b95e1aaaeb9c85ab023b629ac6a5",
     "app/trading/verdict_record.html": "cc6ebbb3d597842bb275e8b0dbf9da2f04b5f92d1239285c0106def795f5ef2b",
-    "index.html": "816c236af0b858689c8ecfa09b50bf88fb4cc0c209bb590aac3395f55942ffdb",
-    "scripts.html": "1f7b405801db1bc3c7570a30062c27c188b8c653abcc63cd4f7aefc6fe59986d",
+    "index.html": "f290df6ba2e2c9886c5741cd59906b7aa23eb4a1ddbc85e2b040e2d5935681c5",
+    "scripts.html": "f1efe2db645b719b4c91cb99e98be6c93ec3ae9e16def999905889678f7521c1",
     "scripts/ai_value_report.html": "5d1e24480b2924067ea037f0470a156523853a799dccc87be29cf16d0c913697",
     "scripts/analyze_risk.html": "b5502544e7cc3a9a9c5745e3e9de47b57522965612cfd2f21466286ae04b0b1a",
     "scripts/backup_db.html": "b1f8ca3698f2315f8a5a4a3836f286b355ec477875331b241d4ba56bcf6851ec",
@@ -462,6 +463,7 @@
     "scripts/v2_round3.html": "0616e78193f9906617ec85ac6e8009dd38868bcebc2c8dd0d4dd47c2f329a273",
     "scripts/v2_round3_reserved.html": "344f75a6fab601b3f63858e3a83f700cdc429390dfa5849112885b9a9fefeb3d",
     "scripts/v2_round4.html": "35ed62594ed28500cc75cd8bc2a72199f6ab1d227818d6c2a12802b013dd5c10",
-    "scripts/v2_tradingview_check.html": "a4784c1d4dc20ea368d746d5d6349e60405fcf2beb92898251d7ac9037cfedda"
+    "scripts/v2_tradingview_check.html": "a4784c1d4dc20ea368d746d5d6349e60405fcf2beb92898251d7ac9037cfedda",
+    "scripts/verify_v1_identity.html": "2af25406ed8d31f5c107d80314ff6ea5c7f30a208176b712200d416554c69471"
   }
 }

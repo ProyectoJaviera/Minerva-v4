@@ -56,6 +56,18 @@ correr, usa los criterios de la Fase 2 y compara con un control de dirección al
 La **captura de datos hacia adelante** (libro de órdenes, funding y Fear & Greed) y sus tareas programadas están en
 [Uso diario](USO.md#tareas-programadas).
 
+## La v3: tiempo real y un solo Minerva
+
+La v3 contiene todo lo anterior (la medición de la v1 sin cambios y la investigación de la v2) y suma el precio en
+tiempo real de Bitunix.
+
+| Documento | Qué contiene |
+|---|---|
+| [v3/PLAN_V3.md](v3/PLAN_V3.md) | El plan de la v3: cartera de fuerza relativa, tiempo real y fases |
+| [v3/BACKTEST_TIEMPO_REAL.md](v3/BACKTEST_TIEMPO_REAL.md) | El backtest minuto a minuto con las velas de 1 minuto de Bitunix |
+| [v3/PRUEBAS_EN_VIVO.md](v3/PRUEBAS_EN_VIVO.md) | Las pruebas de paper hacia adelante configurables (pestaña «En vivo») |
+| [v3/MUDANZA_NETBOOK_V3.md](v3/MUDANZA_NETBOOK_V3.md) | La mudanza al netbook: la v3 reemplaza a la v1 y queda un solo Minerva |
+
 ## Conceptos
 
 | Documento | Qué contiene |

@@ -167,7 +167,7 @@ El diagrama muestra solo las flechas con 3 o más imports; no dibuja las que lle
 | `persistence` | 22 | 5016 | ninguno | api, backtesting, core, execution, explorer, live, llm, main, market, memory, news, replay, research, scripts, telegram, trading |
 | `replay` | 6 | 1278 | backtesting 3, persistence 2, trading 2, config 1, execution 1, indicators 1, strategies 1 | live, scripts |
 | `research` | 6 | 1353 | candidates 6, indicators 6, strategies 4, backtesting 2, persistence 2, config 1, market 1 | api, explorer, live, scripts |
-| `scripts` | 44 | 11310 | config 31, persistence 31, trading 26, market 20, backtesting 10, research 9, core 8, strategies 7, llm 6, replay 6, indicators 4, live 4, news 3, explorer 2, memory 2, api 1, candidates 1 | ninguno |
+| `scripts` | 45 | 11425 | config 31, persistence 31, trading 26, market 20, backtesting 10, research 9, core 8, strategies 7, llm 6, replay 6, indicators 4, live 4, news 3, explorer 2, memory 2, api 1, candidates 1 | ninguno |
 | `strategies` | 9 | 807 | indicators 4 | backtesting, candidates, explorer, live, replay, research, scripts, trading |
 | `telegram` | 8 | 1903 | persistence 12, trading 7, core 5, config 4, market 2, api 1, llm 1 | api, main |
 | `trading` | 23 | 7441 | persistence 57, config 9, market 8, core 6, execution 5, llm 5, backtesting 4, strategies 4 | api, backtesting, core, execution, live, main, memory, replay, scripts, telegram |

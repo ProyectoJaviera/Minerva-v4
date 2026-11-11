@@ -25,8 +25,8 @@ Nunca envía órdenes reales.
 
 **Dentro de Minerva (lo normal).** El corredor vive dentro de la app de la v3: en el contenedor `minerva-v3` arranca
 solo (`MINERVA_LIVE_TESTS`, encendido por defecto) y vuelve solo tras un reinicio. Las pruebas se crean, se miran y se
-detienen en la pestaña **«En vivo»** del dashboard. Está pensado para correr en el netbook, al lado de la v1 y sin
-tocarla: la instalación la hace el dueño con [NETBOOK_V3.md](NETBOOK_V3.md).
+detienen en la pestaña **«En vivo»** del dashboard. Está pensado para correr en el netbook, dentro del único
+Minerva del servidor (la v3 reemplaza a la v1): la instalación la hace el dueño con [MUDANZA_NETBOOK_V3.md](MUDANZA_NETBOOK_V3.md).
 
 **Encender y apagar el bot.** Arriba de la pestaña hay un indicador del bot (verde «Bot activo», gris «Bot
 apagado», rojo «Bot sin respuesta» si no late hace más de un minuto) y un botón para apagarlo o encenderlo. Apagar

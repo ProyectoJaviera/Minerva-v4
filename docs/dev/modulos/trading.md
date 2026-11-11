@@ -570,7 +570,7 @@ conteos.
 - **Tablas que lee:** `data_source_health`, `system_state`, `trades`
 - **Tablas que escribe:** `risk_rejections`, `system_state`
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** 14 archivos (e2e 2, unit 12)
+- **Pruebas que lo importan o citan:** 15 archivos (e2e 2, unit 13)
 <!-- /hechos:app/trading/risk_engine.py -->
 
 ### `app/trading/shadow_book.py`

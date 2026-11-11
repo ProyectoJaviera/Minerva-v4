@@ -1229,3 +1229,30 @@ funding todavía no se incluye.
 - **Tablas que crea o altera:** ninguno
 - **Pruebas que lo importan o citan:** ninguno
 <!-- /hechos:scripts/live_tests.py -->
+
+### `scripts/verify_v1_identity.py`
+
+**Responsabilidad.** Demuestra que el núcleo de la medición es idéntico al de la v1.0 antes de reemplazar a la v1 en
+el servidor ([`docs/v3/MUDANZA_NETBOOK_V3.md`](../../v3/MUDANZA_NETBOOK_V3.md)).
+
+**Funciones y clases clave.** `check()` (identicos byte a byte salvo el fin de línea, `app/config.py` y `app/main.py`
+solo con líneas agregadas, y la constante del prompt congelado) y `main()`.
+
+**Invariantes — no romper.** Las huellas viven en `scripts/v1_measurement_manifest.json`, generado con git desde el
+commit de la v1.0; no se editan a mano. El motor de backtest queda fuera (no participa de la medición).
+
+**Trampas conocidas.** Un cambio de cualquier archivo del núcleo lo hace fallar a propósito: mientras la medición de
+la v1 siga abierta, esos archivos no se tocan.
+
+<!-- hechos:scripts/verify_v1_identity.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/scripts/verify_v1_identity.html`](../api/scripts/verify_v1_identity.html)
+- **Importa (internos):** ninguno
+- **Lo importan:** ninguno
+- **Configuración que lee:** ninguno
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** `tests/unit/test_verify_v1_identity.py`
+<!-- /hechos:scripts/verify_v1_identity.py -->
