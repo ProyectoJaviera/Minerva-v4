@@ -52,7 +52,7 @@ async def _build_history(path: str, symbols=("BTCUSDT", "ETHUSDT")) -> None:
 
 @pytest.fixture
 async def history(tmp_path) -> str:
-    path = str(tmp_path / "history_v2.db")
+    path = str(tmp_path / "history_v3.db")
     await _build_history(path)
     return path
 

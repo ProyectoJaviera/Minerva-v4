@@ -55,7 +55,7 @@ async def _build(path: str, symbols=SYMBOLS) -> None:
 
 @pytest.fixture
 async def history(tmp_path) -> str:
-    path = str(tmp_path / "history_v2.db")
+    path = str(tmp_path / "history_v3.db")
     await _build(path)
     return path
 

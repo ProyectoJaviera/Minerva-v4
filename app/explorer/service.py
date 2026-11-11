@@ -1,7 +1,7 @@
 """Backtest exploratorio a pedido sobre el archivo de historial local (seccion «Indicadores»).
 
 - **Fuente:** un archivo SQLite aparte de la base del bot (`EXPLORER_HISTORY_DB`, por defecto
-  `./history/history_v2.db`), creado con `scripts/update_history_file.py`. Tiene las mismas tablas
+  `./history/history_v3.db`), creado con `scripts/update_history_file.py`. Tiene las mismas tablas
   de mercado que usa el motor (velas LAST_PRICE y MARK_PRICE, funding y specs). Se abre en modo
   `immutable` de solo lectura: nada se escribe.
 - **Estrategia:** la confluencia de los indicadores que el dueno marca (`app.explorer.confluence`):

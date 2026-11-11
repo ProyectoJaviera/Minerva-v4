@@ -19,8 +19,8 @@
 > La v2 **parte de la etiqueta `v1.0`** del repositorio Minerva-v1 (el mismo código y el mismo historial). La medición ciega
 > de la v1 sigue su curso **en ese otro repositorio**, con su propio bot; la v2 es donde continúa el desarrollo nuevo.
 > Para que nada de la v2 pueda tocar el bot vivo de la v1, **todos sus nombres cambian**: proyecto y contenedor
-> `minerva-v2`, imagen `minerva-v2:local`, volúmenes `minerva-v2_data` y `minerva-v2_logs`, puerto `8001` (el `8000` es de la v1),
-> tareas programadas con prefijo `MinervaV2` y marca `MIGRADO_A_DOCKER_V2.txt`. Además arranca **sin** etiquetado del LLM,
+> `minerva-v3`, imagen `minerva-v3:local`, volúmenes `minerva-v3_data` y `minerva-v3_logs`, puerto `8002` (el `8000` es de la v1),
+> tareas programadas con prefijo `MinervaV3` y marca `MIGRADO_A_DOCKER_V3.txt`. Además arranca **sin** etiquetado del LLM,
 > Telegram, brazo ejecutado, noticias ni avisos (`MINERVA_REAL_BOT=false` por defecto). **Nunca copies el `.env` real de la
 > v1 a la v2.**
 
@@ -91,8 +91,8 @@ Todo corre en **un solo proceso** (FastAPI + asyncio) con una base SQLite, y exp
 un bot de Telegram. Detalle de componentes, flujo y decisiones de diseño: [Arquitectura](docs/ARQUITECTURA.md).
 
 El diagrama es el bot heredado de la v1. Lo nuevo de la v2 corre aparte del bot: la investigación y la pestaña
-Indicadores usan el motor de backtest sin red sobre un archivo de historial local (`history/history_v2.db`), y la captura
-de datos son scripts que lanzan las tareas programadas `MinervaV2*` (ver [Arquitectura](docs/ARQUITECTURA.md#la-v2-investigación-y-captura-de-datos)).
+Indicadores usan el motor de backtest sin red sobre un archivo de historial local (`history/history_v3.db`), y la captura
+de datos son scripts que lanzan las tareas programadas `MinervaV3*` (ver [Arquitectura](docs/ARQUITECTURA.md#la-v2-investigación-y-captura-de-datos)).
 
 ## Funcionalidades
 
@@ -116,8 +116,8 @@ de datos son scripts que lanzan las tareas programadas `MinervaV2*` (ver [Arquit
 - **Investigación con preregistro (v2):** indicadores causales probados contra TradingView, candidatos y rondas
   exploratorias con selección solo en el periodo de entrenamiento y controles con dirección al azar
   ([especificación](docs/v2/ESPECIFICACION_INDICADORES.md)).
-- **Captura de datos hacia adelante (v2):** libro de órdenes, funding y Fear & Greed en `history/market_v2.db`, con tareas
-  programadas `MinervaV2*` que también mantienen al día el historial de velas.
+- **Captura de datos hacia adelante (v2):** libro de órdenes, funding y Fear & Greed en `history/market_v3.db`, con tareas
+  programadas `MinervaV3*` que también mantienen al día el historial de velas.
 - **Bot de Telegram:** comandos, avisos de posiciones y riesgo, resumen diario y alerta de caída.
 - **Noticias gratuitas y memoria de lecciones** (apagadas durante la medición y fuera del prompt congelado).
 - **Operación:** Docker (imagen sin privilegios, puerto solo en `127.0.0.1`), respaldos consistentes, mudanza de
@@ -144,7 +144,7 @@ git clone https://github.com/ProyectoJaviera/Minerva-v2.git
 cd Minerva-v2
 cp .env.example .env                          # Windows (PowerShell): Copy-Item .env.example .env
 docker compose build                          # construye la imagen (~1 min la primera vez)
-docker run --rm -it minerva-v2:local python scripts/hash_password.py    # imprime AUTH_PASSWORD_HASH='…'
+docker run --rm -it minerva-v3:local python scripts/hash_password.py    # imprime AUTH_PASSWORD_HASH='…'
 ```
 
 1. **Edita el `.env`**: pega el hash que imprimió el último comando (con sus comillas simples), elige `AUTH_USERNAME`, pon
@@ -157,8 +157,8 @@ docker run --rm -it minerva-v2:local python scripts/hash_password.py    # imprim
    docker compose ps                          # STATUS pasa a "healthy" en ~1 minuto
    ```
 
-3. Abre el dashboard en <http://127.0.0.1:8001/> (con el `AUTH_USERNAME` de tu `.env` y la contraseña que elegiste al
-   generar el hash) y el estado en <http://127.0.0.1:8001/health>.
+3. Abre el dashboard en <http://127.0.0.1:8002/> (con el `AUTH_USERNAME` de tu `.env` y la contraseña que elegiste al
+   generar el hash) y el estado en <http://127.0.0.1:8002/health>.
 
 > En la v2 `MINERVA_REAL_BOT` vale `false` por defecto: el bot genera señales y sombras pero no llama a ninguna API de
 > pago (ni a Telegram). Para encender el etiquetado con Claude, el brazo ejecutado, las noticias y los avisos, ponlo
@@ -242,12 +242,12 @@ no results are published. Documentation is in Spanish; code identifiers are in E
 git clone https://github.com/ProyectoJaviera/Minerva-v2.git && cd Minerva-v2
 cp .env.example .env
 docker compose build
-docker run --rm -it minerva-v2:local python scripts/hash_password.py   # paste the printed line into .env
+docker run --rm -it minerva-v3:local python scripts/hash_password.py   # paste the printed line into .env
 # edit .env: AUTH_USERNAME, AUTH_PASSWORD_HASH, JWT_SECRET (>= 32 chars), ANTHROPIC_API_KEY
 docker compose up -d
 ```
 
-Open <http://127.0.0.1:8001/> (dashboard) and <http://127.0.0.1:8001/health>. Requirements: Git, Docker with Compose v2,
+Open <http://127.0.0.1:8002/> (dashboard) and <http://127.0.0.1:8002/health>. Requirements: Git, Docker with Compose v2,
 Python 3.11/3.12 for helper scripts, and an Anthropic API key (the only paid component; about 0.005 USD per labeled
 signal, with a hard daily cap). Full guide (in Spanish): [`docs/GUIA_INSTALACION.md`](docs/GUIA_INSTALACION.md).
 

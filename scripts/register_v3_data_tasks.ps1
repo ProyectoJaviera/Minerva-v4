@@ -1,17 +1,17 @@
 <#
 .SYNOPSIS
-    Registra (o quita) las tareas programadas de captura de datos de la v2 (prefijo MinervaV2).
+    Registra (o quita) las tareas programadas de captura de datos de la v2 (prefijo MinervaV3).
 
 .DESCRIPTION
     Tareas del usuario actual, sin privilegios de administrador, que corren el python del entorno
     virtual del repositorio con `conhost.exe --headless` (no abren ventanas):
 
-      MinervaV2OrderBook      cada 5 min    scripts\record_market_data.py orderbook
-      MinervaV2Funding        cada 60 min   scripts\record_market_data.py funding
-      MinervaV2FearGreed      diaria 02:10  scripts\record_market_data.py feargreed
-      MinervaV2HistoryUpdate  cada 6 h      scripts\update_history_file.py --via-copy
+      MinervaV3OrderBook      cada 5 min    scripts\record_market_data.py orderbook
+      MinervaV3Funding        cada 60 min   scripts\record_market_data.py funding
+      MinervaV3FearGreed      diaria 02:10  scripts\record_market_data.py feargreed
+      MinervaV3HistoryUpdate  cada 6 h      scripts\update_history_file.py --via-copy
 
-    Los datos van a history\market_v2.db y history\history_v2.db (fuera de git y de data\). No
+    Los datos van a history\market_v3.db y history\history_v3.db (fuera de git y de data\). No
     tocan la v1: los nombres son de la v2 y se comprueban con Assert-NotV1Resources. Como el resto
     del repositorio, habla con el Programador solo por la puerta `$script:SchtasksExe` de
     docker_common.ps1 (en las pruebas apunta a una trampa).
@@ -20,7 +20,7 @@
     Quita las cuatro tareas en vez de registrarlas.
 
 .EXAMPLE
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\register_v2_data_tasks.ps1
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\register_v3_data_tasks.ps1
 #>
 param([switch]$Remove)
 
@@ -31,18 +31,18 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Python = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 
 $Tasks = @(
-    @{ Name = "MinervaV2OrderBook"; Schedule = @("/SC", "MINUTE", "/MO", "5");
+    @{ Name = "MinervaV3OrderBook"; Schedule = @("/SC", "MINUTE", "/MO", "5");
        Command = "scripts\record_market_data.py orderbook" },
-    @{ Name = "MinervaV2Funding"; Schedule = @("/SC", "MINUTE", "/MO", "60");
+    @{ Name = "MinervaV3Funding"; Schedule = @("/SC", "MINUTE", "/MO", "60");
        Command = "scripts\record_market_data.py funding" },
-    @{ Name = "MinervaV2FearGreed"; Schedule = @("/SC", "DAILY", "/ST", "02:10");
+    @{ Name = "MinervaV3FearGreed"; Schedule = @("/SC", "DAILY", "/ST", "02:10");
        Command = "scripts\record_market_data.py feargreed" },
-    @{ Name = "MinervaV2HistoryUpdate"; Schedule = @("/SC", "HOURLY", "/MO", "6");
+    @{ Name = "MinervaV3HistoryUpdate"; Schedule = @("/SC", "HOURLY", "/MO", "6");
        Command = "scripts\update_history_file.py --via-copy" }
 )
 
 foreach ($t in $Tasks) {
-    if (-not $t.Name.StartsWith("MinervaV2")) { throw "La tarea $($t.Name) no tiene el prefijo MinervaV2." }
+    if (-not $t.Name.StartsWith("MinervaV3")) { throw "La tarea $($t.Name) no tiene el prefijo MinervaV3." }
     Assert-NotV1Resources -Task $t.Name
 }
 

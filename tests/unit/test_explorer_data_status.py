@@ -14,7 +14,7 @@ NOW = 1_794_400_000_000
 
 
 def _market(tmp_path):
-    path = tmp_path / "market_v2.db"
+    path = tmp_path / "market_v3.db"
     conn = rec.open_store(path)
     row = rec.summarize_depth({"bids": [["100", "2"]], "asks": [["101", "1"]]})
     for symbol, ts in (("BTCUSDT", NOW - 60_000), ("BTCUSDT", NOW - 2 * 86_400_000),

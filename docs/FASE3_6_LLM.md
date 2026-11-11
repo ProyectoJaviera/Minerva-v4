@@ -1080,7 +1080,7 @@ real de velas 1m contra Bitunix/CoinGecko, lento y no determinista, y no es
 parte de TAREA B -- sino que arma a mano las piezas de producción que SÍ
 tocan TAREA B (`Database` sobre una DB temporal nueva, `Scheduler` real con
 `shadow=ShadowBook` y `live_labeler=ShadowLiveLabeler` reales, el router
-real de `GET /health`), sirviéndolas con `uvicorn` en el puerto 8001. El
+real de `GET /health`), sirviéndolas con `uvicorn` en el puerto 8002. El
 cliente del LLM se parcheó por uno sin red (`build_anthropic_client`
 reemplazado ANTES de que `decision_service.py` se importara por primera
 vez, ya que lo captura como valor por defecto de un parámetro) -- cero costo

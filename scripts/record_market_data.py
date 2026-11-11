@@ -1,8 +1,8 @@
 """Graba hacia adelante datos de mercado que no tienen historial gratis (v2, solo lectura de APIs).
 
-Pensado para las tareas programadas `MinervaV2*` (`scripts/register_v2_data_tasks.ps1`). Cada
+Pensado para las tareas programadas `MinervaV3*` (`scripts/register_v3_data_tasks.ps1`). Cada
 llamada toma UNA foto y termina; escribe en un archivo SQLite aparte, por defecto
-`./history/market_v2.db` (`--path`), nunca en la base del bot ni en `data/`.
+`./history/market_v3.db` (`--path`), nunca en la base del bot ni en `data/`.
 
 Subcomandos:
 
@@ -20,7 +20,7 @@ Los simbolos son los que tiene el archivo de historial (`EXPLORER_HISTORY_DB`) e
 existe, BTCUSDT y ETHUSDT. Un fallo en un simbolo no corta a los demas: se registra y sigue.
 
 Uso:
-    python scripts/record_market_data.py orderbook|funding|feargreed [--path history/market_v2.db]
+    python scripts/record_market_data.py orderbook|funding|feargreed [--path history/market_v3.db]
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, ".")
 
-DEFAULT_PATH = "./history/market_v2.db"
+DEFAULT_PATH = "./history/market_v3.db"
 DEPTH_LIMIT = 50
 RAW_LEVELS = 20
 TIERS = (5, 20, 50)
@@ -283,7 +283,7 @@ async def record_fear_greed(conn: sqlite3.Connection) -> int:
     try:
         async with build_async_http_client(timeout=20) as http:
             resp = await http.get(FEAR_GREED_URL, params={"limit": 1},
-                                  headers={"User-Agent": "minerva-v2"})
+                                  headers={"User-Agent": "minerva-v3"})
             resp.raise_for_status()
         points = parse_fear_greed(resp.text)
     except Exception as exc:  # noqa: BLE001

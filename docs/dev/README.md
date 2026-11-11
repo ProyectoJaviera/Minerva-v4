@@ -19,7 +19,7 @@ solo como interfaz documentada y desactivada, `BitunixBackend`).
 | [ZONAS_PROTEGIDAS.md](ZONAS_PROTEGIDAS.md) | **El más importante.** Qué archivos, funciones, tablas y parámetros no se pueden cambiar durante la medición y por qué; qué sí se puede cambiar con seguridad; qué hacer si de verdad hay que cambiar algo protegido; cómo usar `scripts/check_measurement_safety.py` |
 | [FLUJO_EJECUCION.md](FLUJO_EJECUCION.md) | El `lifespan` de `app/main.py` paso a paso, cada tarea asyncio y cómo se comunican, un cierre de vela de punta a punta, un reinicio y una parada |
 | [MODELO_DATOS.md](MODELO_DATOS.md) | Las 28 tablas: para qué sirve cada una, quién la escribe y quién la lee, el disparador de inmutabilidad, las migraciones y cómo agregar una columna o una tabla sin romper una base existente |
-| [ENTORNO_DESARROLLO.md](ENTORNO_DESARROLLO.md) | Preparar el entorno (Python, Node, Docker), correr el bot de desarrollo en el puerto 8001 con una copia de la base, depurar, ver logs, correr las pruebas por partes, `ruff`, y cómo se genera esta documentación |
+| [ENTORNO_DESARROLLO.md](ENTORNO_DESARROLLO.md) | Preparar el entorno (Python, Node, Docker), correr el bot de desarrollo en el puerto 8002 con una copia de la base, depurar, ver logs, correr las pruebas por partes, `ruff`, y cómo se genera esta documentación |
 | [PRUEBAS.md](PRUEBAS.md) | Cómo está organizado `tests/`, los fixtures y los falsos, cómo escribir una prueba nueva y las pruebas guardianas (prompt congelado, resultados ocultos, sin red, sin ventanas, documentación) con lo que protege cada una |
 | [RECETAS.md](RECETAS.md) | Paso a paso de los cambios comunes (estrategia, indicador, comando de Telegram, endpoint, pestaña del dashboard, variable de configuración, fuente de noticias, parámetro de riesgo) y cómo desplegar un cambio al contenedor |
 | [modulos/](modulos/) | Una guía por paquete de `app/`, una para `scripts/` y una para `frontend/src`, con **cada archivo**: responsabilidad, funciones clave, invariantes, tablas, a quién llama y quién lo llama, configuración, pruebas y trampas conocidas. Ver [el mapa del código](#mapa-del-código) |
@@ -35,7 +35,7 @@ solo como interfaz documentada y desactivada, `BitunixBackend`).
 | **Agregar un comando de Telegram, un endpoint o una pestaña** | [RECETAS](RECETAS.md) → guías [telegram](modulos/telegram.md), [api](modulos/api.md), [frontend](modulos/frontend.md) |
 | **Cambiar una variable de configuración** | [RECETAS](RECETAS.md#agregar-una-variable-de-configuración) → guía [config](modulos/config.md) |
 | **Tocar la base de datos** | [MODELO_DATOS](MODELO_DATOS.md) → [ESQUEMA_BD](../ESQUEMA_BD.md) (generado) |
-| **Correr el bot en mi equipo sin tocar el real** | [ENTORNO_DESARROLLO](ENTORNO_DESARROLLO.md#correr-el-bot-de-desarrollo-en-el-puerto-8001) |
+| **Correr el bot en mi equipo sin tocar el real** | [ENTORNO_DESARROLLO](ENTORNO_DESARROLLO.md#correr-el-bot-de-desarrollo-en-el-puerto-8002) |
 | **Escribir una prueba** | [PRUEBAS](PRUEBAS.md#cómo-escribir-una-prueba-nueva) |
 | **Desplegar un cambio al contenedor** | [RECETAS](RECETAS.md#desplegar-un-cambio-al-contenedor) |
 | **Buscar una función concreta y su docstring** | [la referencia automática](api/index.html) |
@@ -158,7 +158,7 @@ El diagrama muestra solo las flechas con 3 o más imports; no dibuja las que lle
 | `news` | 11 | 1703 | persistence 11, core 4, config 3 | api, llm, main, memory, scripts |
 | `persistence` | 22 | 5016 | ninguno | api, backtesting, core, execution, explorer, llm, main, market, memory, news, research, scripts, telegram, trading |
 | `research` | 6 | 1353 | candidates 6, indicators 6, strategies 4, backtesting 2, persistence 2, config 1, market 1 | api, explorer, scripts |
-| `scripts` | 41 | 10759 | persistence 31, config 28, trading 26, market 17, backtesting 9, core 8, strategies 7, llm 6, research 6, indicators 4, news 3, memory 2, api 1, candidates 1, explorer 1 | ninguno |
+| `scripts` | 41 | 10766 | persistence 31, config 28, trading 26, market 17, backtesting 9, core 8, strategies 7, llm 6, research 6, indicators 4, news 3, memory 2, api 1, candidates 1, explorer 1 | ninguno |
 | `strategies` | 9 | 807 | indicators 4 | backtesting, candidates, explorer, research, scripts, trading |
 | `telegram` | 8 | 1903 | persistence 12, trading 7, core 5, config 4, market 2, api 1, llm 1 | api, main |
 | `trading` | 23 | 7441 | persistence 57, config 9, market 8, core 6, execution 5, llm 5, backtesting 4, strategies 4 | api, backtesting, core, execution, main, memory, scripts, telegram |

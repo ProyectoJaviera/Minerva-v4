@@ -393,7 +393,7 @@ function Freshness({ label, block, extra }: { label: string; block?: { last_at: 
   );
 }
 
-// Si las tareas programadas de captura (MinervaV2*) estan funcionando: ultima foto de cada cosa,
+// Si las tareas programadas de captura (MinervaV3*) estan funcionando: ultima foto de cada cosa,
 // errores y los ultimos valores del libro de ordenes. No muestra resultados de ninguna estrategia.
 function DataStatusCard() {
   const status = useDataStatus();
@@ -410,7 +410,7 @@ function DataStatusCard() {
     <Card title="Datos capturados">
       {!market.available ? (
         <p role="status" className="text-sm text-gray-700 dark:text-gray-300">
-          Todavia no hay datos capturados ({market.path}). Se llenan solos con las tareas programadas MinervaV2
+          Todavia no hay datos capturados ({market.path}). Se llenan solos con las tareas programadas MinervaV3
           (scriptsegister_v2_data_tasks.ps1).
         </p>
       ) : (

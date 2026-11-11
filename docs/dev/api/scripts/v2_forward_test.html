@@ -61,11 +61,11 @@ eso equivale a haberlas operado en paper desde ese dia, sin dejar un proceso cor
 60 operaciones o el 2027-05-10; sigue en estudio solo con PF &gt;= 1.2 y por encima de su control.</p>
 
 <p>Solo lectura: abre el archivo de historial (<code>EXPLORER_HISTORY_DB</code>, por defecto
-<code>./history/history_v2.db</code>) en modo inmutable; sin red. La tarea <code>MinervaV2HistoryUpdate</code>
-(<code>scripts/register_v2_data_tasks.ps1</code>) lo actualiza cada 6 horas; a mano:</p>
+<code>./history/history_v3.db</code>) en modo inmutable; sin red. La tarea <code>MinervaV3HistoryUpdate</code>
+(<code>scripts/register_v3_data_tasks.ps1</code>) lo actualiza cada 6 horas; a mano:</p>
 
 <pre><code>python scripts/update_history_file.py
-python scripts/v2_forward_test.py [--path history/history_v2.db] [--trades]
+python scripts/v2_forward_test.py [--path history/history_v3.db] [--trades]
 </code></pre>
 </div>
 

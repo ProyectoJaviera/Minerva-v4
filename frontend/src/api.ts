@@ -759,7 +759,7 @@ export function useExplorerRun() {
   });
 }
 
-// Estado de la captura de datos de la v2 (tareas MinervaV2*) y del historial local. Solo lectura.
+// Estado de la captura de datos de la v2 (tareas MinervaV3*) y del historial local. Solo lectura.
 export interface DataStatusBlock {
   last_at: string | null;
   stale: boolean;

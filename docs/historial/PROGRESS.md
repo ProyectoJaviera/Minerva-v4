@@ -2509,3 +2509,14 @@ Pedido: el dueño quiere ver la investigación de la v2 desde el dashboard, sin 
 - **Pestaña «Estudio»** (`frontend/src/StudyTab.tsx`): una tarjeta por estrategia con sus números y los del control, la etiqueta de revisión y la lista de operaciones; debajo, las 4 rondas y la conclusión. El dashboard pasa a siete pestañas.
 - No son señales en vivo: el bot no opera estas estrategias.
 - **Cambios de comportamiento respecto de la v1.0:** ninguno (pestaña y ruta nuevas de solo lectura).
+
+## v3: nace Minerva v3 (2026-11-11)
+
+Pedido: el dueño pidió empezar una versión 3 mientras la v2 sigue con sus pruebas. Eligió un **repositorio nuevo y aislado** y la **opción C** (cartera de fuerza relativa entre monedas), y pidió **datos en tiempo real de Bitunix** para entrar apenas se cumplan las condiciones, sin esperar siempre el cierre de la vela.
+
+- **Origen:** clon del `master` de Minerva-v2 en el commit `249ed68` (incluye la pestaña Estudio). El remoto de la v2 queda como `v2` para traer correcciones con `git cherry-pick` o `merge`.
+- **Aislamiento (Fase 0):** proyecto, contenedor e imagen `minerva-v3`, volúmenes `minerva-v3_data` y `minerva-v3_logs`, puerto 8002, tareas `MinervaV3*` (`scripts/register_v3_data_tasks.ps1`), marca `MIGRADO_A_DOCKER_V3.txt`, historial `history/history_v3.db` y captura `history/market_v3.db`. Los candados de la v1 siguen, y se suman los de la v2: `Assert-NotV1Resources` (en `scripts/docker_common.ps1`) rechaza el proyecto `minerva-v2`, el puerto 8001 y cualquier tarea `MinervaV2*`; `docker_support.compose` rechaza el proyecto `minerva-v2`; `start_bot.ps1` y `stop_bot.ps1` rechazan el puerto 8001. Pruebas nuevas en `tests/unit/test_v2_isolation.py`.
+- **WebSocket público de Bitunix verificado** en la documentación oficial (`www.bitunix.com/api-docs/futures/websocket/...`): canales `market_kline_<I>` y `mark_kline_<I>` (vela en curso cada 500 ms), `trade`, `ticker`, `tickers` (con mejor compra y venta), `price` (marca, índice y funding) y `depth_book1/5/15` y `depth_books`; límites de 5 mensajes por segundo y 300 suscripciones por conexión. Sin documentar: intervalo de ping exigido, confirmación de suscripción y marca de cierre de la vela de 1 minuto (hay que medirlos en vivo).
+- **Plan:** `docs/v3/PLAN_V3.md` (borrador para el dueño). Decisión de diseño: las entradas en tiempo real solo disparan al cruzar un nivel conocido antes de que empiece la vela (indicadores con velas cerradas); nunca con indicadores recalculados sobre la vela abierta, que repintan y no se pueden medir en un backtest.
+- **Pendiente del dueño:** crear el repositorio `ProyectoJaviera/Minerva-v3` en GitHub (no se pudo crear desde aquí) y decidir si es público o privado; revisar el universo y los lados de la cartera.
+- **Cambios de comportamiento respecto de la v2:** solo nombres, puerto por defecto (8002) y rutas del historial y la captura. Ninguna estrategia, nivel, riesgo ni esquema cambia todavía.

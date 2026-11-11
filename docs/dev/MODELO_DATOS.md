@@ -258,7 +258,7 @@ Ejemplo: una columna `nota` en `trades`.
   `LAST_PRICE` y `MARK_PRICE` son series distintas.
 - **`asset_universe` es un historial de snapshots**, no una lista: el universo vigente son las filas
   `included = 1` del último `refreshed_at`.
-- **Los scripts y las pruebas usan una base temporal.** El bot de desarrollo corre en el puerto 8001
+- **Los scripts y las pruebas usan una base temporal.** El bot de desarrollo corre en el puerto 8002
   sobre una copia (`scripts/run_dev_server.py`); nunca apuntes `DATABASE_PATH` a `data/`.
 
 ## Lo no verificado

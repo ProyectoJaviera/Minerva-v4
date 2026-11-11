@@ -19,15 +19,19 @@ $script:ComposeFile = Join-Path $script:RepoRoot "docker-compose.yml"
 $script:ComposeVars = Join-Path $script:RepoRoot "docker\compose.vars"
 # OJO: NO llamar a esta variable ProjectName: en el ambito del script seria LA MISMA que el parametro
 # -ProjectName de migrate/rollback (este archivo se carga con punto) y lo pisaria.
-$script:ComposeProject = "minerva-v2"
-$script:MarkerName = "MIGRADO_A_DOCKER_V2.txt"
+$script:ComposeProject = "minerva-v3"
+$script:MarkerName = "MIGRADO_A_DOCKER_V3.txt"
 $script:FourHourCloseHours = @(0, 4, 8, 12, 16, 20)
 
-# --- aislamiento de la v1 ----------------------------------------------------------------------------
-# Esta es la v2: los nombres y el puerto del bot vivo de la v1 estan PROHIBIDOS para cualquier script.
+# --- aislamiento de la v1 y de la v2 -----------------------------------------------------------------
+# Esta es la v3: los nombres y el puerto del bot vivo de la v1 estan PROHIBIDOS para cualquier script,
+# y tambien los de la v2 (proyecto minerva-v2, puerto 8001, tareas MinervaV2*), que sigue midiendo.
 $script:V1ProjectName = "minerva"
 $script:V1Port = 8000
 $script:V1TaskNames = @("MinervaStartBot", "MinervaHealthAlert", "MinervaDailySummary", "MinervaBackup")
+$script:V2ProjectName = "minerva-v2"
+$script:V2Port = 8001
+$script:V2TaskPrefix = "MinervaV2"
 
 # Rechaza (con una excepcion) un proyecto de Compose, un puerto o una tarea programada que sean de la v1.
 # Los scripts que paran, arrancan o mudan un bot la llaman ANTES de hacer nada.
@@ -40,10 +44,19 @@ function Assert-NotV1Resources([string]$Project = "", [int[]]$Ports = @(), [stri
         if ($port -eq $script:V1Port) { $problems += "el puerto $port es el del bot vivo de la v1" }
     }
     if ($Task -and ($script:V1TaskNames -contains $Task)) {
-        $problems += "la tarea programada '$Task' es de la v1 (la v2 usa el prefijo MinervaV2)"
+        $problems += "la tarea programada '$Task' es de la v1 (la v3 usa el prefijo MinervaV3)"
+    }
+    if ($Project -and $Project -eq $script:V2ProjectName) {
+        $problems += "el proyecto de Compose '$Project' es el de la v2"
+    }
+    foreach ($port in $Ports) {
+        if ($port -eq $script:V2Port) { $problems += "el puerto $port es el de la v2" }
+    }
+    if ($Task -and $Task.StartsWith($script:V2TaskPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $problems += "la tarea programada '$Task' es de la v2 (la v3 usa el prefijo MinervaV3)"
     }
     if ($problems.Count -gt 0) {
-        throw ("RECHAZADO: " + ($problems -join "; ") + ". Esta v2 no puede tocar la v1.")
+        throw ("RECHAZADO: " + ($problems -join "; ") + ". Esta v3 no puede tocar la v1 ni la v2.")
     }
 }
 

@@ -6,7 +6,7 @@ import { Unavailable } from "./components/Unavailable";
 
 // Pestana «Estudio» (v2): el estado de la prueba hacia adelante de las estrategias en estudio y el
 // resumen de las rondas de investigacion. Todo es de solo lectura; el servidor calcula la prueba
-// sobre el archivo de historial local (se actualiza cada 6 h con la tarea MinervaV2HistoryUpdate).
+// sobre el archivo de historial local (se actualiza cada 6 h con la tarea MinervaV3HistoryUpdate).
 
 function fmtPf(pf: number | null): string {
   return pf === null ? "-" : pf.toFixed(2);

@@ -58,9 +58,9 @@ no crear a mano el registro oficial del veredicto. Ver [Gate, placebo y veredict
 `NEWS_COLLECTION_ENABLED` y `TELEGRAM_PUSH_ENABLED` en `true`; `LESSONS_MEMORY_ENABLED=false` siempre.
 
 **Invariantes — no romper.**
-- **Rehúsa** arrancar si algo ya escucha en `-Port` (dos procesos sobre la misma base SQLite) y si existe `data/MIGRADO_A_DOCKER_V2.txt` (la base nativa sería una copia
+- **Rehúsa** arrancar si algo ya escucha en `-Port` (dos procesos sobre la misma base SQLite) y si existe `data/MIGRADO_A_DOCKER_V3.txt` (la base nativa sería una copia
   vieja y bifurcaría la medición).
-- **Aislamiento de la v1:** rechaza `-Port 8000` (el puerto del bot vivo de la v1); el puerto por defecto es el 8001. Como solo el 8000 enciende los interruptores, en
+- **Aislamiento de la v1:** rechaza `-Port 8000` (el puerto del bot vivo de la v1); el puerto por defecto es el 8002. Como solo el 8000 enciende los interruptores, en
   la v2 quedan siempre apagados (LLM, Telegram, brazo, noticias y avisos). `stop_bot.ps1` también rechaza el 8000.
 - Los parámetros `-Port`, `-DatabasePath` y `-LogDir` permiten otro puerto y una base temporal.
 
@@ -75,7 +75,7 @@ de este repositorio y este puerto; un padre que no pasa se deja intacto. Al term
 quedó libre (si no, sale con código 1).
 
 **Trampas conocidas.** Es un corte **duro** (`Stop-Process -Force`): Windows no da una señal cooperativa para un proceso sin consola. SQLite en WAL lo tolera (a lo sumo se pierde la última
-escritura). **Nunca** lo uses contra el bot real para probarlo: usa `-Port 8001`.
+escritura). **Nunca** lo uses contra el bot real para probarlo: usa `-Port 8002`.
 
 ### `scripts/migrate_to_docker.ps1` y `scripts/rollback_from_docker.ps1`
 
@@ -84,19 +84,19 @@ escritura). **Nunca** lo uses contra el bot real para probarlo: usa `-Port 8001`
 
 **Invariantes — no romper.**
 - Se niegan a correr fuera de los minutos :10–:40 de una hora UTC que no sea de cierre de vela de 4 h (00, 04, 08, 12, 16, 20): ahí las filas de la medición ya no están en vuelo.
-- Tras la mudanza la base viva está en un volumen de Docker; la marca `data/MIGRADO_A_DOCKER_V2.txt` protege la copia vieja.
+- Tras la mudanza la base viva está en un volumen de Docker; la marca `data/MIGRADO_A_DOCKER_V3.txt` protege la copia vieja.
 - Con `-DryRun` solo hacen comprobaciones sin efectos; los parámetros de ensayo (`-NativePort`, `-DockerPort`, `-ProjectName`, `-EnvFile`…) existen para no tocar el bot real.
 
 **Trampas conocidas.** Solo ASCII y compatibles con Windows PowerShell 5.1 (sin `??`, ternario ni `&&`): lo vigilan las pruebas.
 
-### `scripts/register_v2_data_tasks.ps1`
+### `scripts/register_v3_data_tasks.ps1`
 
 **Responsabilidad.** Registra (o quita con `-Remove`) las cuatro tareas de captura de datos de la v2:
-`MinervaV2OrderBook` (5 min), `MinervaV2Funding` (1 h), `MinervaV2FearGreed` (diaria 02:10) y
-`MinervaV2HistoryUpdate` (6 h, `update_history_file.py --via-copy`), del usuario actual y sin administrador.
+`MinervaV3OrderBook` (5 min), `MinervaV3Funding` (1 h), `MinervaV3FearGreed` (diaria 02:10) y
+`MinervaV3HistoryUpdate` (6 h, `update_history_file.py --via-copy`), del usuario actual y sin administrador.
 
 **Invariantes — no romper.** Habla con el Programador solo por la puerta `$script:SchtasksExe` de `docker_common.ps1`
-(en las pruebas es una trampa) y rechaza nombres sin el prefijo `MinervaV2` o de la v1 (`Assert-NotV1Resources`).
+(en las pruebas es una trampa) y rechaza nombres sin el prefijo `MinervaV3` o de la v1 (`Assert-NotV1Resources`).
 
 **Trampas conocidas.** Una tarea creada con `schtasks` arranca en System32: la acción entra a la raíz con
 `cmd /c cd /d` antes de correr python, y por eso la ruta del repositorio no puede tener espacios.
@@ -336,7 +336,7 @@ con `. (Join-Path $PSScriptRoot "docker_common.ps1")`.
 
 ### `scripts/docker_support.py`
 
-**Responsabilidad.** Soporte para operar con el bot en Docker: la **marca de la mudanza** (`data/MIGRADO_A_DOCKER_V2.txt`) y sacar una copia consistente de la base del volumen.
+**Responsabilidad.** Soporte para operar con el bot en Docker: la **marca de la mudanza** (`data/MIGRADO_A_DOCKER_V3.txt`) y sacar una copia consistente de la base del volumen.
 
 **Funciones y clases clave.**
 - `docker_mode_active()` / `docker_mode_refusal()`, `run_docker()` / `compose()` (nunca usan el shell ni esperan una terminal), `export_db_copy()` (respaldo dentro del contenedor, `docker compose cp` y SHA-256),
@@ -356,7 +356,7 @@ con `. (Join-Path $PSScriptRoot "docker_common.ps1")`.
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_docker_db_script.py`, `tests/unit/test_docker_mode_guards.py`, `tests/unit/test_docker_setup.py`, `tests/unit/test_docker_support.py`, `tests/unit/test_v1_isolation.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_docker_db_script.py`, `tests/unit/test_docker_mode_guards.py`, `tests/unit/test_docker_setup.py`, `tests/unit/test_docker_support.py`, `tests/unit/test_v1_isolation.py`, `tests/unit/test_v2_isolation.py`
 <!-- /hechos:scripts/docker_support.py -->
 
 ### `scripts/download_history.py`
@@ -770,7 +770,7 @@ Solo imprime conteos y fechas. Códigos: 0 identidad única y congelada (o sin f
 
 ### `scripts/run_dev_server.py`
 
-**Responsabilidad.** El servidor de desarrollo en el puerto 8001 contra una **copia temporal** de una base real (`--source-db`).
+**Responsabilidad.** El servidor de desarrollo en el puerto 8002 contra una **copia temporal** de una base real (`--source-db`).
 
 **Funciones y clases clave.**
 - `main()` — copia la base con la API de backup, fija el entorno **antes** de importar `app.*` y lanza uvicorn.
@@ -987,13 +987,13 @@ preregistro nuevo y validación hacia adelante.
 ### `scripts/update_history_file.py`
 
 **Responsabilidad.** Crea o actualiza el archivo de historial de la sección «Indicadores» (`EXPLORER_HISTORY_DB`, por
-defecto `history/history_v2.db`) corriendo `download_history.main()` sobre ese archivo y bajando después las velas de
+defecto `history/history_v3.db`) corriendo `download_history.main()` sobre ese archivo y bajando después las velas de
 `EXTRA_TIMEFRAMES` (15m y 1w).
 
 **Funciones y clases clave.**
 - `check_target()` (valida el destino), `download_extra_timeframes()` (15m y 1w, LAST y MARK, de los símbolos que ya
   tiene el archivo), `replace_with_retries()` y `main()` (fija `DATABASE_PATH` en el archivo; `--only-extra` salta
-  `download_history`; `--via-copy`, el modo de la tarea `MinervaV2HistoryUpdate`, actualiza `<archivo>_next.db` y
+  `download_history`; `--via-copy`, el modo de la tarea `MinervaV3HistoryUpdate`, actualiza `<archivo>_next.db` y
   al final la cambia por el archivo).
 
 **Invariantes — no romper.** Nunca escribe en la base del bot ni dentro de una carpeta `data/`; el destino debe
@@ -1014,7 +1014,7 @@ reintenta y, si no puede, deja la copia para la próxima corrida.
 - **Tablas que lee:** `ohlcv_cache`
 - **Tablas que escribe:** `ohlcv_series_complete`
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_explorer.py`, `tests/unit/test_record_market_data.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_explorer.py`, `tests/unit/test_record_market_data.py`, `tests/unit/test_v2_isolation.py`
 <!-- /hechos:scripts/update_history_file.py -->
 
 ### `scripts/v2_round3.py`
@@ -1130,8 +1130,8 @@ aprobada.
 ### `scripts/record_market_data.py`
 
 **Responsabilidad.** Graba hacia adelante, una foto por llamada, datos sin historial gratis: libro de órdenes de
-Bitunix (50 niveles), funding vigente y Fear & Greed del día, en `history/market_v2.db`. Lo llaman las tareas
-`MinervaV2OrderBook`, `MinervaV2Funding` y `MinervaV2FearGreed` (`scripts/register_v2_data_tasks.ps1`).
+Bitunix (50 niveles), funding vigente y Fear & Greed del día, en `history/market_v3.db`. Lo llaman las tareas
+`MinervaV3OrderBook`, `MinervaV3Funding` y `MinervaV3FearGreed` (`scripts/register_v3_data_tasks.ps1`).
 
 **Funciones y clases clave.**
 - `summarize_depth()` (mejor compra y venta, spread, cantidades y desequilibrio en 5, 20 y 50 niveles, nocional y
@@ -1155,5 +1155,5 @@ almacén de certificados del sistema): con `httpx` a secas falla detrás de la i
 - **Tablas que lee:** `ohlcv_cache`
 - **Tablas que escribe:** `fear_greed`
 - **Tablas que crea o altera:** `fear_greed`
-- **Pruebas que lo importan o citan:** `tests/unit/test_explorer_data_status.py`, `tests/unit/test_record_market_data.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_explorer_data_status.py`, `tests/unit/test_record_market_data.py`, `tests/unit/test_v2_isolation.py`
 <!-- /hechos:scripts/record_market_data.py -->

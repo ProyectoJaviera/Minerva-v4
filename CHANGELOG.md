@@ -7,10 +7,17 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v3: inicio y aislamiento — 2026-11-11
+
+- Repositorio nuevo, nacido de la v2 (commit `249ed68`), con nombres propios (`minerva-v3`, puerto 8002, tareas
+  `MinervaV3*`, `history/history_v3.db`) y candados que rechazan los recursos de la v1 y de la v2.
+- Plan de la v3 en `docs/v3/PLAN_V3.md`: cartera de fuerza relativa entre monedas y datos en tiempo real del
+  WebSocket público de Bitunix.
+
 ## Minerva v2: captura de datos y documentación — 2026-11-11
 
 - `scripts/record_market_data.py` graba hacia adelante el libro de órdenes de Bitunix (50 niveles), el funding vigente y
-  el Fear & Greed en `history/market_v2.db`; `scripts/register_v2_data_tasks.ps1` registra las tareas
+  el Fear & Greed en `history/market_v2.db`; `scripts/register_v3_data_tasks.ps1` registra las tareas
   `MinervaV2OrderBook`, `MinervaV2Funding`, `MinervaV2FearGreed` y `MinervaV2HistoryUpdate`.
 - `scripts/update_history_file.py --via-copy` actualiza el historial en una copia y la cambia al final.
 - Documentación actualizada a la v2: README, índice, arquitectura, guía de instalación, glosario y avisos en los

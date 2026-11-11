@@ -439,7 +439,7 @@ class World:
             return True
 
         delivered = telegram_daily.run(
-            host="127.0.0.1", port=8001, timeout=1.0, db_path=str(self.db_path), token="0:E2E",
+            host="127.0.0.1", port=8002, timeout=1.0, db_path=str(self.db_path), token="0:E2E",
             chat_id="1", fetch_health_fn=lambda host, port, timeout: (health, None),
             send_fn=capture,
         )

@@ -51,9 +51,9 @@
                     <h1 class="modulename">
 <a href="./../scripts.html">scripts</a><wbr>.run_dev_server    </h1>
 
-                        <div class="docstring"><p>Servidor de desarrollo en el puerto 8001 contra una copia temporal de una
+                        <div class="docstring"><p>Servidor de desarrollo en el puerto 8002 contra una copia temporal de una
 base real (pre-Fase 5, seccion 6 del plan aprobado 2026-10-14) -- NUNCA toca
-el bot vivo de la v1 (puerto 8000) ni su base de trabajo. OJO: el 8001 es tambien el puerto por
+el bot vivo de la v1 (puerto 8000) ni su base de trabajo. OJO: el 8002 es tambien el puerto por
 defecto del contenedor de la v2 (docker-compose.yml): no corras los dos a la vez. Reemplaza el
 procedimiento manual que se rehacia a mano en TAREA B/TAREA D (ver
 docs/historial/PROGRESS.md y docs/FASE3_6_LLM.md) por un script reusable.</p>
@@ -77,7 +77,7 @@ token admite un solo consumidor de long-polling; ver <code>app/telegram/runtime.
 <p>Fuerza <code>LLM_LIVE_LABELING_ENABLED=false</code> (y <code>ANTHROPIC_API_KEY=""</code>, como
 refuerzo redundante) SIN IMPORTAR lo que diga el <code>.env</code> real: el <code>.env</code> real
 de hoy tiene ese flag en <code>true</code>. Si este script heredara el entorno real tal
-cual, la instancia de desarrollo en 8001 TAMBIEN llamaria de verdad a la API
+cual, la instancia de desarrollo en 8002 TAMBIEN llamaria de verdad a la API
 de Anthropic en cuanto el scheduler generara una sombra nueva sobre la
 copia -- gasto real, no hipotetico. Este candado de seguridad esta
 codificado, no es una opcion que dependa de acordarse de pasarla.</p>
@@ -132,7 +132,7 @@ noticias y la memoria de lecciones quedan apagados.</p>
 
 <ul>
 <li><strong>source_db:</strong>  base real a copiar (solo se lee, para copiarla).</li>
-<li><strong>port:</strong>  puerto del servidor (8001 por defecto desde la linea de comandos).</li>
+<li><strong>port:</strong>  puerto del servidor (8002 por defecto desde la linea de comandos).</li>
 </ul>
 
 <h6 id="raises">Raises:</h6>

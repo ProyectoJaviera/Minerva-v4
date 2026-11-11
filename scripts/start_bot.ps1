@@ -39,7 +39,7 @@
             Para dejarlas apagadas tambien en el bot real, cambia la linea de $telegramPush.)
 
     AISLAMIENTO DE LA v1: esta es la v2. El puerto 8000 es el del bot vivo de la
-    v1 y este script lo RECHAZA; el valor por defecto es el 8001. Como el unico
+    v1 y este script lo RECHAZA; el valor por defecto es el 8002. Como el unico
     puerto que activaba los interruptores "reales" (arriba, "SOLO con -Port 8000")
     es el 8000, el arranque nativo de la v2 SIEMPRE los deja en false: sin
     etiquetado del LLM, Telegram, brazo ejecutado, noticias ni push. (Los
@@ -47,7 +47,7 @@
     propio bot real, se decida a proposito y no por heredar el de la v1.)
 
     -Port/-DatabasePath/-LogDir: el uso sin argumentos apunta a
-    puerto 8001, data\minerva_estabilidad.db (la de ESTA carpeta, no la de la
+    puerto 8002, data\minerva_estabilidad.db (la de ESTA carpeta, no la de la
     v1) y logs\.
 
     REHUSA arrancar si ya hay algo escuchando en -Port: dos procesos
@@ -55,7 +55,7 @@
     script existe para evitar.
 
     REHUSA tambien arrancar si junto a la base existe la marca
-    MIGRADO_A_DOCKER_V2.txt (Fase 7): el bot corre en Docker y esa base es una
+    MIGRADO_A_DOCKER_V3.txt (Fase 7): el bot corre en Docker y esa base es una
     copia vieja; arrancar el bot nativo sobre ella bifurcaria la medicion.
     Para volver al arranque nativo: scripts\rollback_from_docker.ps1.
 
@@ -80,7 +80,7 @@
 
 .EXAMPLE
     .\scripts\start_bot.ps1
-    Arranca el bot nativo de la v2 en el puerto 8001 contra data\minerva_estabilidad.db.
+    Arranca el bot nativo de la v2 en el puerto 8002 contra data\minerva_estabilidad.db.
 
 .EXAMPLE
     .\scripts\start_bot.ps1 -Port 8002 -DatabasePath "C:\temp\copia.db" -LogDir "C:\temp\logs"
@@ -88,17 +88,23 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 8001,
+    [int]$Port = 8002,
     [string]$DatabasePath = "data/minerva_estabilidad.db",
     [string]$LogDir = "logs"
 )
 
 $ErrorActionPreference = "Stop"
 
-# El puerto 8000 es el del bot vivo de la v1: esta v2 no arranca nada ahi (ni siquiera para probar).
+# El puerto 8000 es el del bot vivo de la v1: esta v3 no arranca nada ahi (ni siquiera para probar).
 if ($Port -eq 8000) {
-    Write-Output ("RECHAZADO: el puerto 8000 es el del bot vivo de la v1; esta v2 no arranca nada " +
-        "en el. Usa otro puerto (por defecto 8001).")
+    Write-Output ("RECHAZADO: el puerto 8000 es el del bot vivo de la v1; esta v3 no arranca nada " +
+        "en el. Usa otro puerto (por defecto 8002).")
+    exit 1
+}
+# El puerto 8001 es el de la v2 (dev server y contenedor), que sigue midiendo: la v3 tampoco lo usa.
+if ($Port -eq 8001) {
+    Write-Output ("RECHAZADO: el puerto 8001 es el de la v2; esta v3 no arranca nada " +
+        "en el. Usa otro puerto (por defecto 8002).")
     exit 1
 }
 $RepoRoot = Split-Path -Parent $PSScriptRoot
@@ -124,7 +130,7 @@ function Write-OpLog([string]$Message) {
 # Fase 7: tras la mudanza a Docker (scripts\migrate_to_docker.ps1) la base de este directorio es una
 # copia VIEJA y la viva esta en el volumen de Docker. Arrancar el bot nativo sobre ella BIFURCARIA la
 # medicion (dos historias distintas de la misma base). La marca la borra scripts\rollback_from_docker.ps1.
-$MigrationMarker = Join-Path (Split-Path -Parent $DatabaseFullPath) "MIGRADO_A_DOCKER_V2.txt"
+$MigrationMarker = Join-Path (Split-Path -Parent $DatabaseFullPath) "MIGRADO_A_DOCKER_V3.txt"
 if (Test-Path -LiteralPath $MigrationMarker -PathType Leaf) {
     Write-OpLog ("RECHAZADO: el bot corre en Docker desde la mudanza (existe $MigrationMarker) y " +
         "$DatabaseFullPath es una copia VIEJA: arrancar el bot nativo bifurcaria la medicion. " +

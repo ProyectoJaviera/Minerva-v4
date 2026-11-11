@@ -8,7 +8,7 @@ qué problema investiga) y sigue por la columna que te corresponda.
 
 > **Esta es la documentación de la versión 2.** La v2 parte de la v1.0 (etiqueta `v1.0` del repositorio Minerva-v1),
 > cuya medición ciega del filtro de IA sigue su curso en ese otro repositorio. Los nombres de la v2 son otros para que no
-> pueda tocar el bot vivo de la v1 (proyecto `minerva-v2`, imagen `minerva-v2:local`, puerto `8001`, tareas `MinervaV2…`;
+> pueda tocar el bot vivo de la v1 (proyecto `minerva-v3`, imagen `minerva-v3:local`, puerto `8002`, tareas `MinervaV3…`;
 > ver el [README](../README.md)). Lo nuevo de la v2 está en [Investigación de la v2](#investigación-de-la-v2); los
 > documentos marcados **(v1)** describen la medición de la v1 y se conservan como referencia: el código que mide sigue
 > en la v2, pero apagado por defecto (`MINERVA_REAL_BOT=false`).
@@ -87,7 +87,7 @@ mientras la medición está en curso. Empieza por [dev/README.md](dev/README.md)
 | [dev/ZONAS_PROTEGIDAS.md](dev/ZONAS_PROTEGIDAS.md) | **Lo más importante:** qué archivos, funciones, tablas y parámetros no se pueden cambiar durante la medición y por qué; qué sí se puede; qué hacer si de verdad hay que cambiar algo; y `scripts/check_measurement_safety.py`, que lo comprueba |
 | [dev/FLUJO_EJECUCION.md](dev/FLUJO_EJECUCION.md) | El arranque paso a paso, cada tarea asíncrona, un cierre de vela de punta a punta, un reinicio y una parada |
 | [dev/MODELO_DATOS.md](dev/MODELO_DATOS.md) | Las tablas: quién las escribe y quién las lee, inmutabilidad, migraciones y cómo agregar una columna o una tabla sin romper una base existente |
-| [dev/ENTORNO_DESARROLLO.md](dev/ENTORNO_DESARROLLO.md) | Preparar el entorno, el bot de desarrollo en el puerto 8001 sobre una copia, depurar, logs, pruebas por partes y cómo se genera esta documentación |
+| [dev/ENTORNO_DESARROLLO.md](dev/ENTORNO_DESARROLLO.md) | Preparar el entorno, el bot de desarrollo en el puerto 8002 sobre una copia, depurar, logs, pruebas por partes y cómo se genera esta documentación |
 | [dev/PRUEBAS.md](dev/PRUEBAS.md) | Organización de las pruebas, fixtures y falsos, cómo escribir una nueva y qué protege cada prueba guardiana |
 | [dev/RECETAS.md](dev/RECETAS.md) | Paso a paso: estrategia, indicador, comando de Telegram, endpoint, pestaña del dashboard, variable de configuración, fuente de noticias, parámetro de riesgo, y desplegar al contenedor |
 | [dev/modulos/](dev/README.md#mapa-del-código) | Una guía por paquete de `app/`, una para `scripts/` y una para `frontend/src`, con cada archivo |

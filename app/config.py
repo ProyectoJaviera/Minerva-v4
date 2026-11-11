@@ -247,11 +247,11 @@ class Settings(BaseSettings):
     # bot, que se abre en solo lectura. Se crea con `scripts/download_history.py` y
     # `DATABASE_PATH` apuntando a esta ruta (ver docs/v2/SECCION_INDICADORES.md).
     explorer_history_db: str = Field(
-        default="./history/history_v2.db", alias="EXPLORER_HISTORY_DB"
+        default="./history/history_v3.db", alias="EXPLORER_HISTORY_DB"
     )
     # v2: archivo SQLite de los datos capturados hacia adelante (libro de ordenes, funding, Fear &
     # Greed) por `scripts/record_market_data.py`. El dashboard solo lo lee.
-    market_data_db: str = Field(default="./history/market_v2.db", alias="MARKET_DATA_DB")
+    market_data_db: str = Field(default="./history/market_v3.db", alias="MARKET_DATA_DB")
 
     # --- Claude / Anthropic (usado desde Fase 3.6) ---
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")

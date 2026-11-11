@@ -618,7 +618,7 @@ del bot. Nunca calcula dentro del bucle de eventos del servidor (tarda alrededor
 la vez (`_lock`).
 
 **Trampas conocidas.** La caché vive en memoria (`_state`): se pierde al reiniciar y se recalcula solo cuando cambia el
-archivo (la tarea `MinervaV2HistoryUpdate`, cada 6 h). Mientras recalcula, devuelve el resultado anterior junto con
+archivo (la tarea `MinervaV3HistoryUpdate`, cada 6 h). Mientras recalcula, devuelve el resultado anterior junto con
 `computing`. Los tests deben vaciar `_state` entre casos.
 
 <!-- hechos:app/api/routes/study.py -->
