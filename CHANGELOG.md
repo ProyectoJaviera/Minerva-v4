@@ -7,6 +7,13 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v3: backtest en tiempo real — 2026-11-11
+
+- Repetición minuto a minuto (`app/replay/`): la estrategia puede entrar dentro de la vela, con stop, límite o a
+  mercado, y mirar la vela en curso; salidas con la lectura menos favorable dentro del minuto.
+- Velas de 1 minuto de Bitunix (desde enero de 2023) en `history/minute_v3.db` con `scripts/download_minutes.py`;
+  corrida de ejemplo con `scripts/replay_backtest.py`. Ver `docs/v3/BACKTEST_TIEMPO_REAL.md`.
+
 ## Minerva v3: inicio y aislamiento — 2026-11-11
 
 - Repositorio nuevo, nacido de la v2 (commit `249ed68`), con nombres propios (`minerva-v3`, puerto 8002, tareas

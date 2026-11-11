@@ -77,7 +77,7 @@ sus pruebas. Los indicadores que ve el LLM (`indicators_by_strategy` en sus
 
 - **Referencia pdoc:** [`api/app/indicators/engine.html`](../api/app/indicators/engine.html)
 - **Importa (internos):** ninguno
-- **Lo importan:** `app.strategies.donchian_breakout`, `app.strategies.ema_cross`, `app.strategies.mean_reversion_rsi_bb`, `app.strategies.trend_atr_stop`
+- **Lo importan:** `app.replay.examples`, `app.strategies.donchian_breakout`, `app.strategies.ema_cross`, `app.strategies.mean_reversion_rsi_bb`, `app.strategies.trend_atr_stop`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno

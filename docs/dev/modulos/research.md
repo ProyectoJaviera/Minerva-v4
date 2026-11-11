@@ -156,7 +156,7 @@ su fecha de inicio, junto con su control de dirección al azar.
 
 - **Referencia pdoc:** [`api/app/research/forward.html`](../api/app/research/forward.html)
 - **Importa (internos):** `app.backtesting.engine`, `app.backtesting.metrics`, `app.config`, `app.market.ohlcv_history`, `app.persistence.database`, `app.persistence.repositories.ohlcv_repo`, `app.research.round3`, `app.research.round4`, `app.strategies.base`
-- **Lo importan:** `app.api.routes.study`, `scripts.v2_forward_test`
+- **Lo importan:** `app.api.routes.study`, `scripts.download_minutes`, `scripts.replay_backtest`, `scripts.v2_forward_test`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** `ohlcv_cache`
 - **Tablas que escribe:** ninguno

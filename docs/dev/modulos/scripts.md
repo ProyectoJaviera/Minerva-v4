@@ -1157,3 +1157,52 @@ almacén de certificados del sistema): con `httpx` a secas falla detrás de la i
 - **Tablas que crea o altera:** `fear_greed`
 - **Pruebas que lo importan o citan:** `tests/unit/test_explorer_data_status.py`, `tests/unit/test_record_market_data.py`, `tests/unit/test_v2_isolation.py`
 <!-- /hechos:scripts/record_market_data.py -->
+
+### `scripts/download_minutes.py`
+
+**Responsabilidad.** Baja o completa los minutos del universo en `history/minute_v3.db`
+(cuatro monedas a la vez, tope de 8 pedidos por segundo). Rechaza los archivos de la v1 y de la v2.
+
+**Funciones y clases clave.** `run()`, `refuse_foreign_db()` y `parse_args()`.
+
+**Invariantes — no romper.** Nunca escribe en archivos de la v1 o la v2.
+
+**Trampas conocidas.** La primera corrida de todo el universo tarda horas; las siguientes son incrementales.
+
+<!-- hechos:scripts/download_minutes.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/scripts/download_minutes.html`](../api/scripts/download_minutes.html)
+- **Importa (internos):** `app.config`, `app.market.bitunix_rest`, `app.replay.download`, `app.replay.minute_store`, `app.research.forward`
+- **Lo importan:** `scripts.replay_backtest`
+- **Configuración que lee:** `BITUNIX_REST_BASE_URL`
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** `tests/unit/test_replay_download.py`
+<!-- /hechos:scripts/download_minutes.py -->
+
+### `scripts/replay_backtest.py`
+
+**Responsabilidad.** Corre una estrategia de ejemplo con el motor de repetición y
+imprime operaciones, PF, PnL neto y los contadores del motor por moneda. Lee el archivo de minutos en solo lectura; el
+funding todavía no se incluye.
+
+**Funciones y clases clave.** `main()` y `parse_args()`.
+
+**Invariantes — no romper.** Solo lectura y sin red.
+
+**Trampas conocidas.** Las estrategias son ejemplos sin preregistro.
+
+<!-- hechos:scripts/replay_backtest.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/scripts/replay_backtest.html`](../api/scripts/replay_backtest.html)
+- **Importa (internos):** `app.backtesting.metrics`, `app.config`, `app.replay.candles`, `app.replay.engine`, `app.replay.examples`, `app.replay.minute_store`, `app.research.forward`, `scripts.download_minutes`
+- **Lo importan:** ninguno
+- **Configuración que lee:** `BACKTEST_INITIAL_CAPITAL`
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** ninguno
+<!-- /hechos:scripts/replay_backtest.py -->

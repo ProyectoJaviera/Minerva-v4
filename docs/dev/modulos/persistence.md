@@ -136,12 +136,12 @@ FastAPI no protegería nada).
 
 - **Referencia pdoc:** [`api/app/persistence/models.html`](../api/app/persistence/models.html)
 - **Importa (internos):** ninguno
-- **Lo importan:** 43 módulos (api 5, backtesting 4, execution 4, llm 3, market 3, memory 1, persistence 8, telegram 2, trading 13)
+- **Lo importan:** 45 módulos (api 5, backtesting 4, execution 4, llm 3, market 3, memory 1, persistence 8, replay 2, telegram 2, trading 13)
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** 64 archivos (e2e 10, unit 54)
+- **Pruebas que lo importan o citan:** 65 archivos (e2e 10, unit 55)
 <!-- /hechos:app/persistence/models.py -->
 
 ### `app/persistence/repositories/__init__.py`

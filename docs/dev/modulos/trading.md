@@ -759,7 +759,7 @@ comparación `>` descartaba la señal al azar según el precio.
 
 - **Referencia pdoc:** [`api/app/trading/sl_calc.html`](../api/app/trading/sl_calc.html)
 - **Importa (internos):** `app.config`, `app.strategies.base`
-- **Lo importan:** `app.backtesting.engine`, `app.trading.levels`, `app.trading.signal_generator`
+- **Lo importan:** `app.backtesting.engine`, `app.replay.engine`, `app.trading.levels`, `app.trading.signal_generator`
 - **Configuración que lee:** `BACKTEST_FALLBACK_SL_PCT`, `BACKTEST_FALLBACK_TP_PCT`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -787,7 +787,7 @@ ambos.
 
 - **Referencia pdoc:** [`api/app/trading/slippage.html`](../api/app/trading/slippage.html)
 - **Importa (internos):** ninguno
-- **Lo importan:** `app.backtesting.engine`, `app.execution.paper_backend`, `app.trading.fills`, `app.trading.shadow_book`
+- **Lo importan:** `app.backtesting.engine`, `app.execution.paper_backend`, `app.replay.engine`, `app.trading.fills`, `app.trading.shadow_book`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno

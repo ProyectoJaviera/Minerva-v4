@@ -80,6 +80,7 @@ docker/         healthcheck, versiones exactas de la imagen y variables de Compo
 | `app/execution/` | la cuenta paper y las fórmulas de PnL | [execution](modulos/execution.md) |
 | `app/backtesting/` | el backtest histórico, offline | [backtesting](modulos/backtesting.md) |
 | `app/research/` | la exploración de la v2: combinaciones de gatillo y filtros de los indicadores | [research](modulos/research.md) |
+| `app/replay/` | el backtest en tiempo real de la v3: repetición minuto a minuto con las velas de 1 minuto | [replay](modulos/replay.md) |
 | `app/explorer/` | la sección «Indicadores» de la v2: backtest exploratorio a pedido sobre el archivo de historial local | [explorer](modulos/explorer.md) |
 | `app/persistence/` | una conexión, el esquema, las migraciones y un repositorio por grupo de tablas | [persistence](modulos/persistence.md) |
 | `app/api/` | la API HTTP: lectura de estado y tres controles | [api](modulos/api.md) |
@@ -105,6 +106,7 @@ flowchart LR
     market["market<br/>11 archivos"]
     memory["memory<br/>10 archivos"]
     news["news<br/>11 archivos"]
+    replay["replay<br/>6 archivos"]
     research["research<br/>6 archivos"]
     strategies["strategies<br/>9 archivos"]
     telegram["telegram<br/>8 archivos"]
@@ -125,6 +127,7 @@ flowchart LR
     llm -->|3| memory
     market -->|9| core
     news -->|4| core
+    replay -->|3| backtesting
     research -->|6| candidates
     research -->|6| indicators
     research -->|4| strategies
@@ -144,24 +147,25 @@ El diagrama muestra solo las flechas con 3 o más imports; no dibuja las que lle
 | Paquete | Archivos | Líneas | Importa de (imports) | Lo importan |
 |---|---:|---:|---|---|
 | `api` | 22 | 2503 | persistence 36, trading 16, config 13, core 8, news 7, explorer 4, llm 4, market 3, memory 3, research 2, telegram 2 | main, scripts, telegram |
-| `backtesting` | 7 | 2143 | persistence 9, strategies 3, trading 3, config 2, core 2, market 2, execution 1 | explorer, research, scripts, trading |
+| `backtesting` | 7 | 2143 | persistence 9, strategies 3, trading 3, config 2, core 2, market 2, execution 1 | explorer, replay, research, scripts, trading |
 | `candidates` | 5 | 610 | indicators 5, strategies 4 | explorer, research, scripts |
-| `config` | 1 | 432 | ninguno | api, backtesting, core, execution, explorer, llm, main, market, memory, news, research, scripts, telegram, trading |
+| `config` | 1 | 432 | ninguno | api, backtesting, core, execution, explorer, llm, main, market, memory, news, replay, research, scripts, telegram, trading |
 | `core` | 5 | 593 | trading 5, persistence 4, config 2, market 2, execution 1 | api, backtesting, execution, llm, main, market, memory, news, scripts, telegram, trading |
-| `execution` | 5 | 666 | persistence 7, trading 5, config 1, core 1, market 1 | backtesting, core, main, trading |
+| `execution` | 5 | 666 | persistence 7, trading 5, config 1, core 1, market 1 | backtesting, core, main, replay, trading |
 | `explorer` | 4 | 1067 | backtesting 2, candidates 2, persistence 2, research 2, config 1, indicators 1, market 1, strategies 1 | api, scripts |
-| `indicators` | 7 | 1146 | ninguno | candidates, explorer, research, scripts, strategies |
+| `indicators` | 7 | 1146 | ninguno | candidates, explorer, replay, research, scripts, strategies |
 | `llm` | 9 | 1478 | persistence 16, config 5, memory 3, core 1, market 1, news 1 | api, scripts, telegram, trading |
 | `main` | 2 | 282 | api 18, market 4, trading 4, core 3, telegram 3, config 1, execution 1, memory 1, news 1, persistence 1 | ninguno |
 | `market` | 11 | 1908 | persistence 13, core 9, config 1 | api, backtesting, core, execution, explorer, llm, main, research, scripts, telegram, trading |
 | `memory` | 10 | 1252 | persistence 20, config 3, core 2, news 1, trading 1 | api, llm, main, scripts |
 | `news` | 11 | 1703 | persistence 11, core 4, config 3 | api, llm, main, memory, scripts |
-| `persistence` | 22 | 5016 | ninguno | api, backtesting, core, execution, explorer, llm, main, market, memory, news, research, scripts, telegram, trading |
+| `persistence` | 22 | 5016 | ninguno | api, backtesting, core, execution, explorer, llm, main, market, memory, news, replay, research, scripts, telegram, trading |
+| `replay` | 6 | 1278 | backtesting 3, persistence 2, trading 2, config 1, execution 1, indicators 1, strategies 1 | scripts |
 | `research` | 6 | 1353 | candidates 6, indicators 6, strategies 4, backtesting 2, persistence 2, config 1, market 1 | api, explorer, scripts |
-| `scripts` | 41 | 10766 | persistence 31, config 28, trading 26, market 17, backtesting 9, core 8, strategies 7, llm 6, research 6, indicators 4, news 3, memory 2, api 1, candidates 1, explorer 1 | ninguno |
-| `strategies` | 9 | 807 | indicators 4 | backtesting, candidates, explorer, research, scripts, trading |
+| `scripts` | 43 | 11008 | persistence 31, config 30, trading 26, market 18, backtesting 10, core 8, research 8, strategies 7, llm 6, replay 6, indicators 4, news 3, memory 2, api 1, candidates 1, explorer 1 | ninguno |
+| `strategies` | 9 | 807 | indicators 4 | backtesting, candidates, explorer, replay, research, scripts, trading |
 | `telegram` | 8 | 1903 | persistence 12, trading 7, core 5, config 4, market 2, api 1, llm 1 | api, main |
-| `trading` | 23 | 7441 | persistence 57, config 9, market 8, core 6, execution 5, llm 5, backtesting 4, strategies 4 | api, backtesting, core, execution, main, memory, scripts, telegram |
+| `trading` | 23 | 7441 | persistence 57, config 9, market 8, core 6, execution 5, llm 5, backtesting 4, strategies 4 | api, backtesting, core, execution, main, memory, replay, scripts, telegram |
 <!-- /grafo-paquetes -->
 
 Dos cosas que conviene saber al leer el grafo:

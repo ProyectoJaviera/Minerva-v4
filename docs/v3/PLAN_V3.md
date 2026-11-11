@@ -64,32 +64,28 @@ conexión y repetirlo puede bloquear la IP) y **300 suscripciones por conexión*
 vivo antes de depender de ellos): intervalo de ping exigido, confirmación de suscripción, si la vela de 1 minuto trae
 una marca de cierre y la frecuencia de `trade` y `depth`.
 
-### Qué significa «entrar sin esperar el cierre de la vela»
+### Backtest en tiempo real
 
-Hay dos formas, y solo una es honesta:
-- **Válida:** el nivel de entrada se conoce *antes* de que empiece la vela (un nivel del rebalanceo, un máximo
-  previo, una banda calculada con velas cerradas) y se entra cuando el precio en vivo lo cruza. El backtest puede
-  reproducirlo sin trampa con velas de 1 minuto.
-- **Peligrosa:** recalcular un indicador con la vela todavía abierta y entrar cuando «se cumple». Esa señal puede
-  desaparecer antes del cierre (repintado) y ningún backtest con velas cerradas la reproduce: lo que se mide no
-  sería lo que se opera.
-
-La v3 usa solo la primera: indicadores con velas cerradas, y disparo en tiempo real cuando el precio cruza un nivel
-ya conocido. Para la cartera semanal, el tiempo real sirve sobre todo para **ejecutar el rebalanceo al instante con
-el precio vivo** (en vez de la apertura de la vela siguiente), llenar órdenes límite con el libro real y vigilar los
-stops tick a tick.
+El dueño pidió (2026-11-11) que la v3 pueda hacer backtest con el precio en tiempo real, sin esperar
+los cierres de vela, y que sea su foco. Está en [BACKTEST_TIEMPO_REAL.md](BACKTEST_TIEMPO_REAL.md):
+la historia se recorre minuto a minuto con las velas de 1 minuto de Bitunix (gratis desde enero de
+2023), la estrategia puede decidir dentro de la vela (también mirando la vela abierta, porque solo
+ve lo que se sabía en cada minuto) y el motor elige siempre la lectura menos favorable dentro del
+minuto.
 
 ## 5. Fases
 
 1. **Fase 0, aislamiento (hecha):** nombres propios, puerto 8002, candados contra la v1 y la v2.
-2. **Fase 1, feed en tiempo real:** cliente WebSocket multicanal (sobre `app/market/bitunix_ws.py`), con
+2. **Fase 1, backtest en tiempo real (hecha la base):** archivo de minutos, descarga incremental y
+   motor de repetición minuto a minuto (`app/replay/`), con pruebas y ejemplos.
+3. **Fase 1b, feed en tiempo real:** cliente WebSocket multicanal (sobre `app/market/bitunix_ws.py`), con
    reconexión, salud por canal y bloqueo de nuevas entradas si el feed está viejo; velas de 1 minuto armadas
    localmente y comparadas con las de REST; grabación opcional de `trade` y `tickers`.
-3. **Fase 2, motor de cartera en backtest:** ranking, pesos, rebalanceo, costos y funding; simulación de las
-   entradas con velas de 1 minuto; exploración solo en IS para elegir la variante.
-4. **Fase 3, preregistro:** reglas, universo, criterios y control congelados en un commit propio, con la
+4. **Fase 2, motor de cartera en backtest:** ranking, pesos, rebalanceo, costos y funding; sobre el motor de
+   repetición minuto a minuto; exploración solo en IS para elegir la variante.
+5. **Fase 3, preregistro:** reglas, universo, criterios y control congelados en un commit propio, con la
    aprobación del dueño.
-5. **Fase 4, paper hacia adelante en tiempo real:** el bot de la v3 opera la cartera congelada con el feed vivo
+6. **Fase 4, paper hacia adelante en tiempo real:** el bot de la v3 opera la cartera congelada con el feed vivo
    desde la fecha del preregistro, con una sola revisión al llegar al tamaño de muestra fijado.
 
 ## 6. Pendientes del dueño
