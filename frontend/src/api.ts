@@ -868,3 +868,162 @@ export function useStudyForward() {
     refetchInterval: (query) => (query.state.data?.status === "computing" ? 10_000 : false),
   });
 }
+
+// --- Pestana «En vivo» (v3): pruebas de paper hacia adelante con el precio en tiempo real ------
+
+export interface LiveOptions {
+  enabled: boolean;
+  indicators: { id: string; label: string; kind: "estado" | "evento" }[];
+  exits: { id: string; label: string }[];
+  timeframes: string[];
+  modes: string[];
+  default_symbols: string[];
+  max_symbols: number;
+  max_window: number;
+  default_window: number;
+  eval_seconds: { min: number; max: number; default: number };
+}
+
+export interface LiveConfig {
+  name: string;
+  symbols: string[];
+  timeframe: string;
+  indicators: string[];
+  mode: "close" | "intrabar";
+  exit_name: string;
+  pct_exit: (number | null)[] | null;
+  window: number;
+  min_agree: number | null;
+  eval_seconds: number;
+}
+
+export interface LiveSummary {
+  trades: number;
+  wins: number;
+  winrate: number | null;
+  pf: number | "inf" | null;
+  net: number;
+  fees: number;
+  avg_entry_delay_ms: number | null;
+}
+
+export interface LiveTestRow {
+  id: number;
+  status: "active" | "stopped";
+  created_at_ms: number;
+  stopped_at_ms: number | null;
+  config: LiveConfig;
+  summary: LiveSummary;
+  open_positions: number;
+}
+
+export interface LiveTests {
+  enabled: boolean;
+  runner: {
+    alive: boolean;
+    last_beat_ms: number | null;
+    detail: string | null;
+    // interruptor del dashboard: si el bot de pruebas debe estar encendido
+    bot_on: boolean;
+    switch_changed_ms: number | null;
+  };
+  tests: LiveTestRow[];
+}
+
+export interface LiveTrade {
+  symbol: string;
+  side: string;
+  entry_time_ms: number;
+  exit_time_ms: number;
+  entry_price: number;
+  exit_price: number;
+  pnl_net_usdt: number;
+  close_reason: string;
+  signal_time_ms: number;
+  decision_price: number;
+}
+
+export interface LivePosition {
+  symbol: string;
+  side: string;
+  entry_time_ms: number;
+  entry_price: number;
+  stop: number;
+  tp: number | null;
+  trailing: number | null;
+}
+
+export interface LiveTestDetail extends Omit<LiveTestRow, "open_positions"> {
+  positions: LivePosition[];
+  trades: LiveTrade[];
+  events: { ts_ms: number; symbol: string | null; kind: string; detail: string }[];
+}
+
+export interface LiveCreateBody {
+  name: string;
+  symbols: string[];
+  timeframe: string;
+  indicators: string[];
+  mode: string;
+  exit_name: string;
+  sl_pct?: number | null;
+  tp_pct?: number | null;
+  trail_pct?: number | null;
+  window: number;
+  min_agree: number | null;
+  eval_seconds: number;
+}
+
+export function useLiveOptions() {
+  return useQuery({
+    queryKey: ["live-options"],
+    queryFn: () => apiFetch<LiveOptions>("/api/live/options"),
+  });
+}
+
+export function useLiveTests() {
+  return useQuery({
+    queryKey: ["live-tests"],
+    queryFn: () => apiFetch<LiveTests>("/api/live/tests"),
+    refetchInterval: 15_000,
+  });
+}
+
+export function useLiveTest(id: number | null) {
+  return useQuery({
+    queryKey: ["live-test", id],
+    queryFn: () => apiFetch<LiveTestDetail>(`/api/live/tests/${id}`),
+    enabled: id !== null,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useCreateLiveTest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: LiveCreateBody) => apiPost<{ id: number; name: string }>("/api/live/tests", body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["live-tests"] }),
+  });
+}
+
+// Enciende o apaga el bot de pruebas en vivo. Apagar pide la palabra APAGAR (el servidor la exige).
+export function useLiveBotSwitch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ on, confirm }: { on: boolean; confirm?: string }) =>
+      apiPost<{ bot_on: boolean; enabled: boolean }>("/api/live/bot", { on, confirm: confirm ?? "" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["live-tests"] }),
+  });
+}
+
+export function useStopLiveTest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      apiPost<{ id: number; stopped: boolean }>(`/api/live/tests/${id}/stop`, { confirm: "DETENER" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["live-tests"] });
+      queryClient.invalidateQueries({ queryKey: ["live-test"] });
+    },
+  });
+}

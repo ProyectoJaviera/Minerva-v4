@@ -252,6 +252,15 @@ class Settings(BaseSettings):
     # v2: archivo SQLite de los datos capturados hacia adelante (libro de ordenes, funding, Fear &
     # Greed) por `scripts/record_market_data.py`. El dashboard solo lo lee.
     market_data_db: str = Field(default="./history/market_v3.db", alias="MARKET_DATA_DB")
+    # v3: pruebas en vivo (paper hacia adelante con el WebSocket publico, ver
+    # docs/v3/PRUEBAS_EN_VIVO.md). APAGADAS por defecto: el contenedor de la v3 las enciende en
+    # docker-compose.yml. Solo datos publicos; nunca ordenes reales.
+    live_tests_enabled: bool = Field(default=False, alias="LIVE_TESTS_ENABLED")
+    live_tests_db: str = Field(default="./history/live_v3.db", alias="LIVE_TESTS_DB")
+    live_ticks_db: str = Field(default="./history/ticks_v3.db", alias="LIVE_TICKS_DB")
+    live_record_ticks: bool = Field(default=True, alias="LIVE_RECORD_TICKS")
+    live_max_evals_per_second: int = Field(default=4, ge=1, le=50,
+                                           alias="LIVE_MAX_EVALS_PER_SECOND")
 
     # --- Claude / Anthropic (usado desde Fase 3.6) ---
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")

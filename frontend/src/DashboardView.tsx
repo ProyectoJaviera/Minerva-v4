@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AccountTab } from "./AccountTab";
 import { ArmTab } from "./ArmTab";
 import { IndicatorsTab } from "./IndicatorsTab";
+import { LiveTab } from "./LiveTab";
 import { RiskTab } from "./RiskTab";
 import { StudyTab } from "./StudyTab";
 import { SummaryTab } from "./SummaryTab";
@@ -23,6 +24,8 @@ const TABS: TabDef[] = [
   { id: "indicators", label: "Indicadores" },
   // v2: prueba hacia adelante de las estrategias en estudio y resumen de las rondas.
   { id: "study", label: "Estudio" },
+  // v3: pruebas de paper hacia adelante con el precio en tiempo real.
+  { id: "live", label: "En vivo" },
 ];
 
 function ActiveTab({ id }: { id: string }) {
@@ -39,6 +42,8 @@ function ActiveTab({ id }: { id: string }) {
       return <IndicatorsTab />;
     case "study":
       return <StudyTab />;
+    case "live":
+      return <LiveTab />;
     default:
       return <SummaryTab />;
   }

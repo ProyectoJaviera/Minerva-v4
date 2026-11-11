@@ -7,6 +7,12 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v3: pruebas en vivo dentro de la app — 2026-11-11
+
+- El corredor de las pruebas en vivo arranca dentro del contenedor `minerva-v3`; pestaña «En vivo» del dashboard
+  para crear, ver y detener pruebas; topes de CPU y memoria del contenedor.
+- Guía para instalar la v3 en el netbook al lado de la v1: `docs/v3/NETBOOK_V3.md`.
+
 ## Minerva v3: pruebas en vivo configurables — 2026-11-11
 
 - `scripts/live_tests.py`: pruebas de paper trading hacia adelante con el precio en tiempo real de Bitunix. Se eligen

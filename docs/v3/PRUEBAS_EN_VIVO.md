@@ -23,20 +23,32 @@ Nunca envía órdenes reales.
 
 ## 2. Cómo se usa
 
+**Dentro de Minerva (lo normal).** El corredor vive dentro de la app de la v3: en el contenedor `minerva-v3` arranca
+solo (`MINERVA_LIVE_TESTS`, encendido por defecto) y vuelve solo tras un reinicio. Las pruebas se crean, se miran y se
+detienen en la pestaña **«En vivo»** del dashboard. Está pensado para correr en el netbook, al lado de la v1 y sin
+tocarla: la instalación la hace el dueño con [NETBOOK_V3.md](NETBOOK_V3.md).
+
+**Encender y apagar el bot.** Arriba de la pestaña hay un indicador del bot (verde «Bot activo», gris «Bot
+apagado», rojo «Bot sin respuesta» si no late hace más de un minuto) y un botón para apagarlo o encenderlo. Apagar
+pide escribir `APAGAR`: el bot cierra todas las posiciones abiertas de todas las pruebas con el último precio, deja
+de escuchar el mercado (cierra el WebSocket) y solo late. Encender no pide confirmación: recarga las velas desde REST
+y vuelve a operar las pruebas activas. El estado se guarda en el archivo de pruebas, así que sobrevive a un reinicio
+del contenedor. Las horas apagado no se operan.
+
+**Desde la línea de comandos** (lo mismo, sin dashboard):
+
 ```bash
 python scripts/live_tests.py add --name "RF + EMA 15m" --timeframe 15m --indicators rf ema --mode intrabar
-python scripts/live_tests.py run
 python scripts/live_tests.py report
 python scripts/live_tests.py stop 1
+python scripts/live_tests.py run
 ```
 
-- `run` es el proceso que queda corriendo (una ventana de PowerShell abierta; `Ctrl+C` sale).
-  Atiende todas las pruebas activas a la vez.
-- `add`, `list`, `report` y `stop` se pueden usar con `run` andando: el corredor ve las pruebas
-  nuevas y las detenidas en unos 10 segundos.
-- `report` muestra por prueba: operaciones, PF, % de ganadoras, PnL neto, posiciones abiertas, las
-  últimas operaciones y los últimos eventos (señales, entradas, rechazos), y si el corredor está
-  andando.
+- `run` es un corredor suelto (para un PC sin Docker). **No lo uses donde ya corre el contenedor**: serían dos
+  corredores sobre las mismas pruebas.
+- `add`, `list`, `report` y `stop` solo tocan el archivo de pruebas; el corredor ve los cambios en unos 10 segundos.
+- `report` muestra por prueba: operaciones, PF, % de ganadoras, PnL neto, posiciones abiertas, las últimas operaciones
+  y los últimos eventos (señales, entradas, rechazos), y si el corredor está andando.
 
 ## 3. Cómo opera
 
@@ -61,8 +73,11 @@ python scripts/live_tests.py stop 1
 - **Reinicios:** las posiciones abiertas se guardan; al volver, el primer tick decide si el SL saltó
   durante la caída (y se sale a ese precio, no al del SL).
 - **Detener una prueba** cierra sus posiciones con el último precio (motivo `MANUAL`).
-- **Aislamiento:** archivos propios (`history/live_v3.db` y `history/ticks_v3.db`); los comandos
-  rechazan archivos de la v1 y de la v2.
+- **Aislamiento:** archivos propios (`history/live_v3.db` y `history/ticks_v3.db`; en el contenedor, en el volumen
+  `minerva-v3_data`); los comandos rechazan archivos de la v1 y de la v2.
+- **Equipo chico:** las evaluaciones de indicadores van en cola, en un hilo aparte y con un tope por segundo
+  (`LIVE_MAX_EVALS_PER_SECOND`); el contenedor tiene tope de CPU y memoria para no quitarle recursos a la v1 en el
+  netbook.
 
 ## 5. Grabación segundo a segundo
 
@@ -74,7 +89,7 @@ estrategia tick a tick sobre lo grabado. `run --no-ticks` no graba.
 
 ## 6. Límites honestos
 
-- **Solo cuenta mientras el corredor está andando.** Si el PC se apaga, esas horas no se operan.
+- **Solo cuenta mientras el corredor está andando.** Si el equipo se apaga, esas horas no se operan.
 - **No es una ronda preregistrada.** Si se crean muchas pruebas y se mira solo la que ganó, es el
   mismo sobreajuste de siempre, hecho hacia adelante. Para decidir algo en serio: fijar de antemano
   cuántas operaciones se esperan y compararla con un control al azar (pendiente).
@@ -86,7 +101,6 @@ estrategia tick a tick sobre lo grabado. `run --no-ticks` no graba.
 
 ## 7. Lo que sigue
 
-- Una pestaña del dashboard para crear, ver y detener las pruebas sin la línea de comandos.
-- Una tarea programada `MinervaV3LiveTests` para que el corredor arranque solo con el PC.
 - El control al azar por prueba y un criterio de revisión fijado al crearla.
-- Repetición tick a tick sobre `history/ticks_v3.db`.
+- Repetición tick a tick sobre los ticks grabados.
+- El LLM como filtro en el momento de la señal, con su demora medida (después del veredicto de la v1).

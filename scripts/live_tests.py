@@ -137,27 +137,6 @@ def cmd_add(args: argparse.Namespace) -> int:
     return 0
 
 
-def summarize(trades: list) -> dict:
-    """Resumen de las operaciones cerradas de una prueba.
-
-    Args:
-        trades: operaciones (`ClosedTrade`).
-
-    Returns:
-        Un diccionario con `trades`, `wins`, `winrate`, `pf` (`None` sin perdidas ni ganancias,
-        `inf` sin perdidas), `net` y `fees`.
-    """
-    gains = sum(t.pnl_net_usdt for t in trades if t.pnl_net_usdt > 0)
-    losses = -sum(t.pnl_net_usdt for t in trades if t.pnl_net_usdt < 0)
-    wins = sum(1 for t in trades if t.pnl_net_usdt > 0)
-    pf = None if not trades or (gains == 0 and losses == 0) else (
-        float("inf") if losses == 0 else gains / losses)
-    return {"trades": len(trades), "wins": wins,
-            "winrate": wins / len(trades) if trades else None, "pf": pf,
-            "net": sum(t.pnl_net_usdt for t in trades),
-            "fees": sum(t.fee_entry_usdt + t.fee_exit_usdt for t in trades)}
-
-
 def cmd_list_or_report(args: argparse.Namespace, detailed: bool) -> int:
     """Imprime las pruebas y, con `detailed`, sus resultados y ultimos eventos.
 
@@ -171,6 +150,7 @@ def cmd_list_or_report(args: argparse.Namespace, detailed: bool) -> int:
     Efectos:
         Lee el archivo de pruebas (solo lectura).
     """
+    from app.live.report import summarize
     from app.live.store import LiveStore
 
     if not args.db.is_file():

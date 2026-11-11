@@ -26,6 +26,7 @@ from app.api.routes import (
     control,
     explorer,
     health,
+    live,
     llm_decisions,
     measurement,
     memory,
@@ -43,6 +44,7 @@ from app.core.heartbeat import Heartbeat
 from app.core.logging import get_logger, setup_logging, shutdown_logging
 from app.core.scheduler import Scheduler
 from app.execution.paper_backend import PaperBackend
+from app.live.service import maybe_start_live_tests
 from app.market.bitunix_rest import BitunixRestClient
 from app.market.bitunix_ws import BitunixPublicWSClient
 from app.market.coingecko_client import CoinGeckoClient
@@ -183,6 +185,10 @@ async def lifespan(app: FastAPI):
     # resultados para aprender y no los muestra sin el registro oficial del veredicto.
     lessons_runner = maybe_start_lessons_runner(settings, db, tasks)
     app.state.lessons_runner = lessons_runner
+    # v3: pruebas en vivo (paper hacia adelante con el WebSocket publico), apagadas salvo en el
+    # contenedor. Sus propias tareas, archivos y cliente REST; un fallo suyo no alcanza al resto.
+    live_tests = maybe_start_live_tests(settings, tasks)
+    app.state.live_tests = live_tests
     try:
         yield
     finally:
@@ -192,6 +198,8 @@ async def lifespan(app: FastAPI):
             news_collector.stop()
         if lessons_runner is not None:
             lessons_runner.stop()
+        if live_tests is not None:
+            live_tests.stop()
         if telegram_bot is not None:
             telegram_bot.stop()
         scheduler.stop()
@@ -213,6 +221,8 @@ async def lifespan(app: FastAPI):
         if push_notifier is not None:
             await push_notifier.aclose()
         await monitor.shutdown()
+        if live_tests is not None:
+            await live_tests.aclose()
         await coingecko_client.aclose()
         await rest_client.aclose()
         await db.close()
@@ -256,6 +266,9 @@ app.include_router(universe.router)
 app.include_router(backtest.router)
 app.include_router(explorer.router)
 app.include_router(study.router)
+# v3: pruebas en vivo. Sus dos escrituras (crear y detener una prueba) solo tocan el archivo de
+# pruebas, nunca la medicion ni la cuenta paper; login + mismo origen + JSON (ver live.py).
+app.include_router(live.router)
 # Controles del dashboard (pausar, reanudar, kill switch): las unicas escrituras de control de la
 # API; login + mismo origen + JSON + palabra de confirmacion + auditoria (ver control.py).
 app.include_router(control.router)

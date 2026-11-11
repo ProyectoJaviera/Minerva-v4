@@ -191,8 +191,11 @@ flowchart LR
     HE --> OP["Alerta externa<br/>y comprobación de Docker"]
 ```
 
-- **API:** 26 rutas en total, **solo tres escriben**: login, logout y `POST /api/control/{pause|resume|kill}`
-  (las tres de la sección «Indicadores» y la de «Estudio», de la v2, son `GET`: leen archivos de solo lectura).
+- **API:** 32 rutas en total, **seis escriben**: login, logout, `POST /api/control/{pause|resume|kill}` y, de la
+  v3, crear y detener una prueba en vivo y el interruptor del bot de pruebas (`POST /api/live/tests`,
+  `POST /api/live/tests/{test_id}/stop` y `POST /api/live/bot`, que solo tocan el archivo de pruebas, nunca la
+  medición). Las tres de la sección «Indicadores» y la de «Estudio», de la v2,
+  son `GET`: leen archivos de solo lectura.
   Sin login solo se sirven `GET /health`, `GET /positions` y `GET /trades` (con listas blancas de campos). Las rutas
   están en [`app/api/routes/`](../app/api/routes/).
 - **Dashboard:** seis pestañas (*Resumen*, *Cuenta paper*, *Brazo ejecutado*, *Riesgo y controles*, *Universo y

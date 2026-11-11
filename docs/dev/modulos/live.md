@@ -72,7 +72,7 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 - **Referencia pdoc:** [`api/app/live/config.html`](../api/app/live/config.html)
 - **Importa (internos):** `app.explorer.confluence`
-- **Lo importan:** `app.live.runner`, `app.live.store`, `scripts.live_tests`
+- **Lo importan:** `app.api.routes.live`, `app.live.runner`, `app.live.store`, `scripts.live_tests`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -95,7 +95,7 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 - **Referencia pdoc:** [`api/app/live/paper.html`](../api/app/live/paper.html)
 - **Importa (internos):** `app.backtesting.liquidation`, `app.config`, `app.execution.pnl`, `app.persistence.models`, `app.strategies.base`, `app.trading.sl_calc`, `app.trading.slippage`
-- **Lo importan:** `app.live.runner`, `app.live.store`
+- **Lo importan:** `app.live.report`, `app.live.runner`, `app.live.store`
 - **Configuración que lee:** `BACKTEST_SLIPPAGE_BPS`, `DEFAULT_MARGIN_USDT`, `LEVERAGE`, `MAX_SL_MARGIN_LOSS_PCT`, `TAKER_FEE_PCT`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -111,14 +111,15 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 **Invariantes — no romper.** Una entrada se llena en un tick POSTERIOR a la decisión. Sin ticks recientes (`STALE_SECONDS`) no se abren entradas. Como mucho una entrada por vela y por moneda. Solo endpoints públicos; nunca envía órdenes.
 
-**Trampas conocidas.** Vacía las cachés de indicadores de `combos` y `confluence` cada minuto para no acumular memoria. Un fallo al evaluar una prueba se anota y no detiene a las demás.
+**Trampas conocidas.** Vacía las cachés de indicadores de `combos` y `confluence` cada minuto para no acumular memoria. Un fallo al evaluar una prueba se anota y no detiene a las demás. Con el interruptor apagado, `_pause()` cierra
+las posiciones (motivo `MANUAL`), vacía las velas y deja de mirar ticks; al encenderlo recarga todo.
 
 <!-- hechos:app/live/runner.py -->
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/app/live/runner.html`](../api/app/live/runner.html)
 - **Importa (internos):** `app.config`, `app.core.logging`, `app.explorer.confluence`, `app.live.book`, `app.live.config`, `app.live.paper`, `app.live.store`, `app.persistence.models`, `app.research.combos`, `app.strategies.base`
-- **Lo importan:** `scripts.live_tests`
+- **Lo importan:** `app.live.service`, `scripts.live_tests`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -130,7 +131,8 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 **Responsabilidad.** Los archivos SQLite de las pruebas (`live_tests`, `live_positions`, `live_trades`, `live_events`, `live_heartbeat`) y de ticks (`ticks`).
 
-**Funciones y clases clave.** `LiveStore`, `TickStore` y `StoredTest`.
+**Funciones y clases clave.** `LiveStore` (también el interruptor del bot: `bot_on()`, `set_bot_on()`, tabla `live_control`), `TickStore` y
+`StoredTest`.
 
 **Invariantes — no romper.** Viven aparte de la base del bot. `record_trade()` guarda la operación y borra la posición en una sola transacción.
 
@@ -141,10 +143,60 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 - **Referencia pdoc:** [`api/app/live/store.html`](../api/app/live/store.html)
 - **Importa (internos):** `app.live.config`, `app.live.paper`
-- **Lo importan:** `app.live.runner`, `scripts.live_tests`
+- **Lo importan:** `app.api.routes.live`, `app.live.report`, `app.live.runner`, `app.live.service`, `scripts.live_tests`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`
 <!-- /hechos:app/live/store.py -->
+
+### `app/live/report.py`
+
+**Responsabilidad.** Los resúmenes de las pruebas en vivo, compartidos por `scripts/live_tests.py` y la API.
+
+**Funciones y clases clave.** `summarize()` (operaciones, ganadoras, PF, neto, comisiones y demora media entre decidir
+y entrar), `overview()` (corredor y todas las pruebas) y `detail()` (una prueba).
+
+**Invariantes — no romper.** Solo lectura (abre el archivo en `mode=ro`); sin archivo devuelve listas vacías.
+
+**Trampas conocidas.** Un PF infinito se manda como el texto `"inf"` (JSON no admite infinito).
+
+<!-- hechos:app/live/report.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/app/live/report.html`](../api/app/live/report.html)
+- **Importa (internos):** `app.live.paper`, `app.live.store`
+- **Lo importan:** `app.api.routes.live`, `scripts.live_tests`
+- **Configuración que lee:** ninguno
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`
+<!-- /hechos:app/live/report.py -->
+
+### `app/live/service.py`
+
+**Responsabilidad.** El corredor de las pruebas en vivo dentro de la app: `maybe_start_live_tests()` lo arranca en
+el `lifespan` si `LIVE_TESTS_ENABLED` está encendido.
+
+**Funciones y clases clave.** `LiveTestsService` (`run_forever`, `sync_ws`, `stop`, `aclose`) y `maybe_start_live_tests()`. `sync_ws` abre
+el WebSocket cuando hay monedas que escuchar y lo cierra cuando no (bot apagado o sin pruebas).
+
+**Invariantes — no romper.** Un fallo del corredor nunca impide arrancar ni detiene al resto de la app; usa su propio
+cliente REST y su propio WebSocket del canal `trade`.
+
+**Trampas conocidas.** Apagado por defecto: lo enciende el contenedor de la v3 (`MINERVA_LIVE_TESTS`).
+
+<!-- hechos:app/live/service.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/app/live/service.html`](../api/app/live/service.html)
+- **Importa (internos):** `app.config`, `app.core.logging`, `app.live.runner`, `app.live.store`, `app.market.bitunix_rest`, `app.market.bitunix_ws`
+- **Lo importan:** `app.main`
+- **Configuración que lee:** `BITUNIX_RATE_LIMIT_PER_SEC`, `BITUNIX_REST_BASE_URL`, `BITUNIX_WS_PUBLIC_URL`, `LIVE_MAX_EVALS_PER_SECOND`, `LIVE_RECORD_TICKS`, `LIVE_TESTS_DB`, `LIVE_TESTS_ENABLED`, `LIVE_TICKS_DB`
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** `tests/unit/test_live_api.py`
+<!-- /hechos:app/live/service.py -->

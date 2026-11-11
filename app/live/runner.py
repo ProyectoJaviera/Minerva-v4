@@ -7,7 +7,8 @@ Un solo proceso atiende todas las pruebas activas de `history/live_v3.db`:
    abiertas (SL, TP, trailing, liquidacion, funding) y llena las entradas pendientes.
 3. Decide las entradas con la confluencia de `app.explorer.confluence` (los indicadores y
    filtros que eligio el dueno): al cierre de la vela (modo `close`) o cada `eval_seconds` con la
-   vela abierta (modo `intrabar`). La entrada se llena en el tick SIGUIENTE a la decision.
+   vela abierta (modo `intrabar`). Las evaluaciones van en cola, con un tope por segundo y en un
+   hilo aparte. La entrada se llena en el tick SIGUIENTE a la decision.
 4. Cada pocos segundos relee las pruebas (para ver las nuevas y las detenidas), guarda las
    posiciones, anota su latido y, tras cada cierre de vela, reconcilia con las velas de REST.
 
@@ -20,6 +21,7 @@ Solo usa endpoints publicos de datos. Nunca envia ordenes: todo es paper.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -122,17 +124,24 @@ class LiveRunner:
         rest: cliente REST publico.
         clock: reloj en segundos (para las pruebas).
         on_symbols: se llama con la lista de monedas cuando cambia (para suscribir el WebSocket).
+        max_evals_per_cycle: cuantas evaluaciones de indicadores como maximo en cada llamada a
+            `housekeeping` (una por segundo).
+        inline_eval: evalua en el mismo hilo (para las pruebas); por defecto, en un hilo aparte.
     """
 
     def __init__(self, settings: Settings, store: LiveStore, ticks: TickStore | None,
                  rest: RestSource, clock: Callable[[], float] = time.time,
-                 on_symbols: Callable[[list[str]], Awaitable[None]] | None = None) -> None:
+                 on_symbols: Callable[[list[str]], Awaitable[None]] | None = None,
+                 max_evals_per_cycle: int = 4, inline_eval: bool = False) -> None:
         self.settings = settings
         self.store = store
         self.ticks = ticks
         self.rest = rest
         self.clock = clock
         self.on_symbols = on_symbols
+        self.max_evals_per_cycle = max(1, max_evals_per_cycle)
+        self.inline_eval = inline_eval
+        self._due_close: list[tuple[int, str]] = []
         self.tests: dict[int, StoredTest] = {}
         self.books: dict[tuple[str, str], CandleBook] = {}
         self.positions: dict[tuple[int, str], PaperPosition] = self.store.positions()
@@ -149,6 +158,7 @@ class LiveRunner:
         self._next_save = 0.0
         self._next_funding = 0.0
         self.ticks_seen = 0
+        self.paused = False
 
     # --- utilidades ---
 
@@ -274,6 +284,8 @@ class LiveRunner:
         Efectos:
             Puede escribir `live_trades`, `live_positions` y `live_events`.
         """
+        if self.paused:
+            return  # bot apagado: no se miran ni se graban ticks
         self.ticks_seen += 1
         self.last_price[symbol] = price
         self.last_tick_ms[symbol] = ts_ms
@@ -340,17 +352,17 @@ class LiveRunner:
                            "entradas", symbol=symbol, now_ms=now_ms)
         return stale
 
-    def evaluate(self, cfg: TestConfig, symbol: str,
-                 include_forming: bool) -> tuple[Signal, ConfluenceStrategy, object] | None:
-        """Calcula la confluencia de una prueba en una moneda con las velas actuales.
+    def frames(self, cfg: TestConfig, symbol: str,
+               include_forming: bool) -> tuple[object, object] | None:
+        """Las velas que necesita una evaluacion, copiadas en este instante.
 
         Args:
             cfg: la prueba.
             symbol: la moneda.
-            include_forming: usa tambien la vela en curso (modo `intrabar`).
+            include_forming: incluye la vela en curso (modo `intrabar`).
 
         Returns:
-            `(senal, estrategia, velas)`, o `None` si todavia no hay velas suficientes.
+            `(velas, velas de BTC o None)`, o `None` si todavia no hay velas suficientes.
         """
         book = self.books.get((symbol, cfg.timeframe))
         if book is None:
@@ -364,43 +376,105 @@ class LiveRunner:
             if btc_book is None:
                 return None
             btc = btc_book.frame(include_forming)
+        return frame, btc
+
+    @staticmethod
+    def compute(cfg: TestConfig, frame, btc) -> tuple[Signal, ConfluenceStrategy]:
+        """La confluencia de una prueba sobre unas velas (puro; corre fuera del bucle).
+
+        Args:
+            cfg: la prueba.
+            frame: velas de la moneda.
+            btc: velas de BTC, o `None`.
+
+        Returns:
+            `(senal, estrategia)`; la estrategia da despues el SL, el TP y el trailing.
+        """
         strat = ConfluenceStrategy(cfg.indicators, cfg.timeframe, window=cfg.window,
                                    exit_name=cfg.exit_name, btc=btc, min_agree=cfg.min_agree,
                                    pct_exit=cfg.pct_exit)
-        return strat.evaluate(frame), strat, frame
+        return strat.evaluate(frame), strat
 
-    def _decide(self, test: StoredTest, symbol: str, include_forming: bool, now_ms: int) -> None:
-        key = (test.id, symbol)
+    def evaluate(self, cfg: TestConfig, symbol: str,
+                 include_forming: bool) -> tuple[Signal, ConfluenceStrategy, object] | None:
+        """Calcula la confluencia de una prueba en una moneda con las velas actuales.
+
+        Args:
+            cfg: la prueba.
+            symbol: la moneda.
+            include_forming: usa tambien la vela en curso (modo `intrabar`).
+
+        Returns:
+            `(senal, estrategia, velas)`, o `None` si todavia no hay velas suficientes.
+        """
+        got = self.frames(cfg, symbol, include_forming)
+        if got is None:
+            return None
+        signal, strat = self.compute(cfg, *got)
+        return signal, strat, got[0]
+
+    def _can_enter(self, test_id: int, cfg: TestConfig, symbol: str, now_ms: int) -> bool:
+        key = (test_id, symbol)
         if key in self.positions or key in self.pending or self._is_stale(symbol, now_ms):
-            return
-        book = self.books.get((symbol, test.config.timeframe))
+            return False
+        book = self.books.get((symbol, cfg.timeframe))
         if book is None:
+            return False
+        return self._entry_bucket.get(key) != book.current_bucket(now_ms)
+
+    async def _evaluate_async(self, cfg: TestConfig, symbol: str, include_forming: bool):
+        if self.inline_eval:
+            return self.evaluate(cfg, symbol, include_forming)
+        got = self.frames(cfg, symbol, include_forming)
+        if got is None:
+            return None
+        signal, strat = await asyncio.to_thread(self.compute, cfg, *got)
+        return signal, strat, got[0]
+
+    async def _decide(self, test_id: int, symbol: str, include_forming: bool) -> None:
+        """Evalua una prueba en una moneda y, si hay senal, deja la entrada pendiente.
+
+        La cuenta pesada corre en un hilo para no frenar la lectura del WebSocket; el tiempo que
+        tarda es parte de la demora real entre decidir y entrar.
+
+        Args:
+            test_id: la prueba.
+            symbol: la moneda.
+            include_forming: usa la vela en curso (modo `intrabar`).
+
+        Efectos:
+            Escribe `live_events` (senal o error).
+        """
+        test = self.tests.get(test_id)
+        now_ms = self._now_ms()
+        if test is None or not self._can_enter(test_id, test.config, symbol, now_ms):
             return
-        bucket = book.current_bucket(now_ms)
-        if self._entry_bucket.get(key) == bucket:
-            return  # como mucho una entrada por vela y por moneda
+        cfg = test.config
+        price = self.last_price.get(symbol)
         try:
-            result = self.evaluate(test.config, symbol, include_forming)
+            result = await self._evaluate_async(cfg, symbol, include_forming)
         except Exception as exc:  # noqa: BLE001 - una prueba rota no detiene a las demas
             self.store.log("ERROR", f"fallo al evaluar: {type(exc).__name__}: {exc}",
-                           test_id=test.id, symbol=symbol, now_ms=now_ms)
+                           test_id=test_id, symbol=symbol, now_ms=now_ms)
             return
-        if result is None or result[0] == Signal.HOLD:
+        if result is None or result[0] == Signal.HOLD or price is None:
             return
+        if test_id not in self.tests or not self._can_enter(test_id, cfg, symbol, now_ms):
+            return  # la prueba se detuvo o cambio algo mientras se calculaba
         signal, strat, frame = result
-        price = self.last_price[symbol]
-        self._entry_bucket[key] = bucket
+        key = (test_id, symbol)
+        self._entry_bucket[key] = self.books[(symbol, cfg.timeframe)].current_bucket(now_ms)
         self.pending[key] = _Pending(Side(signal.value), now_ms, price, strat, frame)
         self.store.log("SIGNAL", f"{signal.value} con precio {price} "
                        f"({'vela abierta' if include_forming else 'cierre de vela'})",
-                       test_id=test.id, symbol=symbol, now_ms=now_ms)
+                       test_id=test_id, symbol=symbol, now_ms=now_ms)
 
     def _bar_closed(self, symbol: str, timeframe: str, now_ms: int) -> None:
         self._reconcile_at[(symbol, timeframe)] = self.clock() + RECONCILE_DELAY_SECONDS
         for test in self.tests.values():
             cfg = test.config
             if cfg.mode == "close" and cfg.timeframe == timeframe and symbol in cfg.symbols:
-                self._decide(test, symbol, include_forming=False, now_ms=now_ms)
+                self._due_close.append((test.id, symbol))
 
     # --- tareas periodicas ---
 
@@ -416,6 +490,20 @@ class LiveRunner:
             buffer, self._tick_buffer = self._tick_buffer, []
             self.ticks.append(buffer)
 
+        # Interruptor del dashboard: apagado, el bot cierra sus posiciones, deja de escuchar el
+        # mercado y solo late para que se vea que sigue vivo.
+        if not self.store.bot_on():
+            if not self.paused:
+                await self._pause(now_ms)
+            if now >= self._next_reload:
+                self._next_reload = now + RELOAD_SECONDS
+                self.store.beat("apagado desde el dashboard", now_ms=now_ms)
+            return
+        if self.paused:
+            self.paused = False
+            self._next_reload = 0.0  # recarga ya: vuelve a suscribirse y a cargar velas
+            self.store.log("RESUME", "bot encendido: vuelve a escuchar el mercado", now_ms=now_ms)
+
         if now >= self._next_reload:
             self._next_reload = now + RELOAD_SECONDS
             await self.reload_tests()
@@ -426,16 +514,26 @@ class LiveRunner:
             if book.roll(now_ms):
                 self._bar_closed(symbol, tf, now_ms)
 
+        # Evaluaciones: primero las de cierre de vela (en orden de llegada), despues las del modo
+        # `intrabar` que ya cumplieron su intervalo (las mas atrasadas primero). Tope por segundo
+        # para no saturar un equipo chico: lo que no entra espera al segundo siguiente.
+        budget = self.max_evals_per_cycle
+        while self._due_close and budget > 0:
+            test_id, symbol = self._due_close.pop(0)
+            budget -= 1
+            await self._decide(test_id, symbol, include_forming=False)
+        due = []
         for test in self.tests.values():
             cfg = test.config
             if cfg.mode != "intrabar":
                 continue
             for symbol in cfg.symbols:
-                key = (test.id, symbol)
-                if now - self._last_eval.get(key, 0.0) < cfg.eval_seconds:
-                    continue
-                self._last_eval[key] = now
-                self._decide(test, symbol, include_forming=True, now_ms=now_ms)
+                last = self._last_eval.get((test.id, symbol), 0.0)
+                if now - last >= cfg.eval_seconds:
+                    due.append((last, test.id, symbol))
+        for _last, test_id, symbol in sorted(due)[:max(0, budget)]:
+            self._last_eval[(test_id, symbol)] = now
+            await self._decide(test_id, symbol, include_forming=True)
 
         for key, at in list(self._reconcile_at.items()):
             if now >= at and key in self.books:
@@ -467,6 +565,40 @@ class LiveRunner:
             # Las caches de indicadores crecen con cada vela nueva: se vacian para no acumular.
             combos._FEATURE_CACHE.clear()
             confluence._FEATURE_CACHE.clear()
+
+    async def _pause(self, now_ms: int) -> None:
+        """Apaga el bot: cierra las posiciones abiertas con el ultimo precio y deja de escuchar.
+
+        Una posicion de una moneda sin ningun precio conocido no se puede cerrar: queda guardada
+        y se vuelve a vigilar al encenderlo.
+
+        Args:
+            now_ms: instante, ms Unix.
+
+        Efectos:
+            Escribe `live_trades`, `live_positions` y `live_events`.
+        """
+        self.paused = True
+        self.pending.clear()
+        self._due_close.clear()
+        for (test_id, symbol), pos in list(self.positions.items()):
+            price = self.last_price.get(symbol)
+            if price is None:
+                self.store.log("PAUSE", "sin precio conocido: la posicion queda abierta hasta "
+                               "encender el bot", test_id=test_id, symbol=symbol, now_ms=now_ms)
+                continue
+            trade = close_position(pos, price, now_ms, "MANUAL", self.settings)
+            self.store.record_trade(test_id, symbol, trade)
+            del self.positions[(test_id, symbol)]
+            self.store.log("CLOSE", f"MANUAL a {price} (bot apagado) neto "
+                           f"{trade.pnl_net_usdt:+.4f}", test_id=test_id, symbol=symbol,
+                           now_ms=now_ms)
+        # Al encenderlo se recargan las velas desde REST (mientras estuvo apagado no hubo ticks).
+        self.books.clear()
+        self.last_tick_ms.clear()
+        self.store.log("PAUSE", "bot apagado: deja de escuchar el mercado", now_ms=now_ms)
+        if self.on_symbols is not None:
+            await self.on_symbols([])
 
     def shutdown(self) -> None:
         """Guarda lo pendiente antes de salir (ticks en memoria y posiciones abiertas).

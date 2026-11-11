@@ -97,7 +97,7 @@ tolerarlo.
 
 - **Referencia pdoc:** [`api/app/api/deps.html`](../api/app/api/deps.html)
 - **Importa (internos):** `app.config`, `app.core.heartbeat`, `app.core.scheduler`, `app.news.collector`, `app.persistence.database`, `app.telegram.push`, `app.trading.paper_execution`, `app.trading.shadow_live_labeler`
-- **Lo importan:** 18 módulos (api 18)
+- **Lo importan:** 19 módulos (api 19)
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -201,7 +201,7 @@ por una contraseña de tamaño inválido.
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_auth.py`, `tests/unit/test_phase4_api_routes.py`, `tests/unit/test_phase5_control_api.py`, `tests/unit/test_phase5_read_api.py`, `tests/unit/test_readonly_api_routes.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_auth.py`, `tests/unit/test_live_api.py`, `tests/unit/test_phase4_api_routes.py`, `tests/unit/test_phase5_control_api.py`, `tests/unit/test_phase5_read_api.py`, `tests/unit/test_readonly_api_routes.py`
 <!-- /hechos:app/api/routes/auth.py -->
 
 ### `app/api/routes/backtest.py`
@@ -251,7 +251,7 @@ rastro en `control_audit`.
 
 - **Referencia pdoc:** [`api/app/api/routes/control.html`](../api/app/api/routes/control.html)
 - **Importa (internos):** `app.api.deps`, `app.api.security`, `app.config`, `app.core.logging`, `app.persistence.database`, `app.persistence.repositories.control_audit_repo`, `app.trading.control_actions`
-- **Lo importan:** `app.main`
+- **Lo importan:** `app.api.routes.live`, `app.main`
 - **Configuración que lee:** `DASHBOARD_CONTROLS_ENABLED`
 - **Tablas que lee:** `control_audit`
 - **Tablas que escribe:** ninguno
@@ -534,12 +534,12 @@ nada de resultados.
 
 - **Referencia pdoc:** [`api/app/api/security.html`](../api/app/api/security.html)
 - **Importa (internos):** `app.api.deps`, `app.config`
-- **Lo importan:** 16 módulos (api 14, main 1, scripts 1)
+- **Lo importan:** 17 módulos (api 15, main 1, scripts 1)
 - **Configuración que lee:** `JWT_SECRET`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/e2e/world.py`, `tests/unit/test_auth.py`, `tests/unit/test_hash_password_script.py`, `tests/unit/test_phase4_api_routes.py`, `tests/unit/test_phase5_control_api.py`, `tests/unit/test_phase5_read_api.py`, `tests/unit/test_readonly_api_routes.py`
+- **Pruebas que lo importan o citan:** `tests/e2e/world.py`, `tests/unit/test_auth.py`, `tests/unit/test_hash_password_script.py`, `tests/unit/test_live_api.py`, `tests/unit/test_phase4_api_routes.py`, `tests/unit/test_phase5_control_api.py`, `tests/unit/test_phase5_read_api.py`, `tests/unit/test_readonly_api_routes.py`
 <!-- /hechos:app/api/security.py -->
 
 ### `app/api/serializers.py`
@@ -633,3 +633,33 @@ archivo (la tarea `MinervaV3HistoryUpdate`, cada 6 h). Mientras recalcula, devue
 - **Tablas que crea o altera:** ninguno
 - **Pruebas que lo importan o citan:** `tests/unit/test_study.py`
 <!-- /hechos:app/api/routes/study.py -->
+
+### `app/api/routes/live.py`
+
+**Responsabilidad.** La pestaña «En vivo» de la v3: `GET /api/live/options` (catálogo), `GET /api/live/tests`
+(estado del corredor y resumen de cada prueba), `GET /api/live/tests/{test_id}` (detalle), y dos escrituras:
+`POST /api/live/tests` (crear), `POST /api/live/tests/{test_id}/stop` (detener, con la palabra `DETENER`) y
+`POST /api/live/bot` (encender o apagar el bot; apagar pide `APAGAR`).
+
+**Funciones y clases clave.** `options()`, `list_tests()`, `get_test()`, `create_test()`, `stop_test()`,
+`bot_switch()`, `CreateTestRequest`, `StopRequest` y `BotSwitchRequest`.
+
+**Invariantes — no romper.** Todo con login (`require_auth` del router); las escrituras además con
+`require_same_origin` y `require_json` de `control.py`. Solo tocan `LIVE_TESTS_DB`, nunca la base del bot, la medición
+ni la cuenta paper. La validación es la de `app/live/config.py` (422 con el motivo).
+
+**Trampas conocidas.** Funciona aunque el corredor esté apagado en esa instancia (`enabled: false`): las pruebas se
+guardan, pero solo operan donde `LIVE_TESTS_ENABLED` está encendido.
+
+<!-- hechos:app/api/routes/live.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/app/api/routes/live.html`](../api/app/api/routes/live.html)
+- **Importa (internos):** `app.api.deps`, `app.api.routes.control`, `app.api.security`, `app.config`, `app.explorer.confluence`, `app.live.config`, `app.live.report`, `app.live.store`, `app.research.forward`
+- **Lo importan:** `app.main`
+- **Configuración que lee:** `LIVE_TESTS_DB`, `LIVE_TESTS_ENABLED`
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** `tests/unit/test_live_api.py`
+<!-- /hechos:app/api/routes/live.py -->

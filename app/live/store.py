@@ -59,6 +59,11 @@ CREATE TABLE IF NOT EXISTS live_events (
     detail TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_live_events_test ON live_events (test_id, ts_ms);
+CREATE TABLE IF NOT EXISTS live_control (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    changed_at_ms INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS live_heartbeat (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     ts_ms INTEGER NOT NULL,
@@ -323,6 +328,49 @@ class LiveStore:
                 "SELECT ts_ms, test_id, symbol, kind, detail FROM live_events "
                 "WHERE test_id = ? ORDER BY id DESC LIMIT ?", (test_id, limit))
         return list(cur)
+
+    def bot_on(self) -> bool:
+        """Si el bot de pruebas en vivo esta encendido (interruptor del dashboard).
+
+        Returns:
+            `True` salvo que alguien lo haya apagado (encendido por defecto).
+
+        Efectos:
+            Lee `live_control`.
+        """
+        row = self._conn.execute(
+            "SELECT value FROM live_control WHERE key = 'bot_on'").fetchone()
+        return row is None or row[0] == "1"
+
+    def set_bot_on(self, on: bool, now_ms: int | None = None) -> None:
+        """Enciende o apaga el bot de pruebas en vivo.
+
+        Args:
+            on: el estado pedido.
+            now_ms: instante; por defecto, el reloj.
+
+        Efectos:
+            Escribe `live_control` y `live_events`.
+        """
+        now = int(time.time() * 1000) if now_ms is None else now_ms
+        with self._conn:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO live_control VALUES ('bot_on', ?, ?)",
+                ("1" if on else "0", now))
+        self.log("SWITCH", "bot encendido" if on else "bot apagado", now_ms=now)
+
+    def bot_switch_changed_at(self) -> int | None:
+        """Cuando se cambio el interruptor por ultima vez.
+
+        Returns:
+            El instante en ms, o `None` si nunca se toco.
+
+        Efectos:
+            Lee `live_control`.
+        """
+        row = self._conn.execute(
+            "SELECT changed_at_ms FROM live_control WHERE key = 'bot_on'").fetchone()
+        return None if row is None else int(row[0])
 
     def beat(self, detail: str, now_ms: int | None = None) -> None:
         """Anota que el corredor sigue vivo.

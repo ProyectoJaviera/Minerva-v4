@@ -387,9 +387,12 @@ def test_the_only_write_routes_of_the_api_are_login_logout_and_the_three_control
         if method in {"post", "put", "patch", "delete"}
     )
 
+    # v3: crear y detener una prueba en vivo (solo tocan el archivo de pruebas, no la medicion).
     assert writes == [
         ("/api/auth/login", "post"), ("/api/auth/logout", "post"),
         ("/api/control/{action}", "post"),
+        ("/api/live/bot", "post"), ("/api/live/tests", "post"),
+        ("/api/live/tests/{test_id}/stop", "post"),
     ]
 
 

@@ -95,6 +95,15 @@
                                 <a class="function" href="#LiveStore.events">events</a>
                         </li>
                         <li>
+                                <a class="function" href="#LiveStore.bot_on">bot_on</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#LiveStore.set_bot_on">set_bot_on</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#LiveStore.bot_switch_changed_at">bot_switch_changed_at</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#LiveStore.beat">beat</a>
                         </li>
                         <li>
@@ -618,6 +627,88 @@ cortas, y el corredor relee las pruebas cada pocos segundos.</p>
 
 <blockquote>
   <p>Lee <code>live_events</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveStore.bot_on" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">bot_on</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">bool</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveStore.bot_on"></a>
+    
+            <div class="docstring"><p>Si el bot de pruebas en vivo esta encendido (interruptor del dashboard).</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>True</code> salvo que alguien lo haya apagado (encendido por defecto).</p>
+</blockquote>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Lee <code>live_control</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveStore.set_bot_on" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">set_bot_on</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">on</span><span class="p">:</span> <span class="nb">bool</span>, </span><span class="param"><span class="n">now_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveStore.set_bot_on"></a>
+    
+            <div class="docstring"><p>Enciende o apaga el bot de pruebas en vivo.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>on:</strong>  el estado pedido.</li>
+<li><strong>now_ms:</strong>  instante; por defecto, el reloj.</li>
+</ul>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Escribe <code>live_control</code> y <code>live_events</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveStore.bot_switch_changed_at" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">bot_switch_changed_at</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveStore.bot_switch_changed_at"></a>
+    
+            <div class="docstring"><p>Cuando se cambio el interruptor por ultima vez.</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>El instante en ms, o <code>None</code> si nunca se toco.</p>
+</blockquote>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Lee <code>live_control</code>.</p>
 </blockquote>
 </div>
 

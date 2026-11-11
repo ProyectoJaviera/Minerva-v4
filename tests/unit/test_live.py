@@ -12,11 +12,11 @@ from app.config import Settings
 from app.live.book import CandleBook
 from app.live.config import TestConfig, validate
 from app.live.paper import OpenRefusal, PaperPosition, close_position, on_tick, open_position
+from app.live.report import summarize
 from app.live.runner import LiveRunner, parse_trade_message
 from app.live.store import LiveStore, TickStore
 from app.persistence.models import Side
 from app.strategies.base import Signal
-from scripts.live_tests import summarize
 
 T0 = 1_767_571_200_000  # 2026-01-05 00:00 UTC (lunes)
 M15 = 15 * 60_000
@@ -291,7 +291,7 @@ def make_runner(tmp_path, *configs: TestConfig, signals: dict | None = None):
         subscribed.append(list(symbols))
 
     runner = LiveRunner(make_settings(), store, ticks, FakeRest(T0), clock=clock,
-                        on_symbols=on_symbols)
+                        on_symbols=on_symbols, inline_eval=signals is not None)
     if signals is not None:
         def fake_evaluate(cfg_, symbol, include_forming):
             sig = signals.get((cfg_.name, symbol, include_forming), Signal.HOLD)
@@ -367,6 +367,8 @@ async def test_close_mode_decides_only_when_the_candle_closes(tmp_path):
 
     clock.ms = T0 + M15 + 500
     runner.on_tick("BTCUSDT", clock.ms, 99.8, 1.0, "sell")  # primer tick de la vela nueva
+    assert key not in runner.pending  # la decision va en cola: la toma `housekeeping`
+    await runner.housekeeping()
     assert runner.pending[key].side == Side.SHORT
     runner.on_tick("BTCUSDT", clock.ms + 300, 99.7, 1.0, "sell")
     assert runner.positions[key].side == "SHORT" and runner.positions[key].entry_price == 99.7
@@ -437,3 +439,75 @@ def test_evaluation_is_fast_enough_for_live_use(tmp_path):
         book.on_tick(float(price[-1]) + i * 0.01, 1.0, T0 + i * 1000)
         assert runner.evaluate(c, "BTCUSDT", include_forming=True) is not None
     assert (time.perf_counter() - t0) / 3 < 2.0
+
+
+@pytest.mark.asyncio
+async def test_evaluations_are_capped_per_cycle_and_run_off_the_event_loop(tmp_path):
+    signals = {}
+    symbols = ["BTCUSDT", "ETHUSDT", "TRXUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT"]
+    runner, _store, _t, clock, ids, _s = make_runner(
+        tmp_path, cfg(symbols=symbols, mode="intrabar", eval_seconds=60), signals=signals)
+    runner.max_evals_per_cycle = 2
+    calls = []
+    real = runner.evaluate
+
+    def counting(cfg_, symbol, include_forming):
+        calls.append(symbol)
+        return real(cfg_, symbol, include_forming)
+
+    runner.evaluate = counting  # type: ignore[method-assign]
+    await runner.housekeeping()
+    for s in symbols:
+        runner.on_tick(s, clock.ms, 100.0, 1.0, "buy")
+    calls.clear()
+    clock.ms += 1000
+    await runner.housekeeping()
+    assert len(calls) == 2  # tope de 2 por ciclo
+    clock.ms += 1000
+    await runner.housekeeping()
+    assert len(calls) == 4 and len(set(calls)) == 4  # siguen las mas atrasadas, sin repetir
+
+    # Sin `inline_eval` la cuenta real corre en un hilo y deja la senal igual que en linea.
+    threaded = LiveRunner(make_settings(), runner.store, None, FakeRest(T0), clock=clock)
+    threaded.tests = runner.tests
+    threaded.books = runner.books
+    threaded.last_price = dict(runner.last_price)
+    threaded.last_tick_ms = dict(runner.last_tick_ms)
+    got = await threaded._evaluate_async(runner.tests[ids[0]].config, "BTCUSDT", True)
+    assert got is not None and got[0] in (Signal.LONG, Signal.SHORT, Signal.HOLD)
+
+
+@pytest.mark.asyncio
+async def test_switching_the_bot_off_closes_positions_ignores_ticks_and_on_reloads(tmp_path):
+    signals = {("p", "BTCUSDT", True): Signal.LONG}
+    runner, store, ticks, clock, ids, subscribed = make_runner(
+        tmp_path, cfg(symbols=["BTCUSDT"], mode="intrabar", eval_seconds=5), signals=signals)
+    await runner.housekeeping()
+    key = (ids[0], "BTCUSDT")
+    runner.on_tick("BTCUSDT", clock.ms, 100.0, 1.0, "buy")
+    clock.ms += 6000
+    await runner.housekeeping()
+    runner.on_tick("BTCUSDT", clock.ms + 1, 100.2, 1.0, "buy")
+    assert key in runner.positions
+
+    store.set_bot_on(False, now_ms=clock.ms)
+    clock.ms += 1000
+    await runner.housekeeping()
+    assert runner.paused and runner.positions == {} and store.positions() == {}
+    trade = store.trades(ids[0])[0][1]
+    assert trade.close_reason == "MANUAL" and trade.exit_price == 100.2
+    assert subscribed[-1] == []  # deja de escuchar el mercado
+    seen = runner.ticks_seen
+    runner.on_tick("BTCUSDT", clock.ms + 5, 99.0, 1.0, "sell")
+    assert runner.ticks_seen == seen  # apagado no mira ticks
+    clock.ms += 11_000
+    await runner.housekeeping()
+    assert store.heartbeat()[1] == "apagado desde el dashboard"
+
+    store.set_bot_on(True, now_ms=clock.ms)
+    clock.ms += 1000
+    await runner.housekeeping()
+    assert not runner.paused and subscribed[-1] == ["BTCUSDT"]
+    assert ("BTCUSDT", "15m") in runner.books  # velas recargadas desde REST
+    kinds = [e[3] for e in store.events()]
+    assert "PAUSE" in kinds and "RESUME" in kinds

@@ -104,6 +104,12 @@
                                 <a class="variable" href="#LiveRunner.on_symbols">on_symbols</a>
                         </li>
                         <li>
+                                <a class="variable" href="#LiveRunner.max_evals_per_cycle">max_evals_per_cycle</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#LiveRunner.inline_eval">inline_eval</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#LiveRunner.tests">tests</a>
                         </li>
                         <li>
@@ -128,6 +134,9 @@
                                 <a class="variable" href="#LiveRunner.ticks_seen">ticks_seen</a>
                         </li>
                         <li>
+                                <a class="variable" href="#LiveRunner.paused">paused</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#LiveRunner.symbols">symbols</a>
                         </li>
                         <li>
@@ -138,6 +147,12 @@
                         </li>
                         <li>
                                 <a class="function" href="#LiveRunner.on_tick">on_tick</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#LiveRunner.frames">frames</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#LiveRunner.compute">compute</a>
                         </li>
                         <li>
                                 <a class="function" href="#LiveRunner.evaluate">evaluate</a>
@@ -178,7 +193,8 @@
 abiertas (SL, TP, trailing, liquidacion, funding) y llena las entradas pendientes.</li>
 <li>Decide las entradas con la confluencia de <code><a href="../explorer/confluence.html">app.explorer.confluence</a></code> (los indicadores y
 filtros que eligio el dueno): al cierre de la vela (modo <code>close</code>) o cada <code>eval_seconds</code> con la
-vela abierta (modo <code>intrabar</code>). La entrada se llena en el tick SIGUIENTE a la decision.</li>
+vela abierta (modo <code>intrabar</code>). Las evaluaciones van en cola, con un tope por segundo y en un
+hilo aparte. La entrada se llena en el tick SIGUIENTE a la decision.</li>
 <li>Cada pocos segundos relee las pruebas (para ver las nuevas y las detenidas), guarda las
 posiciones, anota su latido y, tras cada cierre de vela, reconcilia con las velas de REST.</li>
 </ol>
@@ -437,6 +453,9 @@ corredor a mano, sin red.</p>
 <li><strong>rest:</strong>  cliente REST publico.</li>
 <li><strong>clock:</strong>  reloj en segundos (para las pruebas).</li>
 <li><strong>on_symbols:</strong>  se llama con la lista de monedas cuando cambia (para suscribir el WebSocket).</li>
+<li><strong>max_evals_per_cycle:</strong>  cuantas evaluaciones de indicadores como maximo en cada llamada a
+<code><a href="#LiveRunner.housekeeping">housekeeping</a></code> (una por segundo).</li>
+<li><strong>inline_eval:</strong>  evalua en el mismo hilo (para las pruebas); por defecto, en un hilo aparte.</li>
 </ul>
 </div>
 
@@ -444,7 +463,7 @@ corredor a mano, sin red.</p>
                             <div id="LiveRunner.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">LiveRunner</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">settings</span><span class="p">:</span> <span class="n"><a href="../config.html#Settings">app.config.Settings</a></span>,</span><span class="param">	<span class="n">store</span><span class="p">:</span> <span class="n"><a href="store.html#LiveStore">app.live.store.LiveStore</a></span>,</span><span class="param">	<span class="n">ticks</span><span class="p">:</span> <span class="n"><a href="store.html#TickStore">app.live.store.TickStore</a></span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">rest</span><span class="p">:</span> <span class="n"><a href="#RestSource">RestSource</a></span>,</span><span class="param">	<span class="n">clock</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">built</span><span class="o">-</span><span class="ow">in</span> <span class="n">function</span> <span class="n">time</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">on_symbols</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">Awaitable</span><span class="p">[</span><span class="kc">None</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
+        <span class="name">LiveRunner</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">settings</span><span class="p">:</span> <span class="n"><a href="../config.html#Settings">app.config.Settings</a></span>,</span><span class="param">	<span class="n">store</span><span class="p">:</span> <span class="n"><a href="store.html#LiveStore">app.live.store.LiveStore</a></span>,</span><span class="param">	<span class="n">ticks</span><span class="p">:</span> <span class="n"><a href="store.html#TickStore">app.live.store.TickStore</a></span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">rest</span><span class="p">:</span> <span class="n"><a href="#RestSource">RestSource</a></span>,</span><span class="param">	<span class="n">clock</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">built</span><span class="o">-</span><span class="ow">in</span> <span class="n">function</span> <span class="n">time</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">on_symbols</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">Awaitable</span><span class="p">[</span><span class="kc">None</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">max_evals_per_cycle</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>,</span><span class="param">	<span class="n">inline_eval</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span></span>)</span>
 
         
     </div>
@@ -515,6 +534,28 @@ corredor a mano, sin red.</p>
         
     </div>
     <a class="headerlink" href="#LiveRunner.on_symbols"></a>
+    
+    
+
+                            </div>
+                            <div id="LiveRunner.max_evals_per_cycle" class="classattr">
+                                <div class="attr variable">
+            <span class="name">max_evals_per_cycle</span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.max_evals_per_cycle"></a>
+    
+    
+
+                            </div>
+                            <div id="LiveRunner.inline_eval" class="classattr">
+                                <div class="attr variable">
+            <span class="name">inline_eval</span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.inline_eval"></a>
     
     
 
@@ -603,6 +644,17 @@ corredor a mano, sin red.</p>
         
     </div>
     <a class="headerlink" href="#LiveRunner.ticks_seen"></a>
+    
+    
+
+                            </div>
+                            <div id="LiveRunner.paused" class="classattr">
+                                <div class="attr variable">
+            <span class="name">paused</span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.paused"></a>
     
     
 
@@ -704,6 +756,65 @@ posicion abierta y BTC si algun filtro lo necesita.</p>
 
 <blockquote>
   <p>Puede escribir <code>live_trades</code>, <code>live_positions</code> y <code>live_events</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveRunner.frames" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">frames</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="bp">self</span>,</span><span class="param">	<span class="n">cfg</span><span class="p">:</span> <span class="n"><a href="config.html#TestConfig">app.live.config.TestConfig</a></span>,</span><span class="param">	<span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">include_forming</span><span class="p">:</span> <span class="nb">bool</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="nb">object</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.frames"></a>
+    
+            <div class="docstring"><p>Las velas que necesita una evaluacion, copiadas en este instante.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>cfg:</strong>  la prueba.</li>
+<li><strong>symbol:</strong>  la moneda.</li>
+<li><strong>include_forming:</strong>  incluye la vela en curso (modo <code>intrabar</code>).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>(velas, velas de BTC o None)</code>, o <code>None</code> si todavia no hay velas suficientes.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveRunner.compute" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator decorator-staticmethod">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">compute</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">cfg</span><span class="p">:</span> <span class="n"><a href="config.html#TestConfig">app.live.config.TestConfig</a></span>,</span><span class="param">	<span class="n">frame</span>,</span><span class="param">	<span class="n">btc</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n"><a href="../strategies/base.html#Signal">app.strategies.base.Signal</a></span><span class="p">,</span> <span class="n"><a href="../explorer/confluence.html#ConfluenceStrategy">app.explorer.confluence.ConfluenceStrategy</a></span><span class="p">]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.compute"></a>
+    
+            <div class="docstring"><p>La confluencia de una prueba sobre unas velas (puro; corre fuera del bucle).</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>cfg:</strong>  la prueba.</li>
+<li><strong>frame:</strong>  velas de la moneda.</li>
+<li><strong>btc:</strong>  velas de BTC, o <code>None</code>.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>(senal, estrategia)</code>; la estrategia da despues el SL, el TP y el trailing.</p>
 </blockquote>
 </div>
 

@@ -60,6 +60,12 @@ services:
       NEWS_COLLECTION_ENABLED: "${MINERVA_REAL_BOT:-false}"
       LESSONS_MEMORY_ENABLED: "false"
       TELEGRAM_PUSH_ENABLED: "${MINERVA_REAL_BOT:-false}"
+      # v3: pruebas en vivo (paper hacia adelante con el WebSocket publico; nunca ordenes reales).
+      # Sus archivos viven en el volumen de datos, aparte de la base del bot.
+      LIVE_TESTS_ENABLED: "${MINERVA_LIVE_TESTS:-true}"
+      LIVE_TESTS_DB: /app/data/live_v3.db
+      LIVE_TICKS_DB: /app/data/ticks_v3.db
+      LIVE_MAX_EVALS_PER_SECOND: "${MINERVA_LIVE_EVALS:-4}"
     ports:
       # Publicado SOLO en loopback: la API nunca queda expuesta a la LAN ni a internet. Dentro del
       # contenedor el proceso escucha en 0.0.0.0 (asi funciona el port-forwarding de Docker); el
@@ -96,6 +102,10 @@ services:
       start_period: 300s
     # El lifespan cancela tareas y cierra la base de datos: dale tiempo antes del SIGKILL.
     stop_grace_period: 30s
+    # Topes de recursos: en el netbook la v3 comparte el equipo con el bot vivo de la v1 y no puede
+    # quitarle CPU ni memoria. En un PC se pueden subir con MINERVA_CPUS y MINERVA_MEM_LIMIT.
+    cpus: "${MINERVA_CPUS:-0.5}"
+    mem_limit: "${MINERVA_MEM_LIMIT:-600m}"
     cap_drop:
       - ALL
     security_opt:

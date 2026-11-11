@@ -113,7 +113,7 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 <!-- hechos:frontend/src/DashboardView.tsx -->
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
-- **Importa (de `frontend/src/`):** `frontend/src/AccountTab.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/api.ts`, `frontend/src/components/Attribution.tsx`, `frontend/src/components/Tabs.tsx`
+- **Importa (de `frontend/src/`):** `frontend/src/AccountTab.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/api.ts`, `frontend/src/components/Attribution.tsx`, `frontend/src/components/Tabs.tsx`
 - **Lo importan:** `frontend/src/App.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/DashboardView.test.tsx`
@@ -240,8 +240,8 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** ninguno
-- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/Unavailable.tsx`
-- **Rutas HTTP que cita:** `/api/account`, `/api/arm`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/backtest/verdicts`, `/api/control/${action}`, `/api/control/audit`, `/api/control/info`, `/api/explorer/data-status`, `/api/explorer/options`, `/api/explorer/run`, `/api/llm/decisions/recent`, `/api/measurement/status`, `/api/memory/lessons`, `/api/memory/status`, `/api/news/recent`, `/api/news/status`, `/api/risk`, `/api/shadow-trades/recent`, `/api/study/forward`, `/api/universe`, `/health`
+- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/Unavailable.tsx`
+- **Rutas HTTP que cita:** `/api/account`, `/api/arm`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/backtest/verdicts`, `/api/control/${action}`, `/api/control/audit`, `/api/control/info`, `/api/explorer/data-status`, `/api/explorer/options`, `/api/explorer/run`, `/api/live/bot`, `/api/live/options`, `/api/live/tests`, `/api/live/tests/${id}`, `/api/live/tests/${id}/stop`, `/api/llm/decisions/recent`, `/api/measurement/status`, `/api/memory/lessons`, `/api/memory/status`, `/api/news/recent`, `/api/news/status`, `/api/risk`, `/api/shadow-trades/recent`, `/api/study/forward`, `/api/universe`, `/health`
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/api.ts -->
 
@@ -300,7 +300,7 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** ninguno
-- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`
+- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/components/Card.tsx -->
@@ -320,7 +320,7 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** ninguno
-- **Lo importan:** `frontend/src/RiskTab.tsx`
+- **Lo importan:** `frontend/src/LiveTab.tsx`, `frontend/src/RiskTab.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/components/ConfirmDialog.test.tsx`
 <!-- /hechos:frontend/src/components/ConfirmDialog.tsx -->
@@ -360,7 +360,7 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** ninguno
-- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`
+- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/components/StatTile.tsx -->
@@ -400,7 +400,7 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** `frontend/src/api.ts`
-- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/UniverseTab.tsx`
+- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/UniverseTab.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/components/Unavailable.tsx -->
@@ -481,7 +481,7 @@ todavía no manda el campo.
 - **Importa (de `frontend/src/`):** ninguno
 - **Lo importan:** ninguno
 - **Rutas HTTP que cita:** ninguno
-- **Pruebas:** `frontend/src/AccountTab.test.tsx`, `frontend/src/App.test.tsx`, `frontend/src/ArmTab.test.tsx`, `frontend/src/DashboardView.test.tsx`, `frontend/src/IndicatorsTab.test.tsx`, `frontend/src/NewsMemoryCard.test.tsx`, `frontend/src/RiskTab.test.tsx`, `frontend/src/StudyTab.test.tsx`, `frontend/src/UniverseTab.test.tsx`
+- **Pruebas:** `frontend/src/AccountTab.test.tsx`, `frontend/src/App.test.tsx`, `frontend/src/ArmTab.test.tsx`, `frontend/src/DashboardView.test.tsx`, `frontend/src/IndicatorsTab.test.tsx`, `frontend/src/LiveTab.test.tsx`, `frontend/src/NewsMemoryCard.test.tsx`, `frontend/src/RiskTab.test.tsx`, `frontend/src/StudyTab.test.tsx`, `frontend/src/UniverseTab.test.tsx`
 <!-- /hechos:frontend/src/testUtils.tsx -->
 
 ### `frontend/src/IndicatorsTab.tsx`
@@ -532,3 +532,27 @@ primera visita tras un reinicio del servidor tarda alrededor de un minuto en mos
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/StudyTab.test.tsx`
 <!-- /hechos:frontend/src/StudyTab.tsx -->
+
+### `frontend/src/LiveTab.tsx`
+
+**Responsabilidad.** La pestaña «En vivo» (v3): estado del corredor, una tarjeta por prueba con su resumen y su
+detalle (posiciones, operaciones y eventos), el formulario para crear una prueba y el diálogo para detenerla.
+
+**Funciones y clases clave.** `LiveTab`, `BotPanel` (indicador del bot y botón para encenderlo o apagarlo),
+`CreateForm`, `TestCard` y `TestDetail`. Los datos vienen de
+`useLiveOptions`, `useLiveTests`, `useLiveTest`, `useCreateLiveTest`, `useStopLiveTest` y `useLiveBotSwitch`
+(`api.ts`).
+
+**Invariantes — no romper.** Detener una prueba y apagar el bot pasan por `ConfirmDialog` con la palabra
+`DETENER` o `APAGAR`, que el servidor vuelve a exigir. El formulario no decide qué es válido: muestra el motivo que devuelve el servidor.
+
+**Trampas conocidas.** La lista y el detalle se refrescan cada 15 s.
+
+<!-- hechos:frontend/src/LiveTab.tsx -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Importa (de `frontend/src/`):** `frontend/src/api.ts`, `frontend/src/components/Card.tsx`, `frontend/src/components/ConfirmDialog.tsx`, `frontend/src/components/StatTile.tsx`, `frontend/src/components/Unavailable.tsx`
+- **Lo importan:** `frontend/src/DashboardView.tsx`
+- **Rutas HTTP que cita:** ninguno
+- **Pruebas:** `frontend/src/LiveTab.test.tsx`
+<!-- /hechos:frontend/src/LiveTab.tsx -->

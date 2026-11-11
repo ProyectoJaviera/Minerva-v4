@@ -1221,11 +1221,11 @@ funding todavía no se incluye.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/scripts/live_tests.html`](../api/scripts/live_tests.html)
-- **Importa (internos):** `app.config`, `app.explorer.confluence`, `app.live.config`, `app.live.runner`, `app.live.store`, `app.market.bitunix_rest`, `app.market.bitunix_ws`, `app.research.forward`, `scripts.download_minutes`
+- **Importa (internos):** `app.config`, `app.explorer.confluence`, `app.live.config`, `app.live.report`, `app.live.runner`, `app.live.store`, `app.market.bitunix_rest`, `app.market.bitunix_ws`, `app.research.forward`, `scripts.download_minutes`
 - **Lo importan:** ninguno
 - **Configuración que lee:** `BITUNIX_RATE_LIMIT_PER_SEC`, `BITUNIX_REST_BASE_URL`, `BITUNIX_WS_PUBLIC_URL`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`
+- **Pruebas que lo importan o citan:** ninguno
 <!-- /hechos:scripts/live_tests.py -->

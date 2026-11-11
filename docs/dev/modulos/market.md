@@ -99,7 +99,7 @@ y reintentos con backoff.
 
 - **Referencia pdoc:** [`api/app/market/bitunix_rest.html`](../api/app/market/bitunix_rest.html)
 - **Importa (internos):** `app.core.http`, `app.core.logging`, `app.market.rate_limiter`
-- **Lo importan:** 16 módulos (core 1, execution 1, main 1, market 4, scripts 7, trading 2)
+- **Lo importan:** 17 módulos (core 1, execution 1, live 1, main 1, market 4, scripts 7, trading 2)
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -130,7 +130,7 @@ y reintentos con backoff.
 
 - **Referencia pdoc:** [`api/app/market/bitunix_ws.html`](../api/app/market/bitunix_ws.html)
 - **Importa (internos):** `app.core.logging`
-- **Lo importan:** `app.core.scheduler`, `app.main`, `scripts.live_tests`
+- **Lo importan:** `app.core.scheduler`, `app.live.service`, `app.main`, `scripts.live_tests`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
