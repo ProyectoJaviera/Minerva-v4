@@ -125,6 +125,9 @@
                     <a class="function" href="#list_tests">list_tests</a>
             </li>
             <li>
+                    <a class="function" href="#live_positions">live_positions</a>
+            </li>
+            <li>
                     <a class="function" href="#get_test">get_test</a>
             </li>
             <li>
@@ -552,6 +555,44 @@ palabra <code>DETENER</code>. El interruptor (<code>POST /api/live/bot</code>) e
 
 <blockquote>
   <p><code>runner</code> y <code>tests</code> (ver <code>report.overview</code>), mas <code>enabled</code>.</p>
+</blockquote>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Lee el archivo de pruebas en solo lectura, en un hilo aparte.</p>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="live_positions">
+                    <div class="attr function">
+                    <div class="decorator decorator-router.get">@router.get(&#39;/positions&#39;)</div>
+
+        <span class="def">async def</span>
+        <span class="name">live_positions</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">settings</span><span class="p">:</span> <span class="n"><a href="../../config.html#Settings">app.config.Settings</a></span> <span class="o">=</span> <span class="n">Depends</span><span class="p">(</span><span class="n">dependency</span><span class="o">=&lt;</span><span class="n">function</span> <span class="n">get_settings</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></span><span class="return-annotation">) -> <span class="nb">dict</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#live_positions"></a>
+    
+            <div class="docstring"><p><code>GET /api/live/positions</code>: las posiciones abiertas con sus valores en vivo (v4).</p>
+
+<p>El corredor guarda el ultimo precio de cada moneda una vez por segundo; con eso se calculan
+el PnL no realizado, el ROE, el resultado si se cerrara ahora y las distancias al SL, al TP y
+a la liquidacion, como en la ficha de una posicion de un exchange.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>settings:</strong>  configuracion (inyectada).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>now_ms</code> y <code>positions</code> (ver <code>report.live_positions</code>).</p>
 </blockquote>
 
 <h6 id="efectos">Efectos:</h6>

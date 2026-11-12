@@ -69,6 +69,11 @@ CREATE TABLE IF NOT EXISTS live_control_rates (
     eligible_bars INTEGER NOT NULL DEFAULT 0,
     signals INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS live_prices (
+    symbol TEXT PRIMARY KEY,
+    price REAL NOT NULL,
+    ts_ms INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS live_heartbeat (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     ts_ms INTEGER NOT NULL,
@@ -140,6 +145,7 @@ class LiveStore:
         cols = {r[1] for r in self._conn.execute("PRAGMA table_info(live_tests)")}
         # Un archivo de la v3 abierto en solo lectura no tiene las columnas de la v4.
         self._has_controls = "control_of" in cols and "live_control_rates" in tables
+        self._has_prices = "live_prices" in tables
 
     def close(self) -> None:
         """Cierra la conexion."""
@@ -420,6 +426,36 @@ class LiveStore:
                 "SELECT ts_ms, test_id, symbol, kind, detail FROM live_events "
                 "WHERE test_id = ? ORDER BY id DESC LIMIT ?", (test_id, limit))
         return list(cur)
+
+    def save_prices(self, prices: dict[str, tuple[float, int]]) -> None:
+        """Guarda el ultimo precio conocido de cada moneda (v4, para ver las posiciones en vivo).
+
+        Args:
+            prices: `symbol -> (precio, hora del tick en ms)`.
+
+        Efectos:
+            Escribe `live_prices`.
+        """
+        if not prices:
+            return
+        with self._conn:
+            self._conn.executemany(
+                "INSERT OR REPLACE INTO live_prices VALUES (?, ?, ?)",
+                [(s, float(p), int(ts)) for s, (p, ts) in prices.items()])
+
+    def prices(self) -> dict[str, tuple[float, int]]:
+        """El ultimo precio guardado de cada moneda (v4).
+
+        Returns:
+            `symbol -> (precio, hora del tick en ms)`; vacio en un archivo sin la tabla.
+
+        Efectos:
+            Lee `live_prices`.
+        """
+        if not self._has_prices:
+            return {}
+        return {r[0]: (float(r[1]), int(r[2])) for r in self._conn.execute(
+            "SELECT symbol, price, ts_ms FROM live_prices")}
 
     def bot_on(self) -> bool:
         """Si el bot de pruebas en vivo esta encendido (interruptor del dashboard).

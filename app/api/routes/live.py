@@ -144,6 +144,27 @@ async def list_tests(settings: Settings = Depends(get_settings)) -> dict:
     return out
 
 
+@router.get("/positions")
+async def live_positions(settings: Settings = Depends(get_settings)) -> dict:
+    """`GET /api/live/positions`: las posiciones abiertas con sus valores en vivo (v4).
+
+    El corredor guarda el ultimo precio de cada moneda una vez por segundo; con eso se calculan
+    el PnL no realizado, el ROE, el resultado si se cerrara ahora y las distancias al SL, al TP y
+    a la liquidacion, como en la ficha de una posicion de un exchange.
+
+    Args:
+        settings: configuracion (inyectada).
+
+    Returns:
+        `now_ms` y `positions` (ver `report.live_positions`).
+
+    Efectos:
+        Lee el archivo de pruebas en solo lectura, en un hilo aparte.
+    """
+    return await asyncio.to_thread(report.live_positions, settings.live_tests_db,
+                                   settings.taker_fee_pct, settings.backtest_slippage_bps)
+
+
 @router.get("/tests/{test_id}")
 async def get_test(test_id: int, settings: Settings = Depends(get_settings)) -> dict:
     """`GET /api/live/tests/{test_id}`: detalle de una prueba.

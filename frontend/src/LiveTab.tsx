@@ -5,9 +5,11 @@ import {
   type LiveSummary,
   type LiveTestRow,
   type LiveVerdict,
+  type LiveOpenPosition,
   useCreateLiveTest,
   useLiveBotSwitch,
   useLiveOptions,
+  useLivePositions,
   useLiveTest,
   useLiveTests,
   useStopLiveTest,
@@ -459,6 +461,99 @@ function TestDetail({ id }: { id: number }) {
   );
 }
 
+function fmtPrice(v: number | null): string {
+  return v === null ? "-" : String(Number(v.toPrecision(6)));
+}
+
+function fmtSigned(v: number | null, digits = 2, unit = ""): string {
+  if (v === null) return "-";
+  return `${v >= 0 ? "+" : ""}${v.toFixed(digits)}${unit}`;
+}
+
+function pnlClass(v: number | null): string {
+  if (v === null || v === 0) return "text-gray-800 dark:text-gray-200";
+  return v > 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400";
+}
+
+function fmtAge(fromMs: number, nowMs: number): string {
+  const s = Math.max(0, Math.round((nowMs - fromMs) / 1000));
+  if (s < 60) return `${s} s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  return `${h} h ${m % 60} min`;
+}
+
+// v4: las posiciones abiertas como en un exchange, con el precio actual y el PnL no realizado. Se
+// refresca cada 2 segundos con el ultimo precio que guarda el corredor.
+function PositionsTable({ rows, nowMs, label }: { rows: LiveOpenPosition[]; nowMs: number; label: string }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="overflow-x-auto">
+      <table aria-label={label} className="w-full min-w-[720px] text-left text-xs tabular-nums">
+        <thead>
+          <tr className="text-gray-500 dark:text-gray-400">
+            <th className="py-1 pr-2 font-medium">Moneda</th>
+            <th className="pr-2 font-medium">Tamaño</th>
+            <th className="pr-2 font-medium">Entrada</th>
+            <th className="pr-2 font-medium">Precio actual</th>
+            <th className="pr-2 font-medium">Liquidación</th>
+            <th className="pr-2 font-medium">PnL no realizado (ROE)</th>
+            <th className="pr-2 font-medium">Neto si cierra</th>
+            <th className="pr-2 font-medium">SL</th>
+            <th className="pr-2 font-medium">Próximo TP</th>
+            <th className="font-medium">Abierta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((p) => (
+            <tr key={`${p.test_id}-${p.symbol}`} className="border-t border-gray-100 align-top text-gray-800 dark:border-gray-700 dark:text-gray-200">
+              <td className="py-1.5 pr-2">
+                <div className="font-semibold">{p.symbol}</div>
+                <span className={`rounded px-1 text-[11px] font-medium ${p.side === "LONG" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200" : "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200"}`}>
+                  {p.side === "LONG" ? "Largo" : "Corto"} {p.leverage}x
+                </span>
+              </td>
+              <td className="pr-2">
+                <div>{p.notional === null ? "-" : `${p.notional.toFixed(2)} USDT`}</div>
+                <div className="text-gray-500">margen {p.margin_usdt} · {Math.round(p.size_pct)} % abierto</div>
+              </td>
+              <td className="pr-2">{fmtPrice(p.entry_price)}</td>
+              <td className="pr-2">
+                <div className="font-semibold">{fmtPrice(p.price)}</div>
+                <div className={p.price_stale ? "text-amber-700 dark:text-amber-400" : "text-gray-500"}>
+                  {p.price_ts_ms === null ? "sin precio" : p.price_stale ? `viejo (${fmtAge(p.price_ts_ms, nowMs)})` : `hace ${fmtAge(p.price_ts_ms, nowMs)}`}
+                </div>
+              </td>
+              <td className="pr-2">
+                <div>{fmtPrice(p.liq)}</div>
+                <div className="text-gray-500">{p.to_liq_pct === null ? "" : `a ${p.to_liq_pct.toFixed(2)} %`}</div>
+              </td>
+              <td className={`pr-2 font-semibold ${pnlClass(p.upnl)}`}>
+                <div>{fmtSigned(p.upnl, 3, " USDT")}</div>
+                <div>{fmtSigned(p.roe_pct, 2, " %")}</div>
+              </td>
+              <td className={`pr-2 ${pnlClass(p.net_if_closed)}`}>
+                <div>{fmtSigned(p.net_if_closed, 3, " USDT")}</div>
+                {p.realized !== 0 && <div className="text-gray-500">TP hechos {fmtSigned(p.realized, 3)}</div>}
+              </td>
+              <td className="pr-2">
+                <div>{fmtPrice(p.stop)}</div>
+                <div className="text-gray-500">{p.to_sl_pct === null ? "" : `a ${p.to_sl_pct.toFixed(2)} %`}</div>
+              </td>
+              <td className="pr-2">
+                <div>{fmtPrice(p.next_tp)}</div>
+                <div className="text-gray-500">{p.to_tp_pct === null ? (p.trailing !== null ? "trailing" : "") : `a ${p.to_tp_pct.toFixed(2)} %`}</div>
+              </td>
+              <td>{fmtAge(p.entry_time_ms, nowMs)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 const VERDICT_TEXT: Record<LiveVerdict, string> = {
   pocas_operaciones: "Faltan operaciones para decir algo",
   le_gana: "Le gana al azar",
@@ -479,10 +574,11 @@ function fmtPerTrade(v: number | null): string {
 
 // v4: la prueba contra su gemelo de entradas al azar (misma configuracion, entradas sorteadas a la
 // misma frecuencia). Si no le gana al gemelo, su resultado no se distingue de la suerte.
-function ControlPanel({ t }: { t: LiveTestRow }) {
+function ControlPanel({ t, positions, nowMs }: { t: LiveTestRow; positions: LiveOpenPosition[]; nowMs: number }) {
   const ctl = t.control;
   const vs = t.vs_control;
   if (!ctl || !vs) return null;
+  const twinRows = positions.filter((p) => p.test_id === ctl.id);
   const rate = t.rate;
   return (
     <section aria-label="Contra el azar" className="space-y-2 rounded bg-gray-50 p-2 dark:bg-gray-800/60">
@@ -505,12 +601,17 @@ function ControlPanel({ t }: { t: LiveTestRow }) {
           ? ` El veredicto necesita al menos ${vs.min_trades} operaciones cerradas en cada lado.`
           : ` Prueba de Welch de una cola al 5 % sobre el resultado neto por operación (t = ${vs.t === null ? "-" : vs.t.toFixed(2)}).`}
       </p>
+      <PositionsTable rows={twinRows} nowMs={nowMs} label="Posiciones abiertas del gemelo" />
     </section>
   );
 }
 
 function TestCard({ t, onStop }: { t: LiveTestRow; onStop: (t: LiveTestRow) => void }) {
   const [open, setOpen] = useState(false);
+  const live = useLivePositions(t.status === "active" || t.open_positions > 0);
+  const positions = live.data?.positions ?? [];
+  const nowMs = Date.now();
+  const own = positions.filter((p) => p.test_id === t.id);
   const s = t.summary;
   const c = t.config;
   return (
@@ -543,9 +644,20 @@ function TestCard({ t, onStop }: { t: LiveTestRow; onStop: (t: LiveTestRow) => v
         <StatTile label="PF" value={fmtPf(s.pf)} />
         <StatTile label="Resultado" value={fmtUsdt(s.net)} />
         <StatTile label="Ganadoras" value={s.winrate === null ? "-" : `${Math.round(100 * s.winrate)}%`} />
-        <StatTile label="Abiertas" value={String(t.open_positions)} />
+        <StatTile label="Abiertas" value={String(own.length || t.open_positions)} />
       </div>
-      <ControlPanel t={t} />
+      {own.length > 0 && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-200">Posiciones abiertas</h4>
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              PnL no realizado {fmtSigned(own.reduce((a, p) => a + (p.upnl ?? 0), 0), 3, " USDT")} · se actualiza cada 2 s
+            </span>
+          </div>
+          <PositionsTable rows={own} nowMs={nowMs} label="Posiciones abiertas" />
+        </div>
+      )}
+      <ControlPanel t={t} positions={positions} nowMs={nowMs} />
       <button onClick={() => setOpen(!open)} className="text-xs text-blue-700 underline dark:text-blue-300">
         {open ? "Ocultar detalle" : "Ver detalle"}
       </button>

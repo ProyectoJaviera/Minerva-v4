@@ -141,7 +141,7 @@ FastAPI no protegería nada).
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** 67 archivos (e2e 10, unit 57)
+- **Pruebas que lo importan o citan:** 68 archivos (e2e 10, unit 58)
 <!-- /hechos:app/persistence/models.py -->
 
 ### `app/persistence/repositories/__init__.py`

@@ -10,10 +10,98 @@ import time
 from pathlib import Path
 
 from app.live.control import compare, signal_rate
-from app.live.paper import ClosedTrade
+from app.live.paper import ClosedTrade, PaperPosition
 from app.live.store import LiveStore, StoredTest
 
 RUNNER_ALIVE_SECONDS = 60
+# Un precio sin ticks nuevos en mas de esto se marca como viejo en el dashboard.
+PRICE_STALE_SECONDS = 30
+
+
+def position_view(pos: PaperPosition, price: float | None, taker_fee_pct: float,
+                  slippage_bps: float) -> dict:
+    """Los valores de una posicion abierta a un precio, como los muestra un exchange (v4).
+
+    Args:
+        pos: la posicion.
+        price: ultimo precio de la moneda, o `None` si no se conoce.
+        taker_fee_pct: comision taker (fraccion) para estimar el cierre.
+        slippage_bps: deslizamiento de salida en puntos basicos.
+
+    Returns:
+        `size_pct` (lo que sigue abierto, %), `notional` al precio actual, `upnl` (PnL no
+        realizado bruto de la parte abierta, como el de un exchange), `roe_pct` (sobre el margen de
+        la parte abierta), `realized` (neto de los TP parciales ya hechos), `net_if_closed` (lo que
+        dejaria toda la operacion si se cerrara ahora: con comisiones, deslizamiento y funding),
+        `next_tp` y las distancias en % del precio actual al SL, al proximo TP y a la liquidacion
+        (positivas si falta recorrido). Sin precio, los valores en vivo son `None`.
+    """
+    long = pos.side == "LONG"
+    sign = 1.0 if long else -1.0
+    open_frac = pos.qty / pos.qty_initial if pos.qty_initial else 1.0
+    pending = [lv for lv in pos.tp_levels if not lv[2]]
+    next_tp = pending[0][0] if pending else pos.tp
+    realized = (pos.realized_gross_usdt - pos.realized_fee_exit_usdt
+                - pos.realized_slippage_exit_usdt)
+    out = {"size_pct": 100 * open_frac, "next_tp": next_tp, "realized": realized,
+           "funding": pos.funding_paid_usdt, "notional": None, "upnl": None, "roe_pct": None,
+           "net_if_closed": None, "to_sl_pct": None, "to_tp_pct": None, "to_liq_pct": None}
+    if price is None or price <= 0:
+        return out
+    upnl = (price - pos.entry_price) * pos.qty * sign
+    margin_open = pos.margin_usdt * open_frac
+    exit_costs = price * pos.qty * taker_fee_pct + price * pos.qty * slippage_bps / 10_000
+    out.update({
+        "notional": price * pos.qty, "upnl": upnl,
+        "roe_pct": upnl / margin_open * 100 if margin_open else None,
+        "net_if_closed": (upnl + realized - pos.fee_entry_usdt - pos.slippage_entry_usdt
+                          - pos.funding_paid_usdt - exit_costs),
+        "to_sl_pct": sign * (price - pos.stop) / price * 100,
+        "to_tp_pct": None if next_tp is None else sign * (next_tp - price) / price * 100,
+        "to_liq_pct": sign * (price - pos.liq) / price * 100,
+    })
+    return out
+
+
+def live_positions(path: str | Path, taker_fee_pct: float, slippage_bps: float,
+                   now_s: float | None = None) -> dict:
+    """Todas las posiciones abiertas con sus valores al ultimo precio, para el dashboard (v4).
+
+    Args:
+        path: archivo de pruebas.
+        taker_fee_pct: comision taker (fraccion).
+        slippage_bps: deslizamiento en puntos basicos.
+        now_s: instante en segundos (para las pruebas); por defecto, el reloj.
+
+    Returns:
+        `now_ms` y `positions`: una fila por posicion con `test_id`, `is_control`, `symbol`, los
+        campos de la posicion, `price`, `price_ts_ms`, `price_stale` y los de `position_view`.
+
+    Efectos:
+        Lee el archivo de pruebas en solo lectura.
+    """
+    now = time.time() if now_s is None else now_s
+    now_ms = int(now * 1000)
+    if not Path(path).is_file():
+        return {"now_ms": now_ms, "positions": []}
+    with LiveStore(path, read_only=True) as store:
+        controls = {t.id for t in store.tests() if t.control_of is not None}
+        prices = store.prices()
+        rows = []
+        for (test_id, symbol), pos in sorted(store.positions().items()):
+            price, ts = prices.get(symbol, (None, None))
+            stale = ts is None or now_ms - ts > PRICE_STALE_SECONDS * 1000
+            rows.append({
+                "test_id": test_id, "is_control": test_id in controls, "symbol": symbol,
+                "side": pos.side, "entry_time_ms": pos.entry_time_ms,
+                "entry_price": pos.entry_price, "qty": pos.qty, "qty_initial": pos.qty_initial,
+                "margin_usdt": pos.margin_usdt, "leverage": pos.leverage, "stop": pos.stop,
+                "liq": pos.liq, "tp_levels": pos.tp_levels, "tp": pos.tp,
+                "trailing": pos.trailing, "price": price, "price_ts_ms": ts,
+                "price_stale": stale,
+                **position_view(pos, price, taker_fee_pct, slippage_bps),
+            })
+    return {"now_ms": now_ms, "positions": rows}
 
 
 def summarize(trades: list[ClosedTrade]) -> dict:

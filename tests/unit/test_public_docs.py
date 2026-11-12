@@ -562,8 +562,8 @@ def test_the_api_has_the_number_of_routes_the_documents_state():
 
     # INFORME_FINAL.md es la foto del cierre de la Fase 6 (22 rutas); la v2 agrego las tres de la
     # seccion «Indicadores» y la de «Estudio»; la v3, las seis de «En vivo» y el avance de
-    # Indicadores.
-    assert len(real) == 33, "ARQUITECTURA.md dice 33 rutas: actualiza los docs"
+    # Indicadores; la v4, las posiciones en vivo (solo lectura).
+    assert len(real) == 34, "ARQUITECTURA.md dice 34 rutas: actualiza los docs"
     # login, logout, las acciones de control (una sola ruta con tres acciones) y, de la v3, crear y
     # detener una prueba en vivo (solo tocan el archivo de pruebas).
     assert writes == {

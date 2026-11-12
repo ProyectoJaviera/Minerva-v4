@@ -1047,6 +1047,54 @@ export function useLiveTests() {
   });
 }
 
+// v4: una posicion abierta con sus valores al ultimo precio (como la ficha de un exchange).
+export interface LiveOpenPosition {
+  test_id: number;
+  is_control: boolean;
+  symbol: string;
+  side: string;
+  entry_time_ms: number;
+  entry_price: number;
+  qty: number;
+  qty_initial: number;
+  margin_usdt: number;
+  leverage: number;
+  stop: number;
+  liq: number;
+  tp: number | null;
+  tp_levels: [number, number, boolean][];
+  trailing: number | null;
+  price: number | null;
+  price_ts_ms: number | null;
+  price_stale: boolean;
+  size_pct: number;
+  next_tp: number | null;
+  realized: number;
+  funding: number;
+  notional: number | null;
+  upnl: number | null;
+  roe_pct: number | null;
+  net_if_closed: number | null;
+  to_sl_pct: number | null;
+  to_tp_pct: number | null;
+  to_liq_pct: number | null;
+}
+
+export interface LiveOpenPositions {
+  now_ms: number;
+  positions: LiveOpenPosition[];
+}
+
+// Se refresca cada 2 s (el corredor guarda el ultimo precio una vez por segundo).
+export function useLivePositions(enabled = true) {
+  return useQuery({
+    queryKey: ["live-positions"],
+    queryFn: () => apiFetch<LiveOpenPositions>("/api/live/positions"),
+    enabled,
+    refetchInterval: enabled ? 2000 : false,
+  });
+}
+
 export function useLiveTest(id: number | null) {
   return useQuery({
     queryKey: ["live-test", id],

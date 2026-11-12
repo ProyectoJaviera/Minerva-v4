@@ -107,6 +107,12 @@
                                 <a class="function" href="#LiveStore.events">events</a>
                         </li>
                         <li>
+                                <a class="function" href="#LiveStore.save_prices">save_prices</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#LiveStore.prices">prices</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#LiveStore.bot_on">bot_on</a>
                         </li>
                         <li>
@@ -746,6 +752,60 @@ cortas, y el corredor relee las pruebas cada pocos segundos.</p>
 
 <blockquote>
   <p>Lee <code>live_events</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveStore.save_prices" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">save_prices</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">prices</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveStore.save_prices"></a>
+    
+            <div class="docstring"><p>Guarda el ultimo precio conocido de cada moneda (v4, para ver las posiciones en vivo).</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>prices:</strong>  <code>symbol -&gt; (precio, hora del tick en ms)</code>.</li>
+</ul>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Escribe <code>live_prices</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveStore.prices" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">prices</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveStore.prices"></a>
+    
+            <div class="docstring"><p>El ultimo precio guardado de cada moneda (v4).</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>symbol -&gt; (precio, hora del tick en ms)</code>; vacio en un archivo sin la tabla.</p>
+</blockquote>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Lee <code>live_prices</code>.</p>
 </blockquote>
 </div>
 

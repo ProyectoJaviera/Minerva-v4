@@ -100,7 +100,7 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_positions.py`
 <!-- /hechos:app/live/paper.py -->
 
 ### `app/live/runner.py`
@@ -148,7 +148,7 @@ las posiciones (motivo `MANUAL`), vacía las velas y deja de mirar ticks; al enc
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`, `tests/unit/test_live_control.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`, `tests/unit/test_live_control.py`, `tests/unit/test_live_positions.py`
 <!-- /hechos:app/live/store.py -->
 
 ### `app/live/report.py`
@@ -172,7 +172,7 @@ y entrar), `overview()` (corredor y todas las pruebas) y `detail()` (una prueba)
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`, `tests/unit/test_live_control.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`, `tests/unit/test_live_control.py`, `tests/unit/test_live_positions.py`
 <!-- /hechos:app/live/report.py -->
 
 ### `app/live/service.py`

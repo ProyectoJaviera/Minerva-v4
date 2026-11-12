@@ -32,6 +32,15 @@
                     <a class="variable" href="#RUNNER_ALIVE_SECONDS">RUNNER_ALIVE_SECONDS</a>
             </li>
             <li>
+                    <a class="variable" href="#PRICE_STALE_SECONDS">PRICE_STALE_SECONDS</a>
+            </li>
+            <li>
+                    <a class="function" href="#position_view">position_view</a>
+            </li>
+            <li>
+                    <a class="function" href="#live_positions">live_positions</a>
+            </li>
+            <li>
                     <a class="function" href="#summarize">summarize</a>
             </li>
             <li>
@@ -77,6 +86,90 @@ el gemelo (<code>rate</code>) y la comparacion con el (<code>vs_control</code>, 
     <a class="headerlink" href="#RUNNER_ALIVE_SECONDS"></a>
     
     
+
+                </section>
+                <section id="PRICE_STALE_SECONDS">
+                    <div class="attr variable">
+            <span class="name">PRICE_STALE_SECONDS</span>        =
+<span class="default_value">30</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PRICE_STALE_SECONDS"></a>
+    
+    
+
+                </section>
+                <section id="position_view">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">position_view</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">pos</span><span class="p">:</span> <span class="n"><a href="paper.html#PaperPosition">app.live.paper.PaperPosition</a></span>,</span><span class="param">	<span class="n">price</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">taker_fee_pct</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">slippage_bps</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="nb">dict</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#position_view"></a>
+    
+            <div class="docstring"><p>Los valores de una posicion abierta a un precio, como los muestra un exchange (v4).</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>pos:</strong>  la posicion.</li>
+<li><strong>price:</strong>  ultimo precio de la moneda, o <code>None</code> si no se conoce.</li>
+<li><strong>taker_fee_pct:</strong>  comision taker (fraccion) para estimar el cierre.</li>
+<li><strong>slippage_bps:</strong>  deslizamiento de salida en puntos basicos.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>size_pct</code> (lo que sigue abierto, %), <code>notional</code> al precio actual, <code>upnl</code> (PnL no
+  realizado bruto de la parte abierta, como el de un exchange), <code>roe_pct</code> (sobre el margen de
+  la parte abierta), <code>realized</code> (neto de los TP parciales ya hechos), <code>net_if_closed</code> (lo que
+  dejaria toda la operacion si se cerrara ahora: con comisiones, deslizamiento y funding),
+  <code>next_tp</code> y las distancias en % del precio actual al SL, al proximo TP y a la liquidacion
+  (positivas si falta recorrido). Sin precio, los valores en vivo son <code>None</code>.</p>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="live_positions">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">live_positions</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span>,</span><span class="param">	<span class="n">taker_fee_pct</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">slippage_bps</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">now_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">dict</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#live_positions"></a>
+    
+            <div class="docstring"><p>Todas las posiciones abiertas con sus valores al ultimo precio, para el dashboard (v4).</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>path:</strong>  archivo de pruebas.</li>
+<li><strong>taker_fee_pct:</strong>  comision taker (fraccion).</li>
+<li><strong>slippage_bps:</strong>  deslizamiento en puntos basicos.</li>
+<li><strong>now_s:</strong>  instante en segundos (para las pruebas); por defecto, el reloj.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>now_ms</code> y <code>positions</code>: una fila por posicion con <code>test_id</code>, <code>is_control</code>, <code>symbol</code>, los
+  campos de la posicion, <code>price</code>, <code>price_ts_ms</code>, <code>price_stale</code> y los de <code><a href="#position_view">position_view</a></code>.</p>
+</blockquote>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Lee el archivo de pruebas en solo lectura.</p>
+</blockquote>
+</div>
+
 
                 </section>
                 <section id="summarize">

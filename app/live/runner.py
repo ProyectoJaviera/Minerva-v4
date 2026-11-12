@@ -179,6 +179,7 @@ class LiveRunner:
         self.rates: dict[int, tuple[int, int]] = self.store.rates()
         self._twin_of: dict[int, int] = {}
         self._twin_due: list[tuple[int, int, str, Side]] = []
+        self._prices_dirty: set[str] = set()
 
     # --- utilidades ---
 
@@ -317,6 +318,7 @@ class LiveRunner:
         self.ticks_seen += 1
         self.last_price[symbol] = price
         self.last_tick_ms[symbol] = ts_ms
+        self._prices_dirty.add(symbol)
         self._stale_logged.discard(symbol)
         if self.ticks is not None:
             self._tick_buffer.append((symbol, ts_ms, price, qty, side))
@@ -624,6 +626,12 @@ class LiveRunner:
         if self.ticks is not None and self._tick_buffer:
             buffer, self._tick_buffer = self._tick_buffer, []
             self.ticks.append(buffer)
+        # v4: el ultimo precio de cada moneda, una vez por segundo, para que el dashboard muestre
+        # las posiciones abiertas en vivo (precio actual y PnL no realizado).
+        if self._prices_dirty:
+            dirty, self._prices_dirty = self._prices_dirty, set()
+            self.store.save_prices({s: (self.last_price[s], self.last_tick_ms.get(s, now_ms))
+                                    for s in dirty if s in self.last_price})
 
         # Interruptor del dashboard: apagado, el bot cierra sus posiciones, deja de escuchar el
         # mercado y solo late para que se vea que sigue vivo.

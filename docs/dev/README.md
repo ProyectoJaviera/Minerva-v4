@@ -151,7 +151,7 @@ El diagrama muestra solo las flechas con 3 o más imports; no dibuja las que lle
 
 | Paquete | Archivos | Líneas | Importa de (imports) | Lo importan |
 |---|---:|---:|---|---|
-| `api` | 23 | 2785 | persistence 36, trading 16, config 14, core 8, news 7, explorer 5, llm 4, live 3, market 3, memory 3, research 3, telegram 2 | main, scripts, telegram |
+| `api` | 23 | 2806 | persistence 36, trading 16, config 14, core 8, news 7, explorer 5, llm 4, live 3, market 3, memory 3, research 3, telegram 2 | main, scripts, telegram |
 | `backtesting` | 7 | 2143 | persistence 9, strategies 3, trading 3, config 2, core 2, market 2, execution 1 | explorer, live, replay, research, scripts, trading |
 | `candidates` | 5 | 610 | indicators 5, strategies 4 | explorer, live, research, scripts |
 | `config` | 1 | 443 | ninguno | api, backtesting, core, execution, explorer, live, llm, main, market, memory, news, replay, research, scripts, telegram, trading |
@@ -159,7 +159,7 @@ El diagrama muestra solo las flechas con 3 o más imports; no dibuja las que lle
 | `execution` | 5 | 666 | persistence 7, trading 5, config 1, core 1, market 1 | backtesting, core, live, main, replay, trading |
 | `explorer` | 4 | 1111 | backtesting 2, candidates 2, persistence 2, research 2, config 1, indicators 1, market 1, strategies 1 | api, live, scripts |
 | `indicators` | 7 | 1146 | ninguno | candidates, explorer, live, replay, research, scripts, strategies |
-| `live` | 9 | 2557 | config 3, explorer 3, persistence 3, backtesting 2, core 2, market 2, strategies 2, trading 2, candidates 1, execution 1, indicators 1, replay 1, research 1 | api, main, scripts |
+| `live` | 9 | 2689 | config 3, explorer 3, persistence 3, backtesting 2, core 2, market 2, strategies 2, trading 2, candidates 1, execution 1, indicators 1, replay 1, research 1 | api, main, scripts |
 | `llm` | 9 | 1478 | persistence 16, config 5, memory 3, core 1, market 1, news 1 | api, scripts, telegram, trading |
 | `main` | 2 | 295 | api 19, market 4, trading 4, core 3, telegram 3, config 1, execution 1, live 1, memory 1, news 1, persistence 1 | ninguno |
 | `market` | 11 | 1908 | persistence 13, core 9, config 1 | api, backtesting, core, execution, explorer, live, llm, main, research, scripts, telegram, trading |

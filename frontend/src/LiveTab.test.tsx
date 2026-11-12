@@ -117,6 +117,33 @@ describe("LiveTab", () => {
     expect(panel).toHaveTextContent("t = 2.40");
   });
 
+  it("muestra las posiciones abiertas en vivo, como en un exchange", async () => {
+    const now = Date.now();
+    const position = {
+      test_id: 1, is_control: false, symbol: "XRPUSDT", side: "SHORT", entry_time_ms: now - 90 * 60_000,
+      entry_price: 1.0361, qty: 96.5, qty_initial: 96.5, margin_usdt: 10, leverage: 10, stop: 1.0538,
+      liq: 1.13, tp: null, tp_levels: [[1.02056, 0.5, false], [1.00502, 0.5, false]], trailing: 0.0207,
+      price: 1.0301, price_ts_ms: now - 1000, price_stale: false, size_pct: 100, next_tp: 1.02056,
+      realized: 0, funding: 0, notional: 99.4, upnl: 0.579, roe_pct: 5.79, net_if_closed: 0.46,
+      to_sl_pct: 2.3, to_tp_pct: 0.93, to_liq_pct: 9.7,
+    };
+    vi.stubGlobal("fetch", mockFetch({
+      "/api/live/options": { status: 200, body: OPTIONS },
+      "/api/live/tests": { status: 200, body: TESTS },
+      "/api/live/positions": { status: 200, body: { now_ms: now, positions: [position] } },
+    }));
+    render(withQueryClient(<LiveTab />));
+    const table = await screen.findByRole("table", { name: "Posiciones abiertas" });
+    expect(table).toHaveTextContent("XRPUSDT");
+    expect(table).toHaveTextContent("Corto 10x");
+    expect(table).toHaveTextContent("1.0301");
+    expect(table).toHaveTextContent("+0.579 USDT");
+    expect(table).toHaveTextContent("+5.79 %");
+    expect(table).toHaveTextContent("a 0.93 %");
+    expect(table).toHaveTextContent("1 h 30 min");
+    expect(screen.getByText(/se actualiza cada 2 s/)).toBeInTheDocument();
+  });
+
   it("crea una prueba con los indicadores elegidos", async () => {
     const fetchMock = mockFetch({
       "/api/live/options": { status: 200, body: OPTIONS },

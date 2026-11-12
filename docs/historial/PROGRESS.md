@@ -2601,3 +2601,12 @@ Pedido del dueño: una v4 copiada de la v3 con una sola función nueva, un contr
 - **Esquema (cambio):** `live_tests.control_of` (columna nueva; los archivos de la v3 se migran solos al abrirlos para escribir) y tabla `live_control_rates` (velas elegibles y señales por prueba). La base del bot no cambia.
 - **Veredicto:** prueba de Welch de una cola al 5 % sobre el PnL neto medio por operación, prueba contra gemelo, solo con 30 o más operaciones cerradas en cada lado: «Le gana al azar», «Pierde contra el azar», «No se distingue del azar» o «Faltan operaciones». Se muestra en la tarjeta «Contra el azar» de cada prueba y en `live_tests.py report`. Es un solo gemelo (una sola tirada de la suerte): un «le gana» aislado no prueba ventaja si se crearon muchas pruebas.
 - **Motivo:** la v3 dejaba pendiente «compararla con un control al azar» (docs/v3/PRUEBAS_EN_VIVO.md, sección 6).
+
+## v4: posiciones En vivo en tiempo real (2026-11-12)
+
+Pedido del dueño: ver las posiciones abiertas de cada prueba «En vivo» como en un exchange, con los valores actualizándose solos (la lista de texto de la v3 era difícil de leer).
+
+- El corredor guarda una vez por segundo el último precio de cada moneda en la tabla nueva `live_prices` del archivo de pruebas (esquema aditivo; la base del bot no cambia).
+- `GET /api/live/positions` (solo lectura) devuelve cada posición abierta con el precio actual y su antigüedad, el tamaño al precio actual, el PnL no realizado bruto de la parte abierta y el ROE sobre su margen (como un exchange), el neto si se cerrara ahora (con comisiones, deslizamiento, funding y TP parciales ya hechos) y las distancias al SL, al próximo TP y a la liquidación (`app/live/report.py`, `position_view`).
+- La tarjeta de cada prueba muestra la tabla «Posiciones abiertas» (también las del gemelo dentro de «Contra el azar»), refrescada cada 2 s; un precio sin ticks en más de 30 s se marca como viejo.
+- Sin cambio de comportamiento de las pruebas: solo se muestra. Smoke test con precios reales de Bitunix: las dos posiciones de la prueba de humo mostraron precio vivo, PnL y distancias coherentes.
