@@ -19,7 +19,40 @@ base vacía o con el LLM apagado, la medición se cortaría.
 Convenciones: **[PC]** es PowerShell en el PC, desde la carpeta de la v3 (`Minerva-v3`); **[NETBOOK]** es bash por SSH
 en el netbook. Reemplaza `<usuario>` y `<IP>` por los del netbook.
 
+Todo se hace desde la carpeta de la v3 con su propio entorno de Python (`.venv`). Las únicas referencias a otras
+versiones son a propósito: el paso 0 trae por última vez los datos que grababa la v2 en tu PC, y en el netbook se
+respalda y se detiene la v1 (`~/minerva`), que es justamente la que la v3 reemplaza.
+
 ---
+
+## 0. [PC] Pasar la captura de datos de la v2 a la v3 (cualquier día antes)
+
+Hasta hoy las tareas `MinervaV2*` de tu PC graban el libro de órdenes, el funding y el Fear & Greed en la carpeta
+de la v2. La v2 está cerrada (`v2.0`): desde ahora graba la v3, en su propia carpeta `history\`. En PowerShell
+como administrador (`Start-Process powershell -Verb RunAs`), apaga las de la v2:
+
+```powershell
+Get-ScheduledTask -TaskName "MinervaV2*" | Disable-ScheduledTask
+```
+
+En una ventana normal, desde la carpeta de la v3, trae por **última vez** lo que grabó la v2 (con sus tareas ya
+apagadas nadie escribe el archivo) y registra las tareas de la v3:
+
+```powershell
+Copy-Item ..\Minerva-v2\history\market_v2.db history\market_v3.db -Force
+```
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\register_v3_data_tasks.ps1
+```
+
+```powershell
+Get-ScheduledTask -TaskName "MinervaV3*" | Select-Object TaskName, State
+```
+
+Tienen que aparecer `MinervaV3OrderBook`, `MinervaV3Funding`, `MinervaV3FearGreed` y `MinervaV3HistoryUpdate`.
+En unos minutos, la tarjeta «Datos capturados» de la pestaña Indicadores (http://127.0.0.1:8002) deja de decir
+«atrasado».
 
 ## A. [PC] Comprobar que la v3 mide lo mismo que la v1
 
@@ -30,7 +63,7 @@ git status --short
 No debe listar nada (la imagen se construye con lo que haya en la carpeta).
 
 ```powershell
-..\Minerva-v2\.venv\Scripts\python.exe scripts\verify_v1_identity.py
+.\.venv\Scripts\python.exe scripts\verify_v1_identity.py
 ```
 
 Debe terminar en `OK: la medicion es identica a la v1.0`. Si dice `NO COINCIDE`, **para aquí** y avísame.
@@ -69,19 +102,19 @@ scp ..\transfer\minerva-v3_old-cpu.tar <usuario>@<IP>:~/
 scp ..\transfer\minerva-v3_repo.tar.gz <usuario>@<IP>:~/
 ```
 
-Los datos que grabó la v2 en tu PC desde hoy (libro de órdenes, funding, Fear & Greed) no se pueden volver a
-bajar: llévalos para que la v3 siga sumando sobre ellos. El historial de velas también, para no volver a
-descargarlo en el netbook:
+Los datos capturados (libro de órdenes, funding, Fear & Greed) no se pueden volver a bajar: llévalos para que el
+netbook siga sumando sobre ellos. El historial de velas también, para no descargarlo de nuevo allá. Los dos están
+en la carpeta `history\` de la v3 (paso 0):
 
 ```powershell
-scp ..\Minerva-v2\history\market_v2.db <usuario>@<IP>:~/market_v3.db
+scp history\market_v3.db <usuario>@<IP>:~/
 ```
 
 ```powershell
-scp ..\Minerva-v2\history\history_v2.db <usuario>@<IP>:~/history_v3.db
+scp history\history_v3.db <usuario>@<IP>:~/
 ```
 
-(Si alguna tarea `MinervaV2*` está escribiendo justo en ese momento, repite la copia un minuto después.)
+(Si una tarea `MinervaV3*` está escribiendo justo en ese momento, repite la copia un minuto después.)
 
 ## D. [NETBOOK] Desempaquetar, cargar la imagen y probarla en este procesador
 
@@ -231,7 +264,7 @@ Los números tienen que ser **los mismos que anotaste en G.1** (o mayores, si ya
 ### G.4 Cambiar las tareas automáticas (cron)
 
 Las tres tareas de la v1 pasan a la carpeta de la v3, y se suman las de captura de datos que hasta hoy corrían
-en tu PC con la v2:
+en tu PC:
 
 ```bash
 crontab -l > ~/crontab_v1_respaldo.txt
@@ -278,17 +311,20 @@ tailscale serve status
 El dashboard queda en la misma dirección de siempre. Revisa que estén las pestañas **Indicadores**, **Estudio**
 y **En vivo** (con el bot de pruebas activo).
 
-### G.6 [PC] Apagar las tareas de la v2
+### G.6 [PC] Quitar las tareas de captura de tu PC
 
-Desde ahora la captura corre en el netbook. En PowerShell como administrador (`Start-Process powershell -Verb RunAs`):
+Desde ahora la captura corre en el netbook. En el PC, desde la carpeta de la v3:
 
 ```powershell
-Get-ScheduledTask -TaskName "MinervaV2*" | Disable-ScheduledTask
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\register_v3_data_tasks.ps1 -Remove
 ```
 
 ```powershell
-Get-ScheduledTask -TaskName "MinervaV2*" | Select-Object TaskName, State
+Get-ScheduledTask -TaskName "MinervaV3*" | Select-Object TaskName, State
 ```
+
+(No debe listar nada.) Si quieres seguir probando la v3 en el PC después, sus pestañas funcionan igual: el
+historial de tu PC simplemente deja de actualizarse.
 
 ---
 
@@ -338,7 +374,7 @@ Primero hay que llevar la base más reciente de la v3 al volumen de la v1. Avís
 - **Veredicto de enero:** el procedimiento es el mismo, ahora desde la v3:
   `cd ~/minerva-v3 && .venv/bin/python scripts/docker_db.py export --out-dir data/backups --prefix veredicto`,
   y el registro oficial `docs/VEREDICTO_3_6_REGISTRO_*.txt` se copia a `~/minerva-v3/docs/`.
-- **Actualizar la v3 más adelante:** repetir A, B y C (sin los archivos de la v2), y en el netbook
+- **Actualizar la v3 más adelante:** repetir A, B y C (sin los archivos de `history\`), y en el netbook
   `tar -xzf ~/minerva-v3_repo.tar.gz -C ~/minerva-v3`, `docker load`, `docker tag` y
   `docker compose up -d --no-build`. Antes de cada actualización, `verify_v1_identity.py` tiene que decir `OK`
   mientras la medición de la v1 siga abierta.
