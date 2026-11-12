@@ -88,7 +88,7 @@ python scripts/live_tests.py run               # el proceso que queda corriendo 
 </code></pre>
 
 <p><code>run</code> escucha el canal <code>trade</code> del WebSocket publico de Bitunix, graba cada operacion en
-<code>history/ticks_v3.db</code> y opera en paper todas las pruebas activas de <code>history/live_v3.db</code>. Los demas
+<code>history/ticks_v4.db</code> y opera en paper todas las pruebas activas de <code>history/live_v4.db</code>. Los demas
 comandos solo leen o escriben ese archivo, asi que se pueden usar con <code>run</code> andando: el corredor ve
 las pruebas nuevas y las detenidas en unos 10 segundos. Nunca envia ordenes reales.</p>
 </div>
@@ -112,7 +112,7 @@ las pruebas nuevas y las detenidas en unos 10 segundos. Nunca envia ordenes real
                 <section id="DEFAULT_LIVE_DB">
                     <div class="attr variable">
             <span class="name">DEFAULT_LIVE_DB</span>        =
-<span class="default_value">Path(&#39;&lt;repo&gt;/history/live_v3.db&#39;)</span>
+<span class="default_value">Path(&#39;&lt;repo&gt;/history/live_v4.db&#39;)</span>
 
         
     </div>
@@ -124,7 +124,7 @@ las pruebas nuevas y las detenidas en unos 10 segundos. Nunca envia ordenes real
                 <section id="DEFAULT_TICK_DB">
                     <div class="attr variable">
             <span class="name">DEFAULT_TICK_DB</span>        =
-<span class="default_value">Path(&#39;&lt;repo&gt;/history/ticks_v3.db&#39;)</span>
+<span class="default_value">Path(&#39;&lt;repo&gt;/history/ticks_v4.db&#39;)</span>
 
         
     </div>

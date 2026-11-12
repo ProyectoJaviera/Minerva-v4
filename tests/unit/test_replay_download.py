@@ -87,7 +87,7 @@ async def test_gaps_are_repaired_with_narrow_requests_and_real_outages_are_count
     ("D:/x/Minerva-v2/history/history_v2.db", True),
     ("D:/x/Minerva/data/minerva.db", True),
     ("D:/x/Minerva-v3/history/market_v2.db", True),
-    ("D:/x/Minerva-v3/history/minute_v3.db", False),
+    ("D:/x/Minerva-v4/history/minute_v4.db", False),
 ])
 def test_the_script_refuses_files_of_other_versions(path, refused):
     assert (refuse_foreign_db(Path(path)) is not None) is refused

@@ -1,12 +1,17 @@
-"""Resumen de los resultados de las pruebas en vivo (compartido por el comando y la API)."""
+"""Resumen de los resultados de las pruebas en vivo (compartido por el comando y la API).
+
+v4: cada prueba trae a su gemelo de control al azar (`control`), la frecuencia de senales que usa
+el gemelo (`rate`) y la comparacion con el (`vs_control`, ver `app.live.control.compare`).
+"""
 
 from __future__ import annotations
 
 import time
 from pathlib import Path
 
+from app.live.control import compare, signal_rate
 from app.live.paper import ClosedTrade
-from app.live.store import LiveStore
+from app.live.store import LiveStore, StoredTest
 
 RUNNER_ALIVE_SECONDS = 60
 
@@ -39,6 +44,32 @@ def _json_pf(pf: float | None) -> float | str | None:
     return "inf" if pf is not None and pf == float("inf") else pf
 
 
+def _summary(trades: list[ClosedTrade]) -> dict:
+    s = summarize(trades)
+    s["pf"] = _json_pf(s["pf"])
+    return s
+
+
+def _control_block(store: LiveStore, test: StoredTest, tests: list[StoredTest],
+                   own: list[ClosedTrade], positions: dict) -> dict:
+    """El gemelo al azar de una prueba, su frecuencia y la comparacion (o `None`s si no tiene)."""
+    twin = next((t for t in tests if t.control_of == test.id), None)
+    eligible, signals = store.rates().get(test.id, (0, 0))
+    rate = {"eligible_bars": eligible, "signals": signals,
+            "rate": signal_rate(eligible, signals)}
+    if twin is None:
+        return {"control": None, "rate": rate, "vs_control": None}
+    twin_trades = [tr for _, tr in store.trades(twin.id)]
+    return {
+        "control": {"id": twin.id, "name": twin.config.name, "status": twin.status,
+                    "created_at_ms": twin.created_at_ms, "summary": _summary(twin_trades),
+                    "open_positions": sum(1 for (tid, _s) in positions if tid == twin.id)},
+        "rate": rate,
+        "vs_control": compare([t.pnl_net_usdt for t in own],
+                              [t.pnl_net_usdt for t in twin_trades]),
+    }
+
+
 def overview(path: str | Path, now_s: float | None = None) -> dict:
     """Estado del corredor y resumen de todas las pruebas, para el dashboard.
 
@@ -64,14 +95,17 @@ def overview(path: str | Path, now_s: float | None = None) -> dict:
         switch_changed = store.bot_switch_changed_at()
         positions = store.positions()
         rows = []
-        for t in store.tests():
-            s = summarize([tr for _, tr in store.trades(t.id)])
-            s["pf"] = _json_pf(s["pf"])
+        tests = store.tests()
+        for t in tests:
+            if t.control_of is not None:
+                continue  # el gemelo va dentro de su prueba
+            own = [tr for _, tr in store.trades(t.id)]
             rows.append({
                 "id": t.id, "status": t.status, "created_at_ms": t.created_at_ms,
                 "stopped_at_ms": t.stopped_at_ms, "config": _config_dict(t.config),
-                "summary": s,
+                "summary": _summary(own),
                 "open_positions": sum(1 for (tid, _s) in positions if tid == t.id),
+                **_control_block(store, t, tests, own, positions),
             })
     return {"runner": {"alive": beat is not None and now - beat[0] / 1000 < RUNNER_ALIVE_SECONDS,
                        "last_beat_ms": None if beat is None else beat[0],
@@ -99,14 +133,19 @@ def detail(path: str | Path, test_id: int, trades_limit: int = 100,
     if not Path(path).is_file():
         return None
     with LiveStore(path, read_only=True) as store:
-        test = next((t for t in store.tests() if t.id == test_id), None)
+        tests = store.tests()
+        test = next((t for t in tests if t.id == test_id), None)
         if test is None:
             return None
         trades = store.trades(test_id)
-        s = summarize([tr for _, tr in trades])
-        s["pf"] = _json_pf(s["pf"])
+        own = [tr for _, tr in trades]
+        s = _summary(own)
+        all_positions = store.positions()
         positions = [{"symbol": sym, **pos.to_dict()}
-                     for (tid, sym), pos in sorted(store.positions().items()) if tid == test_id]
+                     for (tid, sym), pos in sorted(all_positions.items()) if tid == test_id]
+        block = ({"control": None, "rate": None, "vs_control": None}
+                 if test.control_of is not None
+                 else _control_block(store, test, tests, own, all_positions))
         events = [{"ts_ms": e[0], "symbol": e[2], "kind": e[3], "detail": e[4]}
                   for e in store.events(test_id, limit=events_limit)]
     return {
@@ -114,7 +153,7 @@ def detail(path: str | Path, test_id: int, trades_limit: int = 100,
         "stopped_at_ms": test.stopped_at_ms, "config": _config_dict(test.config), "summary": s,
         "positions": positions,
         "trades": [{"symbol": sym, **tr.__dict__} for sym, tr in trades[-trades_limit:]][::-1],
-        "events": events,
+        "events": events, "control_of": test.control_of, **block,
     }
 
 

@@ -6,7 +6,7 @@ Uso (desde la raiz del repo, con el venv):
     python scripts/download_minutes.py --symbols BTCUSDT --start 2026-11-01
     python scripts/download_minutes.py --start 2023-01-01   # todo lo que hay (varias horas)
 
-Es incremental: la segunda vez solo baja lo nuevo. Escribe en `history/minute_v3.db` (o
+Es incremental: la segunda vez solo baja lo nuevo. Escribe en `history/minute_v4.db` (o
 `--db`). Rechaza los archivos de la v1 y de la v2. Solo usa el endpoint publico de velas.
 Cada ano son 525 600 minutos por moneda (unos 2 600 pedidos de 200 velas, unos 30 MB). Baja
 cuatro monedas a la vez sin pasar el tope de pedidos por segundo: medido el 2026-11-11, cada
@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-DEFAULT_DB = REPO_ROOT / "history" / "minute_v3.db"
+DEFAULT_DB = REPO_ROOT / "history" / "minute_v4.db"
 DEFAULT_START = "2025-01-01"
 # Bitunix documenta 10 pedidos por segundo por IP; se deja margen.
 MAX_RATE = 8
@@ -42,8 +42,9 @@ def refuse_foreign_db(path: Path) -> str | None:
         El mensaje de rechazo, o `None` si es aceptable.
     """
     text = str(path.resolve()).replace("\\", "/").lower()
-    if "/minerva-v2/" in text or "/minerva/" in text or "_v2.db" in text:
-        return f"RECHAZADO: {path} parece un archivo de la v1 o de la v2; la v3 usa el suyo."
+    if ("/minerva-v2/" in text or "/minerva-v3/" in text or "/minerva/" in text
+            or "_v2.db" in text or "_v3.db" in text):
+        return f"RECHAZADO: {path} parece un archivo de la v1, la v2 o la v3; la v4 usa el suyo."
     return None
 
 

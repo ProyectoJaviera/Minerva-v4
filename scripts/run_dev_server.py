@@ -1,6 +1,6 @@
-"""Servidor de desarrollo en el puerto 8002 contra una copia temporal de una
+"""Servidor de desarrollo en el puerto 8003 contra una copia temporal de una
 base real (pre-Fase 5, seccion 6 del plan aprobado 2026-10-14) -- NUNCA toca
-el bot vivo de la v1 (puerto 8000) ni su base de trabajo. OJO: el 8002 es tambien el puerto por
+el bot vivo de la v1 (puerto 8000) ni su base de trabajo. OJO: el 8003 es tambien el puerto por
 defecto del contenedor de la v2 (docker-compose.yml): no corras los dos a la vez. Reemplaza el
 procedimiento manual que se rehacia a mano en TAREA B/TAREA D (ver
 docs/historial/PROGRESS.md y docs/FASE3_6_LLM.md) por un script reusable.
@@ -24,7 +24,7 @@ Fuerza `PAPER_EXECUTION_ENABLED=false` (el brazo ejecutado de la cuenta paper, s
 Fuerza `LLM_LIVE_LABELING_ENABLED=false` (y `ANTHROPIC_API_KEY=""`, como
 refuerzo redundante) SIN IMPORTAR lo que diga el `.env` real: el `.env` real
 de hoy tiene ese flag en `true`. Si este script heredara el entorno real tal
-cual, la instancia de desarrollo en 8002 TAMBIEN llamaria de verdad a la API
+cual, la instancia de desarrollo en 8003 TAMBIEN llamaria de verdad a la API
 de Anthropic en cuanto el scheduler generara una sombra nueva sobre la
 copia -- gasto real, no hipotetico. Este candado de seguridad esta
 codificado, no es una opcion que dependa de acordarse de pasarla.
@@ -37,7 +37,7 @@ solo de tiempo de arranque mayor al de un smoke mas acotado.
 Uso:
 
     python scripts/run_dev_server.py --source-db data/minerva_estabilidad.db
-    python scripts/run_dev_server.py --source-db data/minerva_estabilidad.db --port 8002
+    python scripts/run_dev_server.py --source-db data/minerva_estabilidad.db --port 8003
 """
 
 from __future__ import annotations
@@ -81,7 +81,7 @@ def main(source_db: str, port: int) -> None:
 
     Args:
         source_db: base real a copiar (solo se lee, para copiarla).
-        port: puerto del servidor (8002 por defecto desde la linea de comandos).
+        port: puerto del servidor (8003 por defecto desde la linea de comandos).
 
     Raises:
         SystemExit: si `source_db` no existe.
@@ -143,6 +143,6 @@ if __name__ == "__main__":
         "--source-db", required=True,
         help="base real a copiar (solo se LEE, para copiar -- nunca se escribe)",
     )
-    parser.add_argument("--port", type=int, default=8002)
+    parser.add_argument("--port", type=int, default=8003)
     args = parser.parse_args()
     main(args.source_db, args.port)

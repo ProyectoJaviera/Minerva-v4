@@ -1,4 +1,4 @@
-"""El corredor de las pruebas en vivo dentro de la app (contenedor `minerva-v3`).
+"""El corredor de las pruebas en vivo dentro de la app (contenedor `minerva-v4`).
 
 `maybe_start_live_tests` lo arranca en el `lifespan` solo si `LIVE_TESTS_ENABLED` esta encendido,
 en su propia tarea (un bucle de un segundo) que abre el WebSocket publico del canal `trade` cuando

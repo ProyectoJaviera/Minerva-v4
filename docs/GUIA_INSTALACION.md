@@ -150,7 +150,7 @@ primera vez):
 
 ```bash
 docker compose build
-docker run --rm -it minerva-v3:local python scripts/hash_password.py
+docker run --rm -it minerva-v4:local python scripts/hash_password.py
 ```
 
 El script pide la contraseña dos veces (sin mostrarla) y escribe la línea completa `AUTH_PASSWORD_HASH='…'`.
@@ -167,7 +167,7 @@ con menos, el login responde 503 y el resto de la API rechaza todo. Genera una c
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-(Con Docker y sin Python: `docker run --rm minerva-v3:local python -c "import secrets; print(secrets.token_hex(32))"`.)
+(Con Docker y sin Python: `docker run --rm minerva-v4:local python -c "import secrets; print(secrets.token_hex(32))"`.)
 Pégala en el `.env`:
 
 ```text
@@ -228,11 +228,11 @@ docker compose ps
 - La primera vez construye la imagen (3 etapas: compila el dashboard, instala las dependencias con versiones exactas y
   arma la imagen final): ≈ 1 minuto con buena conexión. Necesita internet (imágenes base, paquetes de Python y de
   Node).
-- Después arranca el contenedor `minerva` (puerto `127.0.0.1:8002`, base y logs en volúmenes de Docker).
+- Después arranca el contenedor `minerva` (puerto `127.0.0.1:8003`, base y logs en volúmenes de Docker).
   `docker compose ps` pasa a `healthy` en menos de un minuto; el contenedor tiene hasta 5 minutos de margen antes de
   marcarse como no sano.
 - **En la v2, `docker compose up -d` a secas arranca en modo prueba**: sin etiquetado con Claude, sin brazo ejecutado,
-  sin noticias y sin Telegram (`MINERVA_REAL_BOT=false` por defecto), y publica el puerto `8002` (el `8000` es del bot
+  sin noticias y sin Telegram (`MINERVA_REAL_BOT=false` por defecto), y publica el puerto `8003` (el `8000` es del bot
   vivo de la v1). Para encenderlos a propósito mira [Encender el etiquetado y los avisos](#probar-sin-gastar).
 - El contenedor se reinicia solo (`restart: unless-stopped`) si Docker o el equipo se reinician; ver
   [Uso diario](USO.md#arrancar-y-detener).
@@ -278,7 +278,7 @@ docker compose up -d --no-build
 ## 5. Comprobar que funciona
 
 1. **Estado del contenedor:** `docker compose ps` debe decir `healthy`.
-2. **`/health`:** abre <http://127.0.0.1:8002/health> en el navegador (no pide sesión). En la primera respuesta
+2. **`/health`:** abre <http://127.0.0.1:8003/health> en el navegador (no pide sesión). En la primera respuesta
    `status` puede tardar unos segundos en pasar a `ok` (el primer ciclo del scheduler). Con los valores por defecto
    ("bot real") y todas las credenciales puestas, deberías ver:
 
@@ -291,7 +291,7 @@ docker compose up -d --no-build
    | `paper_execution.active` | `true` | El brazo ejecutado de la cuenta paper está armado |
    | `telegram_push.enabled` / `active` | `true` / `true` | Solo si pusiste token y `chat_id` |
 
-3. **Dashboard:** abre <http://127.0.0.1:8002/>, entra con el usuario y la contraseña que elegiste y mira la pestaña
+3. **Dashboard:** abre <http://127.0.0.1:8003/>, entra con el usuario y la contraseña que elegiste y mira la pestaña
    *Resumen*. Qué muestra cada pestaña: [Uso diario](USO.md#el-dashboard).
 4. **Telegram (si lo configuraste):** el bot envía un mensaje de arranque al chat; prueba `/status`.
 5. **Registros:** `docker compose logs --tail 50 minerva`. Los mensajes normales del primer arranque incluyen un
@@ -355,7 +355,7 @@ python -m venv .venv
 npm --prefix frontend ci
 npm --prefix frontend run build
 
-# 3. Arrancar y detener el bot (puerto 8002, sin consola)
+# 3. Arrancar y detener el bot (puerto 8003, sin consola)
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_bot.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\stop_bot.ps1
 ```
@@ -378,7 +378,7 @@ reinicia en la ventana segura. El detalle de cada interruptor está en [Configur
   ```bash
   LLM_LIVE_LABELING_ENABLED=false TELEGRAM_COMMANDS_ENABLED=false PAPER_EXECUTION_ENABLED=false \
   NEWS_COLLECTION_ENABLED=false TELEGRAM_PUSH_ENABLED=false AUTO_OPEN_WITHOUT_LLM=false \
-  LESSONS_MEMORY_ENABLED=false .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8002
+  LESSONS_MEMORY_ENABLED=false .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8003
   ```
 
   **No verificado:** el proyecto se desarrolló y se probó en Windows; este comando usa las mismas variables y el mismo

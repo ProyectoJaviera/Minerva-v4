@@ -95,7 +95,7 @@ backtest recalculaba cada indicador desde cero en cada vela.
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** 19 archivos (e2e 2, unit 17)
+- **Pruebas que lo importan o citan:** 20 archivos (e2e 2, unit 18)
 <!-- /hechos:app/strategies/base.py -->
 
 ### `app/strategies/donchian_breakout.py`

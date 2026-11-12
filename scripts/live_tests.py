@@ -11,7 +11,7 @@ Uso (desde la raiz del repo, con el venv):
     python scripts/live_tests.py run               # el proceso que queda corriendo (Ctrl+C sale)
 
 `run` escucha el canal `trade` del WebSocket publico de Bitunix, graba cada operacion en
-`history/ticks_v3.db` y opera en paper todas las pruebas activas de `history/live_v3.db`. Los demas
+`history/ticks_v4.db` y opera en paper todas las pruebas activas de `history/live_v4.db`. Los demas
 comandos solo leen o escriben ese archivo, asi que se pueden usar con `run` andando: el corredor ve
 las pruebas nuevas y las detenidas en unos 10 segundos. Nunca envia ordenes reales.
 """
@@ -31,8 +31,8 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.download_minutes import refuse_foreign_db  # noqa: E402
 
-DEFAULT_LIVE_DB = REPO_ROOT / "history" / "live_v3.db"
-DEFAULT_TICK_DB = REPO_ROOT / "history" / "ticks_v3.db"
+DEFAULT_LIVE_DB = REPO_ROOT / "history" / "live_v4.db"
+DEFAULT_TICK_DB = REPO_ROOT / "history" / "ticks_v4.db"
 
 
 def _fmt(ms: int | None) -> str:
@@ -140,9 +140,11 @@ def cmd_add(args: argparse.Namespace) -> int:
         return 1
     with LiveStore(args.db) as store:
         test_id = store.add_test(cfg)
+        store.ensure_controls()  # v4: su gemelo de control al azar
     print(f"Prueba {test_id} creada: '{cfg.name}' en {cfg.timeframe}, modo {cfg.mode}, "
           f"indicadores {', '.join(cfg.indicators)}, {len(cfg.symbols)} monedas, "
           f"salida {cfg.exit_name}.")
+    print("Con su gemelo de control al azar (mismas monedas, marco y salida; entradas sorteadas).")
     print("Empieza a operar cuando el corredor este andando: python scripts/live_tests.py run")
     return 0
 
@@ -160,6 +162,7 @@ def cmd_list_or_report(args: argparse.Namespace, detailed: bool) -> int:
     Efectos:
         Lee el archivo de pruebas (solo lectura).
     """
+    from app.live.control import compare
     from app.live.report import summarize
     from app.live.store import LiveStore
 
@@ -175,7 +178,8 @@ def cmd_list_or_report(args: argparse.Namespace, detailed: bool) -> int:
             state = "ANDANDO" if age < 60 else f"DETENIDO (ultimo latido hace {age / 60:.0f} min)"
             print(f"Corredor: {state} | {beat[1]}")
         wanted = getattr(args, "test_id", None)
-        tests = [t for t in store.tests() if wanted in (None, t.id)]
+        all_tests = store.tests()
+        tests = [t for t in all_tests if wanted in (None, t.id)]
         if wanted is not None and not tests:
             print(f"No existe la prueba {wanted}.")
             return 1
@@ -190,6 +194,17 @@ def cmd_list_or_report(args: argparse.Namespace, detailed: bool) -> int:
                   f"{cfg.timeframe} {cfg.mode} | {'+'.join(cfg.indicators)} | {cfg.exit_name} | "
                   f"{s['trades']} operaciones, PF {pf}, ganadoras {wr}, neto {s['net']:+.2f} USDT"
                   f" | abiertas {n_open}")
+            twin = next((x for x in all_tests if x.control_of == t.id), None)
+            if t.control_of is not None:
+                print(f"    gemelo al azar de la prueba {t.control_of}")
+            elif twin is not None:
+                tw = [tr for _, tr in store.trades(twin.id)]
+                cmp_ = compare([tr.pnl_net_usdt for _, tr in store.trades(t.id)],
+                               [tr.pnl_net_usdt for tr in tw])
+                elig, sigs = store.rates().get(t.id, (0, 0))
+                print(f"    contra el azar [{twin.id}]: {len(tw)} operaciones del gemelo, "
+                      f"neto {sum(tr.pnl_net_usdt for tr in tw):+.2f} USDT | frecuencia "
+                      f"{sigs}/{elig} velas | veredicto {cmp_['verdict']}")
             if not detailed:
                 continue
             for (tid, symbol), pos in sorted(open_positions.items()):

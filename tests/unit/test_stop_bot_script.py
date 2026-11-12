@@ -1,6 +1,6 @@
 """Contrato de `scripts/stop_bot.ps1` a nivel de texto (el comportamiento real contra
 un proceso vivo lo cubre `tests/integration/test_start_stop_bot_scripts.py`, manual,
-puerto 8002). Aqui se fijan las verificaciones de seguridad que no deben perderse en
+puerto 8003). Aqui se fijan las verificaciones de seguridad que no deben perderse en
 un refactor."""
 
 from __future__ import annotations

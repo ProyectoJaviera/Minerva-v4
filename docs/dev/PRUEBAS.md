@@ -28,7 +28,7 @@ ni a Bitunix. Las excepciones son las dos pruebas manuales de `tests/integration
 
 - `test_bitunix_live.py`: endpoints **públicos** de Bitunix (sin credenciales).
 - `test_start_stop_bot_scripts.py`: corre `start_bot.ps1` y `stop_bot.ps1` con el `lifespan` real, solo en
-  Windows y **siempre contra el puerto 8002 y una copia temporal de la base**; es lento. No lo corras sin
+  Windows y **siempre contra el puerto 8003 y una copia temporal de la base**; es lento. No lo corras sin
   querer: lanza el bot.
 
 ## Cómo se organizan las pruebas unitarias
@@ -168,7 +168,7 @@ estado de la medición y `measurement_keys` idénticos. El modelo es
 pipeline de datos o la persistencia, corre un smoke test de punta a punta con un subconjunto pequeño; que
 las pruebas unitarias pasen no es suficiente. Las de `tests/e2e/` cubren la cadena con el exterior
 simulado; para el pipeline real, corre el bot de desarrollo sobre una copia
-([`ENTORNO_DESARROLLO.md`](ENTORNO_DESARROLLO.md#correr-el-bot-de-desarrollo-en-el-puerto-8002)).
+([`ENTORNO_DESARROLLO.md`](ENTORNO_DESARROLLO.md#correr-el-bot-de-desarrollo-en-el-puerto-8003)).
 
 ## Las pruebas guardianas
 
@@ -228,7 +228,7 @@ de red depende de los falsos de cada prueba.
 | Prueba | Qué protege |
 |---|---|
 | `tests/unit/test_no_console_windows.py` | por AST, **todo** `subprocess.run/Popen/...` y `asyncio.create_subprocess_exec` de `app/`, `scripts/` y `tests/` lleva `creationflags=NO_WINDOW` (con casos que deben fallar); nada usa `DETACHED_PROCESS`, `CREATE_NEW_CONSOLE` ni `os.system`. El motivo está medido: el `python.exe` de un venv de uv es un trampolín de consola |
-| `tests/unit/test_no_real_task_scheduler.py` | ninguna prueba toca el Programador de tareas **real** de Windows (`MinervaV3StartBot`, `MinervaV3HealthAlert`, `MinervaV3DailySummary`, `MinervaV3Backup`): la única vía es `$env:MINERVA_SCHTASKS_EXE`, que en las pruebas apunta siempre a un falso o a una trampa |
+| `tests/unit/test_no_real_task_scheduler.py` | ninguna prueba toca el Programador de tareas **real** de Windows (`MinervaV4StartBot`, `MinervaV4HealthAlert`, `MinervaV4DailySummary`, `MinervaV4Backup`): la única vía es `$env:MINERVA_SCHTASKS_EXE`, que en las pruebas apunta siempre a un falso o a una trampa |
 
 ### La base real no se toca
 

@@ -11,11 +11,11 @@ Criterio de lectura (`docs/v2/PAPER_V2_RONDA3.md`): cada estrategia se evalua un
 60 operaciones o el 2027-05-10; sigue en estudio solo con PF >= 1.2 y por encima de su control.
 
 Solo lectura: abre el archivo de historial (`EXPLORER_HISTORY_DB`, por defecto
-`./history/history_v3.db`) en modo inmutable; sin red. La tarea `MinervaV3HistoryUpdate`
-(`scripts/register_v3_data_tasks.ps1`) lo actualiza cada 6 horas; a mano:
+`./history/history_v4.db`) en modo inmutable; sin red. La tarea `MinervaV4HistoryUpdate`
+(`scripts/register_v4_data_tasks.ps1`) lo actualiza cada 6 horas; a mano:
 
     python scripts/update_history_file.py
-    python scripts/v2_forward_test.py [--path history/history_v3.db] [--trades]
+    python scripts/v2_forward_test.py [--path history/history_v4.db] [--trades]
 """
 
 from __future__ import annotations

@@ -3,7 +3,7 @@
 Solo lectura: lee el archivo de historial local (el mismo de la pestana «Indicadores») en modo
 inmutable y no escribe en la base del bot. Calcular la prueba tarda alrededor de un minuto, asi que
 se hace en un hilo aparte y se guarda en memoria hasta que el archivo de historial cambie (la tarea
-`MinervaV3HistoryUpdate` lo actualiza cada 6 horas). Mientras calcula, la ruta responde con
+`MinervaV4HistoryUpdate` lo actualiza cada 6 horas). Mientras calcula, la ruta responde con
 `status: "computing"`. Protegido con `require_auth` a nivel de router.
 """
 

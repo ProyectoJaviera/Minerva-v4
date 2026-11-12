@@ -1,6 +1,6 @@
 """El corredor de las pruebas en vivo: escucha el WebSocket publico y opera en paper.
 
-Un solo proceso atiende todas las pruebas activas de `history/live_v3.db`:
+Un solo proceso atiende todas las pruebas activas de `history/live_v4.db`:
 
 1. Se suscribe al canal `trade` de las monedas de las pruebas (mas BTC, que usan dos filtros).
 2. Con cada tick: lo graba, actualiza la vela en curso de cada marco, revisa las posiciones
@@ -16,12 +16,17 @@ Protecciones: si una moneda lleva mas de `STALE_SECONDS` sin ticks no se abren e
 una prueba detenida cierra sus posiciones con el ultimo precio (motivo `MANUAL`); al reiniciar,
 las posiciones guardadas siguen y el primer tick decide si un SL salto durante la caida.
 
+v4: cada prueba tiene un gemelo de control al azar (`app/live/control.py`) que opera con la misma
+configuracion y entradas sorteadas a la misma frecuencia. El corredor lo crea si falta, cuenta las
+velas elegibles y las senales de la prueba, y sortea las entradas del gemelo al cierre de cada vela.
+
 Solo usa endpoints publicos de datos. Nunca envia ordenes: todo es paper.
 """
 
 from __future__ import annotations
 
 import asyncio
+import random
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -31,6 +36,7 @@ from app.config import Settings
 from app.core.logging import get_logger
 from app.explorer import confluence
 from app.explorer.confluence import ConfluenceStrategy
+from app.live import control
 from app.live.book import MAX_CLOSED, CandleBook
 from app.live.config import TestConfig
 from app.live.paper import OpenRefusal, PaperPosition, close_position, on_tick, open_position
@@ -130,13 +136,16 @@ class LiveRunner:
         inline_eval: evalua en el mismo hilo (para las pruebas); por defecto, en un hilo aparte.
         ticks_retention_days: borra cada hora los ticks grabados mas viejos que estos dias
             (`None` = guardar todo).
+        controls: crea y opera el gemelo al azar de cada prueba (v4).
+        rng: generador de numeros al azar del gemelo (para las pruebas).
     """
 
     def __init__(self, settings: Settings, store: LiveStore, ticks: TickStore | None,
                  rest: RestSource, clock: Callable[[], float] = time.time,
                  on_symbols: Callable[[list[str]], Awaitable[None]] | None = None,
                  max_evals_per_cycle: int = 4, inline_eval: bool = False,
-                 ticks_retention_days: float | None = None) -> None:
+                 ticks_retention_days: float | None = None, controls: bool = True,
+                 rng: random.Random | None = None) -> None:
         self.settings = settings
         self.store = store
         self.ticks = ticks
@@ -165,6 +174,11 @@ class LiveRunner:
         self._next_funding = 0.0
         self.ticks_seen = 0
         self.paused = False
+        self.controls = controls
+        self.rng = rng if rng is not None else random.Random()
+        self.rates: dict[int, tuple[int, int]] = self.store.rates()
+        self._twin_of: dict[int, int] = {}
+        self._twin_due: list[tuple[int, int, str, Side]] = []
 
     # --- utilidades ---
 
@@ -222,7 +236,14 @@ class LiveRunner:
             Lee `live_tests`. Red: GET publicos de velas y funding para las monedas nuevas.
             Escribe `live_trades`, `live_positions` y `live_events` si cierra posiciones.
         """
-        active = {t.id: t for t in self.store.tests(only_active=True)}
+        if self.controls:
+            created = self.store.ensure_controls(now_ms=self._now_ms())
+            if created:
+                self.rates = self.store.rates()
+        active = {t.id: t for t in self.store.tests(only_active=True)
+                  if self.controls or t.control_of is None}
+        self._twin_of = {t.control_of: t.id for t in active.values()
+                         if t.control_of is not None and t.control_of in active}
         for test_id in set(self.tests) - set(active):
             self._close_test(test_id)
         added = set(active) - set(self.tests)
@@ -251,6 +272,7 @@ class LiveRunner:
     def _close_test(self, test_id: int) -> None:
         for key in [k for k in self.pending if k[0] == test_id]:
             del self.pending[key]
+        self._twin_due = [d for d in self._twin_due if d[1] != test_id]
         for (tid, symbol), pos in list(self.positions.items()):
             if tid != test_id:
                 continue
@@ -495,16 +517,99 @@ class LiveRunner:
         key = (test_id, symbol)
         self._entry_bucket[key] = self.books[(symbol, cfg.timeframe)].current_bucket(now_ms)
         self.pending[key] = _Pending(Side(signal.value), now_ms, price, strat, frame)
+        if test.control_of is None and test_id in self._twin_of:
+            self._bump_rate(test_id, signals=1)
         self.store.log("SIGNAL", f"{signal.value} con precio {price} "
                        f"({'vela abierta' if include_forming else 'cierre de vela'})",
                        test_id=test_id, symbol=symbol, now_ms=now_ms)
 
     def _bar_closed(self, symbol: str, timeframe: str, now_ms: int) -> None:
         self._reconcile_at[(symbol, timeframe)] = self.clock() + RECONCILE_DELAY_SECONDS
-        for test in self.tests.values():
+        for test in list(self.tests.values()):
             cfg = test.config
-            if cfg.mode == "close" and cfg.timeframe == timeframe and symbol in cfg.symbols:
+            if test.control_of is not None or cfg.timeframe != timeframe \
+                    or symbol not in cfg.symbols:
+                continue
+            if test.id in self._twin_of:
+                self._control_step(test, symbol, now_ms)
+            if cfg.mode == "close":
                 self._due_close.append((test.id, symbol))
+
+    # --- gemelo de control al azar (v4) ---
+
+    def _bump_rate(self, test_id: int, eligible: int = 0, signals: int = 0) -> None:
+        old = self.rates.get(test_id, (0, 0))
+        self.rates[test_id] = (old[0] + eligible, old[1] + signals)
+        self.store.bump_rate(test_id, eligible=eligible, signals=signals)
+
+    def _open_count(self, test_id: int) -> int:
+        held = sum(1 for (tid, _s) in list(self.positions) + list(self.pending) if tid == test_id)
+        return held + sum(1 for d in self._twin_due if d[1] == test_id)
+
+    def _control_step(self, test: StoredTest, symbol: str, now_ms: int) -> None:
+        """Al cerrar una vela: sortea la entrada del gemelo y cuenta si la vela era elegible.
+
+        El sorteo usa la frecuencia conocida antes de esta vela; despues se cuenta la vela como
+        elegible si la prueba podia entrar en ella.
+
+        Args:
+            test: la prueba (no el gemelo).
+            symbol: la moneda cuya vela cerro.
+            now_ms: instante del cierre, ms Unix.
+
+        Efectos:
+            Escribe `live_control_rates`.
+        """
+        cfg = test.config
+        twin_id = self._twin_of[test.id]
+        stale = self._is_stale(symbol, now_ms)
+        if twin_id in self.tests and not stale:
+            key = (twin_id, symbol)
+            busy = key in self.positions or key in self.pending \
+                or any(d[1] == twin_id and d[2] == symbol for d in self._twin_due)
+            full = cfg.max_open is not None and self._open_count(twin_id) >= cfg.max_open
+            if not busy and not full:
+                eligible, signals = self.rates.get(test.id, (0, 0))
+                side = control.draw_entry(self.rng, control.signal_rate(eligible, signals),
+                                          cfg.direction)
+                if side is not None:
+                    due = now_ms + control.entry_delay_ms(self.rng, cfg)
+                    self._twin_due.append((due, twin_id, symbol, side))
+        key = (test.id, symbol)
+        if not stale and key not in self.positions and key not in self.pending:
+            self._bump_rate(test.id, eligible=1)
+
+    def _decide_control(self, twin_id: int, symbol: str, side: Side, now_ms: int) -> None:
+        """Deja pendiente la entrada sorteada del gemelo (se llena en el tick siguiente).
+
+        Args:
+            twin_id: el gemelo.
+            symbol: la moneda.
+            side: la direccion sorteada.
+            now_ms: instante, ms Unix.
+
+        Efectos:
+            Escribe `live_events`.
+        """
+        twin = self.tests.get(twin_id)
+        price = self.last_price.get(symbol)
+        if twin is None or price is None:
+            return
+        cfg = twin.config
+        key = (twin_id, symbol)
+        if key in self.positions or key in self.pending or self._is_stale(symbol, now_ms):
+            return
+        book = self.books.get((symbol, cfg.timeframe))
+        if book is None:
+            return
+        frame = book.frame(cfg.mode == "intrabar")
+        if len(frame) <= confluence.WARMUP_BY_TIMEFRAME[cfg.timeframe]:
+            return
+        self._entry_bucket[key] = book.current_bucket(now_ms)
+        exits = control.RandomExitStrategy(cfg, frame)
+        self.pending[key] = _Pending(side, now_ms, price, exits, frame)
+        self.store.log("SIGNAL", f"{side.value} al azar con precio {price}", test_id=twin_id,
+                       symbol=symbol, now_ms=now_ms)
 
     # --- tareas periodicas ---
 
@@ -555,7 +660,7 @@ class LiveRunner:
         due = []
         for test in self.tests.values():
             cfg = test.config
-            if cfg.mode != "intrabar":
+            if cfg.mode != "intrabar" or test.control_of is not None:
                 continue
             for symbol in cfg.symbols:
                 last = self._last_eval.get((test.id, symbol), 0.0)
@@ -564,6 +669,14 @@ class LiveRunner:
         for _last, test_id, symbol in sorted(due)[:max(0, budget)]:
             self._last_eval[(test_id, symbol)] = now
             await self._decide(test_id, symbol, include_forming=True)
+
+        # Entradas sorteadas del gemelo al azar que ya llegaron a su momento (son baratas: solo
+        # el ATR, sin indicadores; no gastan el tope de evaluaciones).
+        ready = [d for d in self._twin_due if d[0] <= now_ms]
+        if ready:
+            self._twin_due = [d for d in self._twin_due if d[0] > now_ms]
+            for _due, twin_id, symbol, side in ready:
+                self._decide_control(twin_id, symbol, side, now_ms)
 
         for key, at in list(self._reconcile_at.items()):
             if now >= at and key in self.books:
@@ -620,6 +733,7 @@ class LiveRunner:
         self.paused = True
         self.pending.clear()
         self._due_close.clear()
+        self._twin_due.clear()
         for (test_id, symbol), pos in list(self.positions.items()):
             price = self.last_price.get(symbol)
             if price is None:

@@ -156,7 +156,7 @@ describe("IndicatorsTab: datos capturados", () => {
       "/api/explorer/options": { status: 200, body: OPTIONS },
       "/api/explorer/data-status": { status: 200, body: {
         market: {
-          available: true, path: "./history/market_v3.db",
+          available: true, path: "./history/market_v4.db",
           orderbook: { last_at: now, stale: false, snapshots_24h: 288, symbols_24h: 10 },
           funding: { last_at: now, stale: true, symbols: 10 },
           feargreed: { last_at: now, stale: false, day: "2026-11-11", value: 29, classification: "Fear" },
@@ -164,7 +164,7 @@ describe("IndicatorsTab: datos capturados", () => {
           symbols: [{ symbol: "BTCUSDT", at: now, mid: 74000.5, spread_bps: 0.01, imbalance_20: 0.12,
                       bid_notional_50: 6_800_000, ask_notional_50: 6_700_000, funding_rate: 0.0001 }],
         },
-        history: { available: true, path: "./history/history_v3.db", last_at: now, stale: false, timeframes: [] },
+        history: { available: true, path: "./history/history_v4.db", last_at: now, stale: false, timeframes: [] },
       } },
     }));
     render(withQueryClient(<IndicatorsTab />));
@@ -179,8 +179,8 @@ describe("IndicatorsTab: datos capturados", () => {
     vi.stubGlobal("fetch", mockFetch({
       "/api/explorer/options": { status: 200, body: OPTIONS },
       "/api/explorer/data-status": { status: 200, body: {
-        market: { available: false, path: "./history/market_v3.db" },
-        history: { available: false, path: "./history/history_v3.db", last_at: null, stale: true },
+        market: { available: false, path: "./history/market_v4.db" },
+        history: { available: false, path: "./history/history_v4.db", last_at: null, stale: true },
       } },
     }));
     render(withQueryClient(<IndicatorsTab />));

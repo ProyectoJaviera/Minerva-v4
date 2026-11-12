@@ -71,6 +71,52 @@ describe("LiveTab", () => {
     expect(screen.getByText(/OPEN BTCUSDT LONG a 74000/)).toBeInTheDocument();
   });
 
+  it("muestra la prueba contra su gemelo al azar", async () => {
+    const withControl = {
+      ...TEST,
+      control: {
+        id: 2, name: "Azar: RF + EMA 15m", status: "active", created_at_ms: TEST.created_at_ms,
+        summary: { ...SUMMARY, trades: 5, pf: 0.9, net: -0.31 }, open_positions: 0,
+      },
+      rate: { eligible_bars: 40, signals: 4, rate: 0.1 },
+      vs_control: {
+        verdict: "pocas_operaciones", strategy_mean: 0.14, control_mean: -0.062, diff: 0.202, t: 1.1,
+        min_trades: 30, strategy_trades: 3, control_trades: 5,
+      },
+    };
+    vi.stubGlobal("fetch", mockFetch({
+      "/api/live/options": { status: 200, body: OPTIONS },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: [withControl] } },
+    }));
+    render(withQueryClient(<LiveTab />));
+    const panel = await screen.findByRole("region", { name: "Contra el azar" });
+    expect(panel).toHaveTextContent("Faltan operaciones para decir algo");
+    expect(panel).toHaveTextContent("-0.31 USDT");
+    expect(panel).toHaveTextContent("+0.202 USDT");
+    expect(panel).toHaveTextContent("4 señales en 40 velas");
+    expect(panel).toHaveTextContent("al menos 30 operaciones");
+  });
+
+  it("dice si la prueba le gana al azar", async () => {
+    const wins = {
+      ...TEST,
+      control: { id: 2, name: "Azar: x", status: "active", created_at_ms: 0, summary: SUMMARY, open_positions: 0 },
+      rate: { eligible_bars: 400, signals: 40, rate: 0.1 },
+      vs_control: {
+        verdict: "le_gana", strategy_mean: 0.3, control_mean: 0.0, diff: 0.3, t: 2.4,
+        min_trades: 30, strategy_trades: 40, control_trades: 38,
+      },
+    };
+    vi.stubGlobal("fetch", mockFetch({
+      "/api/live/options": { status: 200, body: OPTIONS },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: [wins] } },
+    }));
+    render(withQueryClient(<LiveTab />));
+    const panel = await screen.findByRole("region", { name: "Contra el azar" });
+    expect(panel).toHaveTextContent("Le gana al azar");
+    expect(panel).toHaveTextContent("t = 2.40");
+  });
+
   it("crea una prueba con los indicadores elegidos", async () => {
     const fetchMock = mockFetch({
       "/api/live/options": { status: 200, body: OPTIONS },

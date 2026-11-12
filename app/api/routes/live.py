@@ -179,6 +179,7 @@ def _create(path: str, body: CreateTestRequest) -> dict:
                    max_open=body.max_open)
     with LiveStore(path) as store:
         test_id = store.add_test(cfg)
+        store.ensure_controls()  # v4: su gemelo de control al azar
     return {"id": test_id, "name": cfg.name}
 
 

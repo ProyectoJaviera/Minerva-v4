@@ -78,7 +78,7 @@ python scripts/download_minutes.py --symbols BTCUSDT --start 2026-11-01
 python scripts/download_minutes.py --start 2023-01-01   # todo lo que hay (varias horas)
 </code></pre>
 
-<p>Es incremental: la segunda vez solo baja lo nuevo. Escribe en <code>history/minute_v3.db</code> (o
+<p>Es incremental: la segunda vez solo baja lo nuevo. Escribe en <code>history/minute_v4.db</code> (o
 <code>--db</code>). Rechaza los archivos de la v1 y de la v2. Solo usa el endpoint publico de velas.
 Cada ano son 525 600 minutos por moneda (unos 2 600 pedidos de 200 velas, unos 30 MB). Baja
 cuatro monedas a la vez sin pasar el tope de pedidos por segundo: medido el 2026-11-11, cada
@@ -104,7 +104,7 @@ pedido tarda ~0,4 s, asi que una moneda sola avanza a ~2,5 pedidos por segundo.<
                 <section id="DEFAULT_DB">
                     <div class="attr variable">
             <span class="name">DEFAULT_DB</span>        =
-<span class="default_value">Path(&#39;&lt;repo&gt;/history/minute_v3.db&#39;)</span>
+<span class="default_value">Path(&#39;&lt;repo&gt;/history/minute_v4.db&#39;)</span>
 
         
     </div>

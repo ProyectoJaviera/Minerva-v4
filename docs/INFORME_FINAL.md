@@ -53,7 +53,7 @@ un dashboard, un bot de Telegram y una API con login. El proyecto está diseñad
 3. **El brazo ejecutado de la cuenta paper no tiene resultados que mostrar:** acaba de empezar y, por diseño, sus
    resultados están ocultos.
 4. **La mudanza real del bot a Docker no se ha ejecutado:** los scripts se probaron con Docker Desktop real pero en un
-   ensayo aislado (puertos 8002 y 8002, copia de la base); el bot del puerto 8000 sigue nativo hasta que el
+   ensayo aislado (puertos 8003 y 8003, copia de la base); el bot del puerto 8000 sigue nativo hasta que el
    usuario lo mude (§5.2 y `docs/MUDANZA_DOCKER.md`).
 
 **Conclusión honesta.** Se entrega un sistema sólido para *medir* —no un sistema rentable—. Que el sistema funcione
@@ -201,7 +201,7 @@ CoinGecko". Con la puerta cerrada, el servidor no consulta siquiera el PnL, y el
 ### Fase 7: mudanza del bot real a Docker
 
 Detalle en [`docs/MUDANZA_DOCKER.md`](MUDANZA_DOCKER.md). **Etapa 1 (ejecutada):** `docker compose build` y un contenedor
-de prueba en el puerto 8002 con una copia de la base real en un volumen de prueba (etiquetado, Telegram, brazo y
+de prueba en el puerto 8003 con una copia de la base real en un volumen de prueba (etiquetado, Telegram, brazo y
 noticias apagados, credenciales de mentira), verificado de verdad: `healthy`, `/health`, `frozen_hash_ok`, dashboard,
 persistencia tras `docker compose restart`, usuario sin privilegios; después se bajó y se borró el volumen. Encontró
 **cinco defectos** que las pruebas estáticas no veían (los cinco, corregidos): `restore_db.py` no abría un respaldo en
@@ -226,7 +226,7 @@ en este PC.
 - **Pruebas:** 57 de las herramientas (marca, copia del volumen, `docker_db.py`, huella y protecciones de los scripts
   existentes), 45 de los scripts de la mudanza ejecutando PowerShell de verdad contra un `docker`, un `schtasks` y un
   bot nativo falsos (incluido el caso real de **un solo puerto** para el bot nativo y el contenedor), y el **ensayo
-  general con Docker real** (bot nativo de prueba en el 8002, Docker en el 8002 y en el 8002): ensayo en seco, mudanza
+  general con Docker real** (bot nativo de prueba en el 8003, Docker en el 8003 y en el 8003): ensayo en seco, mudanza
   completa, respaldo/copia/informes sobre el contenedor vivo, vuelta atrás y un fallo forzado que se deshizo solo.
 
 ## 3. Cumplimiento de la especificación
@@ -312,8 +312,8 @@ Contrastado línea por línea con `docs/historial/SPEC.md`.
 | Ocultamiento de resultados | Barrido sobre API, dashboard, Telegram, push y resumen; mutaciones de prueba del backend que las pruebas detectaron |
 | Aislamiento de la medición | Con el brazo/noticias/memoria/push encendidos o apagados, `llm_logs`, `shadow_trades` y el avance son idénticos; el hash congelado está fijado por prueba |
 | Docker, estático | `docker compose config`, pruebas estáticas del `Dockerfile`/compose/healthcheck, resolución de dependencias para Linux, réplica de la etapa de Node y humo del árbol de la imagen |
-| **Docker real (Fase 7, Etapa 1)** | `docker compose build` (3 etapas, ≈ 1 min en frío, 503 MB); contenedor en el 8002 con una **copia** de la base real: `healthy`, `/health` `status ok` en ≈ 60 s, `frozen_hash_ok: true`, dashboard y login, volumen persistente tras `docker compose restart` (apagado ordenado ≈ 4 s), proceso uid 10001 con `cap_drop: ALL` que solo escribe en `/app/data`, `/app/logs` y `/tmp`, conectividad a Bitunix, respaldo y `docker compose cp` con el contenedor corriendo y detenido (SHA-256 coincide), resumen diario dentro del contenedor |
-| **Mudanza y vuelta atrás con Docker real (Fase 7, ensayo general)** | Instancia nativa de prueba en el 8002 y Docker en el 8002 sobre una copia de la base real: `-DryRun`, mudanza completa (mismas filas en las 28 tablas), `docker_db.py backup/export/run`, las protecciones de la marca, vuelta atrás completa y un fallo forzado (espera de `/health` de 3 s) que dejó el sistema como estaba. Más pruebas de los scripts de PowerShell ejecutados de verdad contra un `docker`, un `schtasks` y un bot nativo falsos |
+| **Docker real (Fase 7, Etapa 1)** | `docker compose build` (3 etapas, ≈ 1 min en frío, 503 MB); contenedor en el 8003 con una **copia** de la base real: `healthy`, `/health` `status ok` en ≈ 60 s, `frozen_hash_ok: true`, dashboard y login, volumen persistente tras `docker compose restart` (apagado ordenado ≈ 4 s), proceso uid 10001 con `cap_drop: ALL` que solo escribe en `/app/data`, `/app/logs` y `/tmp`, conectividad a Bitunix, respaldo y `docker compose cp` con el contenedor corriendo y detenido (SHA-256 coincide), resumen diario dentro del contenedor |
+| **Mudanza y vuelta atrás con Docker real (Fase 7, ensayo general)** | Instancia nativa de prueba en el 8003 y Docker en el 8003 sobre una copia de la base real: `-DryRun`, mudanza completa (mismas filas en las 28 tablas), `docker_db.py backup/export/run`, las protecciones de la marca, vuelta atrás completa y un fallo forzado (espera de `/health` de 3 s) que dejó el sistema como estaba. Más pruebas de los scripts de PowerShell ejecutados de verdad contra un `docker`, un `schtasks` y un bot nativo falsos |
 | Respaldo y restauración | Pruebas dedicadas, humo sobre una copia real (con el conteo de tablas y filas antes y después) y, desde la Fase 7, dentro del contenedor |
 
 ### 5.2 No verificado (declarado, no oculto)
@@ -326,7 +326,7 @@ Contrastado línea por línea con `docs/historial/SPEC.md`.
   hibernación de Windows con el reloj de la máquina virtual de Docker, el flujo de certificados corporativos, semanas
   de operación continua (crecimiento del volumen, rotación de logs) ni un **Ctrl+C a mitad de la mudanza** (el
   bloque `finally` que deshace lo hecho no tiene prueba automática). Tampoco una mudanza con el bot nativo y el
-  contenedor **ambos en el puerto 8000** contra Docker real: el ensayo real usó el 8002 y el 8002 (más una repetición
+  contenedor **ambos en el puerto 8000** contra Docker real: el ensayo real usó el 8003 y el 8003 (más una repetición
   con el mismo puerto, §13 de `docs/historial/MUDANZA_DOCKER_ENSAYO.md`) y las pruebas automáticas cubren el caso del
   mismo puerto.
 - **Entrega real de mensajes de Telegram** en el chat del usuario (requiere el token del `.env`, que no se lee). El

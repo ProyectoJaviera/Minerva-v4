@@ -49,6 +49,9 @@
                         <li>
                                 <a class="variable" href="#StoredTest.stopped_at_ms">stopped_at_ms</a>
                         </li>
+                        <li>
+                                <a class="variable" href="#StoredTest.control_of">control_of</a>
+                        </li>
                 </ul>
 
             </li>
@@ -69,6 +72,15 @@
                         </li>
                         <li>
                                 <a class="function" href="#LiveStore.stop_test">stop_test</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#LiveStore.ensure_controls">ensure_controls</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#LiveStore.bump_rate">bump_rate</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#LiveStore.rates">rates</a>
                         </li>
                         <li>
                                 <a class="function" href="#LiveStore.tests">tests</a>
@@ -156,9 +168,9 @@
                         <div class="docstring"><p>Archivos de las pruebas en vivo (SQLite, aparte de la base del bot).</p>
 
 <ul>
-<li><code>history/live_v3.db</code> (<code><a href="#LiveStore">LiveStore</a></code>): las pruebas que definio el dueno, sus posiciones abiertas,
+<li><code>history/live_v4.db</code> (<code><a href="#LiveStore">LiveStore</a></code>): las pruebas que definio el dueno, sus posiciones abiertas,
 sus operaciones cerradas y un registro de eventos (senales, rechazos, avisos del feed).</li>
-<li><code>history/ticks_v3.db</code> (<code><a href="#TickStore">TickStore</a></code>): cada operacion del canal <code>trade</code> del WebSocket publico
+<li><code>history/ticks_v4.db</code> (<code><a href="#TickStore">TickStore</a></code>): cada operacion del canal <code>trade</code> del WebSocket publico
 (hora en ms, precio, cantidad y lado). Es la historia segundo a segundo que Bitunix no entrega
 gratis hacia atras; medido el 2026-11-11, BTC trae ~2 operaciones por segundo por este canal.</li>
 </ul>
@@ -192,6 +204,7 @@ cortas, y el corredor relee las pruebas cada pocos segundos.</p>
 <li><strong>status:</strong>  <code>active</code> o <code>stopped</code>.</li>
 <li><strong>created_at_ms:</strong>  cuando se creo (solo cuentan las operaciones posteriores).</li>
 <li><strong>stopped_at_ms:</strong>  cuando se detuvo, o <code>None</code>.</li>
+<li><strong>control_of:</strong>  si es el gemelo al azar de otra prueba, el id de esa prueba (v4).</li>
 </ul>
 </div>
 
@@ -199,7 +212,7 @@ cortas, y el corredor relee las pruebas cada pocos segundos.</p>
                             <div id="StoredTest.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">StoredTest</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="config.html#TestConfig">app.live.config.TestConfig</a></span>,</span><span class="param">	<span class="n">status</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">created_at_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">stopped_at_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span></span>)</span>
+        <span class="name">StoredTest</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">config</span><span class="p">:</span> <span class="n"><a href="config.html#TestConfig">app.live.config.TestConfig</a></span>,</span><span class="param">	<span class="n">status</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">created_at_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">stopped_at_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">control_of</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
         
     </div>
@@ -259,6 +272,18 @@ cortas, y el corredor relee las pruebas cada pocos segundos.</p>
         
     </div>
     <a class="headerlink" href="#StoredTest.stopped_at_ms"></a>
+    
+    
+
+                            </div>
+                            <div id="StoredTest.control_of" class="classattr">
+                                <div class="attr variable">
+            <span class="name">control_of</span><span class="annotation">: int | None</span>        =
+<span class="default_value">None</span>
+
+        
+    </div>
+    <a class="headerlink" href="#StoredTest.control_of"></a>
     
     
 
@@ -367,7 +392,9 @@ cortas, y el corredor relee las pruebas cada pocos segundos.</p>
     </div>
     <a class="headerlink" href="#LiveStore.stop_test"></a>
     
-            <div class="docstring"><p>Detiene una prueba activa (no borra nada; no se puede reanudar).</p>
+            <div class="docstring"><p>Detiene una prueba activa y su gemelo al azar (no borra nada; no se puede reanudar).</p>
+
+<p>Un gemelo no se detiene solo: se detiene con su prueba.</p>
 
 <h6 id="arguments">Arguments:</h6>
 
@@ -379,13 +406,102 @@ cortas, y el corredor relee las pruebas cada pocos segundos.</p>
 <h6 id="returns">Returns:</h6>
 
 <blockquote>
-  <p><code>True</code> si estaba activa y quedo detenida.</p>
+  <p><code>True</code> si la prueba estaba activa y quedo detenida.</p>
 </blockquote>
 
 <h6 id="efectos">Efectos:</h6>
 
 <blockquote>
   <p>Escribe <code>live_tests</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveStore.ensure_controls" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ensure_controls</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">now_ms</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveStore.ensure_controls"></a>
+    
+            <div class="docstring"><p>Crea el gemelo al azar de cada prueba activa que todavia no tiene uno (v4).</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>now_ms:</strong>  instante de creacion; por defecto, el reloj.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Los ids de los gemelos creados.</p>
+</blockquote>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Escribe <code>live_tests</code> y <code>live_control_rates</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveStore.bump_rate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">bump_rate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">test_id</span><span class="p">:</span> <span class="nb">int</span>, </span><span class="param"><span class="n">eligible</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>, </span><span class="param"><span class="n">signals</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span></span><span class="return-annotation">) -> <span class="kc">None</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveStore.bump_rate"></a>
+    
+            <div class="docstring"><p>Suma velas elegibles o senales al contador de frecuencia de una prueba (v4).</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>test_id:</strong>  la prueba (no el gemelo).</li>
+<li><strong>eligible:</strong>  velas elegibles a sumar.</li>
+<li><strong>signals:</strong>  senales a sumar.</li>
+</ul>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Escribe <code>live_control_rates</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveStore.rates" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">rates</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveStore.rates"></a>
+    
+            <div class="docstring"><p>Los contadores de frecuencia de todas las pruebas (v4).</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Un diccionario <code>test_id -&gt; (velas elegibles, senales)</code>.</p>
+</blockquote>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Lee <code>live_control_rates</code>.</p>
 </blockquote>
 </div>
 

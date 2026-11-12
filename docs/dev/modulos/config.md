@@ -86,5 +86,5 @@ propiedades derivadas (listas separadas por comas, fecha final del backtest en m
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** 72 archivos (e2e 1, tests/ 1, unit 70)
+- **Pruebas que lo importan o citan:** 73 archivos (e2e 1, tests/ 1, unit 71)
 <!-- /hechos:app/config.py -->

@@ -3,7 +3,7 @@
 Tras la mudanza la base viva esta en un volumen de Docker, NO en `data/` del host. Dos cosas siguen
 de ahi:
 
-1. **La marca de la mudanza** (`data/MIGRADO_A_DOCKER_V3.txt`, junto a la base nativa). La escribe
+1. **La marca de la mudanza** (`data/MIGRADO_A_DOCKER_V4.txt`, junto a la base nativa). La escribe
    `scripts/migrate_to_docker.ps1` y la borra `scripts/rollback_from_docker.ps1`. Mientras exista,
    `data/minerva_estabilidad.db` es una copia VIEJA: `start_bot.ps1` se niega a arrancar el bot
    nativo sobre ella y las herramientas que la usarian por defecto (respaldo, restauracion,
@@ -34,13 +34,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # La marca de la v2 NO se llama como la de la v1 (`MIGRADO_A_DOCKER.txt`): una carpeta `data/` de
 # la v1 nunca se confunde con una de la v2.
-MARKER_NAME = "MIGRADO_A_DOCKER_V3.txt"
+MARKER_NAME = "MIGRADO_A_DOCKER_V4.txt"
 SERVICE = "minerva"
 # Aislamiento de la v1: el proyecto de Compose de esta v2 y el de la v1, que NINGUN comando usa.
-PROJECT_NAME = "minerva-v3"
+PROJECT_NAME = "minerva-v4"
 V1_PROJECT_NAME = "minerva"
 # La v2 sigue midiendo en el mismo PC: su proyecto tambien esta prohibido.
 V2_PROJECT_NAME = "minerva-v2"
+# La v3 tambien corre en este PC: su proyecto tambien esta prohibido.
+V3_PROJECT_NAME = "minerva-v3"
 CONTAINER_BACKUP_DIR = "/app/data/backups"
 # Variables de interpolacion de Compose SIN secretos: con `--env-file` Compose no lee ni interpola
 # el `.env` real (ver docker/compose.vars).
@@ -67,7 +69,7 @@ def marker_path(db_path: str | Path) -> Path:
         db_path: ruta de la base nativa.
 
     Returns:
-        La ruta de `MIGRADO_A_DOCKER_V3.txt`.
+        La ruta de `MIGRADO_A_DOCKER_V4.txt`.
     """
     return Path(db_path).resolve().parent / MARKER_NAME
 
@@ -160,7 +162,7 @@ def run_docker(
 def compose(args: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
     """`docker compose` sobre el compose del repo, sin interpolar el `.env` real.
 
-    `COMPOSE_PROJECT_NAME` (si esta) elige el proyecto; sin el, `PROJECT_NAME` (`minerva-v3`). El
+    `COMPOSE_PROJECT_NAME` (si esta) elige el proyecto; sin el, `PROJECT_NAME` (`minerva-v4`). El
     proyecto se pasa SIEMPRE con `-p`, y el de la v1 (`minerva`) se rechaza: ningun comando de esta
     v2 puede tocar los volumenes ni el contenedor del bot vivo de la v1.
 
@@ -186,7 +188,12 @@ def compose(args: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
     if project == V2_PROJECT_NAME:
         raise DockerError(
             f"RECHAZADO: el proyecto de Compose '{V2_PROJECT_NAME}' es el de la v2; "
-            f"esta v3 solo opera sobre '{PROJECT_NAME}' (o un proyecto de prueba propio)."
+            f"esta v4 solo opera sobre '{PROJECT_NAME}' (o un proyecto de prueba propio)."
+        )
+    if project == V3_PROJECT_NAME:
+        raise DockerError(
+            f"RECHAZADO: el proyecto de Compose '{V3_PROJECT_NAME}' es el de la v3; "
+            f"esta v4 solo opera sobre '{PROJECT_NAME}' (o un proyecto de prueba propio)."
         )
     base = [
         "compose", "--progress", "quiet", "-f", str(REPO_ROOT / "docker-compose.yml"),

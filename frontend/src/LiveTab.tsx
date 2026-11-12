@@ -4,6 +4,7 @@ import {
   type LiveOptions,
   type LiveSummary,
   type LiveTestRow,
+  type LiveVerdict,
   useCreateLiveTest,
   useLiveBotSwitch,
   useLiveOptions,
@@ -458,6 +459,56 @@ function TestDetail({ id }: { id: number }) {
   );
 }
 
+const VERDICT_TEXT: Record<LiveVerdict, string> = {
+  pocas_operaciones: "Faltan operaciones para decir algo",
+  le_gana: "Le gana al azar",
+  pierde: "Pierde contra el azar",
+  no_se_distingue: "No se distingue del azar",
+};
+
+const VERDICT_CLASS: Record<LiveVerdict, string> = {
+  pocas_operaciones: "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200",
+  le_gana: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200",
+  pierde: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200",
+  no_se_distingue: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
+};
+
+function fmtPerTrade(v: number | null): string {
+  return v === null ? "-" : `${v >= 0 ? "+" : ""}${v.toFixed(3)} USDT`;
+}
+
+// v4: la prueba contra su gemelo de entradas al azar (misma configuracion, entradas sorteadas a la
+// misma frecuencia). Si no le gana al gemelo, su resultado no se distingue de la suerte.
+function ControlPanel({ t }: { t: LiveTestRow }) {
+  const ctl = t.control;
+  const vs = t.vs_control;
+  if (!ctl || !vs) return null;
+  const rate = t.rate;
+  return (
+    <section aria-label="Contra el azar" className="space-y-2 rounded bg-gray-50 p-2 dark:bg-gray-800/60">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-200">Contra el azar</h4>
+        <span className={`rounded px-2 py-0.5 text-xs font-medium ${VERDICT_CLASS[vs.verdict]}`}>
+          {VERDICT_TEXT[vs.verdict]}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile label="Operaciones del gemelo" value={String(ctl.summary.trades)} />
+        <StatTile label="PF del gemelo" value={fmtPf(ctl.summary.pf)} />
+        <StatTile label="Resultado del gemelo" value={fmtUsdt(ctl.summary.net)} />
+        <StatTile label="Diferencia por operación" value={fmtPerTrade(vs.diff)} />
+      </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        El gemelo [{ctl.id}] opera las mismas monedas, marco, margen y salida, pero entra al azar
+        {rate ? ` con la frecuencia de la prueba (${rate.signals} señales en ${rate.eligible_bars} velas)` : ""}.
+        {vs.verdict === "pocas_operaciones"
+          ? ` El veredicto necesita al menos ${vs.min_trades} operaciones cerradas en cada lado.`
+          : ` Prueba de Welch de una cola al 5 % sobre el resultado neto por operación (t = ${vs.t === null ? "-" : vs.t.toFixed(2)}).`}
+      </p>
+    </section>
+  );
+}
+
 function TestCard({ t, onStop }: { t: LiveTestRow; onStop: (t: LiveTestRow) => void }) {
   const [open, setOpen] = useState(false);
   const s = t.summary;
@@ -494,6 +545,7 @@ function TestCard({ t, onStop }: { t: LiveTestRow; onStop: (t: LiveTestRow) => v
         <StatTile label="Ganadoras" value={s.winrate === null ? "-" : `${Math.round(100 * s.winrate)}%`} />
         <StatTile label="Abiertas" value={String(t.open_positions)} />
       </div>
+      <ControlPanel t={t} />
       <button onClick={() => setOpen(!open)} className="text-xs text-blue-700 underline dark:text-blue-300">
         {open ? "Ocultar detalle" : "Ver detalle"}
       </button>

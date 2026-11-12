@@ -40,18 +40,18 @@ def test_no_v2_name_survives_in_the_compose_once_comments_are_dropped():
 
 
 @pytest.mark.parametrize("script", ["record_market_data.py", "update_history_file.py"])
-def test_the_capture_scripts_write_to_the_v3_files(script):
+def test_the_capture_scripts_write_to_the_v4_files(script):
     code = _code_without_comments((SCRIPTS / script).read_text(encoding="utf-8"))
 
     assert "history_v2.db" not in code and "market_v2.db" not in code
 
 
-def test_the_v3_data_tasks_use_the_v3_prefix():
-    code = (SCRIPTS / "register_v3_data_tasks.ps1").read_text(encoding="utf-8")
+def test_the_v4_data_tasks_use_the_v4_prefix():
+    code = (SCRIPTS / "register_v4_data_tasks.ps1").read_text(encoding="utf-8")
 
     for task in V2_TASKS:
         assert f'"{task}"' not in code
-    assert "MinervaV3OrderBook" in code
+    assert "MinervaV4OrderBook" in code
 
 
 def test_compose_refuses_the_project_of_the_v2(monkeypatch):

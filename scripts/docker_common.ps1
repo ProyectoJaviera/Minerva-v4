@@ -19,8 +19,8 @@ $script:ComposeFile = Join-Path $script:RepoRoot "docker-compose.yml"
 $script:ComposeVars = Join-Path $script:RepoRoot "docker\compose.vars"
 # OJO: NO llamar a esta variable ProjectName: en el ambito del script seria LA MISMA que el parametro
 # -ProjectName de migrate/rollback (este archivo se carga con punto) y lo pisaria.
-$script:ComposeProject = "minerva-v3"
-$script:MarkerName = "MIGRADO_A_DOCKER_V3.txt"
+$script:ComposeProject = "minerva-v4"
+$script:MarkerName = "MIGRADO_A_DOCKER_V4.txt"
 $script:FourHourCloseHours = @(0, 4, 8, 12, 16, 20)
 
 # --- aislamiento de la v1 y de la v2 -----------------------------------------------------------------
@@ -32,6 +32,10 @@ $script:V1TaskNames = @("MinervaStartBot", "MinervaHealthAlert", "MinervaDailySu
 $script:V2ProjectName = "minerva-v2"
 $script:V2Port = 8001
 $script:V2TaskPrefix = "MinervaV2"
+# La v3 tambien corre en este PC (y en el netbook): proyecto minerva-v3, puerto 8002, tareas MinervaV3*.
+$script:V3ProjectName = "minerva-v3"
+$script:V3Port = 8002
+$script:V3TaskPrefix = "MinervaV3"
 
 # Rechaza (con una excepcion) un proyecto de Compose, un puerto o una tarea programada que sean de la v1.
 # Los scripts que paran, arrancan o mudan un bot la llaman ANTES de hacer nada.
@@ -44,7 +48,7 @@ function Assert-NotV1Resources([string]$Project = "", [int[]]$Ports = @(), [stri
         if ($port -eq $script:V1Port) { $problems += "el puerto $port es el del bot vivo de la v1" }
     }
     if ($Task -and ($script:V1TaskNames -contains $Task)) {
-        $problems += "la tarea programada '$Task' es de la v1 (la v3 usa el prefijo MinervaV3)"
+        $problems += "la tarea programada '$Task' es de la v1 (la v4 usa el prefijo MinervaV4)"
     }
     if ($Project -and $Project -eq $script:V2ProjectName) {
         $problems += "el proyecto de Compose '$Project' es el de la v2"
@@ -53,10 +57,19 @@ function Assert-NotV1Resources([string]$Project = "", [int[]]$Ports = @(), [stri
         if ($port -eq $script:V2Port) { $problems += "el puerto $port es el de la v2" }
     }
     if ($Task -and $Task.StartsWith($script:V2TaskPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-        $problems += "la tarea programada '$Task' es de la v2 (la v3 usa el prefijo MinervaV3)"
+        $problems += "la tarea programada '$Task' es de la v2 (la v4 usa el prefijo MinervaV4)"
+    }
+    if ($Project -and $Project -eq $script:V3ProjectName) {
+        $problems += "el proyecto de Compose '$Project' es el de la v3"
+    }
+    foreach ($port in $Ports) {
+        if ($port -eq $script:V3Port) { $problems += "el puerto $port es el de la v3" }
+    }
+    if ($Task -and $Task.StartsWith($script:V3TaskPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $problems += "la tarea programada '$Task' es de la v3 (la v4 usa el prefijo MinervaV4)"
     }
     if ($problems.Count -gt 0) {
-        throw ("RECHAZADO: " + ($problems -join "; ") + ". Esta v3 no puede tocar la v1 ni la v2.")
+        throw ("RECHAZADO: " + ($problems -join "; ") + ". Esta v4 no puede tocar la v1, la v2 ni la v3.")
     }
 }
 

@@ -247,17 +247,17 @@ class Settings(BaseSettings):
     # bot, que se abre en solo lectura. Se crea con `scripts/download_history.py` y
     # `DATABASE_PATH` apuntando a esta ruta (ver docs/v2/SECCION_INDICADORES.md).
     explorer_history_db: str = Field(
-        default="./history/history_v3.db", alias="EXPLORER_HISTORY_DB"
+        default="./history/history_v4.db", alias="EXPLORER_HISTORY_DB"
     )
     # v2: archivo SQLite de los datos capturados hacia adelante (libro de ordenes, funding, Fear &
     # Greed) por `scripts/record_market_data.py`. El dashboard solo lo lee.
-    market_data_db: str = Field(default="./history/market_v3.db", alias="MARKET_DATA_DB")
+    market_data_db: str = Field(default="./history/market_v4.db", alias="MARKET_DATA_DB")
     # v3: pruebas en vivo (paper hacia adelante con el WebSocket publico, ver
     # docs/v3/PRUEBAS_EN_VIVO.md). APAGADAS por defecto: el contenedor de la v3 las enciende en
     # docker-compose.yml. Solo datos publicos; nunca ordenes reales.
     live_tests_enabled: bool = Field(default=False, alias="LIVE_TESTS_ENABLED")
-    live_tests_db: str = Field(default="./history/live_v3.db", alias="LIVE_TESTS_DB")
-    live_ticks_db: str = Field(default="./history/ticks_v3.db", alias="LIVE_TICKS_DB")
+    live_tests_db: str = Field(default="./history/live_v4.db", alias="LIVE_TESTS_DB")
+    live_ticks_db: str = Field(default="./history/ticks_v4.db", alias="LIVE_TICKS_DB")
     live_record_ticks: bool = Field(default=True, alias="LIVE_RECORD_TICKS")
     # Dias de ticks que se guardan (medido: ~180 MB por dia con 10 monedas); 0 = todos.
     live_ticks_retention_days: float = Field(default=14.0, ge=0, alias="LIVE_TICKS_RETENTION_DAYS")

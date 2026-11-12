@@ -19,7 +19,7 @@
     controles adicionales que este proyecto no tiene todavia (ningun
     endpoint de apagado por HTTP).
 
-    LA CADENA DE PROCESOS (verificada en esta maquina, puerto 8002):
+    LA CADENA DE PROCESOS (verificada en esta maquina, puerto 8003):
         cmd.exe                                  <- start_bot.ps1 (`cmd /c "... >> log 2>&1"`)
           .venv\Scripts\pythonw.exe              <- el LAUNCHER del venv (trampolin)
             <intérprete base>\python.exe         <- el proceso REAL, el que escucha el puerto
@@ -43,19 +43,19 @@
     puerto quedo libre; si sobrevive alguno, sale con codigo 1.
 
     AISLAMIENTO DE LA v1: esta es la v2. El puerto 8000 es el del bot vivo de la v1 (en Docker, lo
-    sostiene el proxy de Docker Desktop): este script lo RECHAZA, y el valor por defecto es el 8002.
+    sostiene el proxy de Docker Desktop): este script lo RECHAZA, y el valor por defecto es el 8003.
 
 .EXAMPLE
     .\scripts\stop_bot.ps1
-    Detiene el bot nativo de la v2 (puerto 8002).
+    Detiene el bot nativo de la v2 (puerto 8003).
 
 .EXAMPLE
-    .\scripts\stop_bot.ps1 -Port 8002
+    .\scripts\stop_bot.ps1 -Port 8003
     Detiene el de otro puerto (nunca el 8000).
 #>
 [CmdletBinding()]
 param(
-    [int]$Port = 8002
+    [int]$Port = 8003
 )
 
 if ($Port -eq 8000) {
@@ -64,7 +64,11 @@ if ($Port -eq 8000) {
     exit 1
 }
 if ($Port -eq 8001) {
-    Write-Output ("RECHAZADO: el puerto 8001 es el de la v2; esta v3 no lo detiene. Usa otro puerto.")
+    Write-Output ("RECHAZADO: el puerto 8001 es el de la v2; esta v4 no lo detiene. Usa otro puerto.")
+    exit 1
+}
+if ($Port -eq 8002) {
+    Write-Output ("RECHAZADO: el puerto 8002 es el de la v3; esta v4 no lo detiene. Usa otro puerto.")
     exit 1
 }
 

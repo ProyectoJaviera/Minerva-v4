@@ -3,7 +3,7 @@
 Es `scripts/download_history.py` (universo top-10 de CoinGecko mas los simbolos de control; velas
 LAST_PRICE y MARK_PRICE de 1h, 4h y 1d desde el piso real de Bitunix, y funding) escribiendo en un
 archivo SQLite APARTE de la base del bot: `EXPLORER_HISTORY_DB`, por defecto
-`./history/history_v3.db`; despues baja tambien las velas de `EXTRA_TIMEFRAMES` (15m y 1w, que la
+`./history/history_v4.db`; despues baja tambien las velas de `EXTRA_TIMEFRAMES` (15m y 1w, que la
 seccion ofrece y el backtest de la Fase 2 no usa) de los mismos simbolos. Ambos intervalos se
 verificaron contra la API publica de Bitunix el 2026-11-11 (la semanal abre el lunes 00:00 UTC).
 Es reanudable: correrlo de nuevo solo baja lo que falta. Las velas de Bitunix coinciden con las de
@@ -14,7 +14,7 @@ Con el contenedor de la v2 corriendo no hace falta reiniciarlo: la seccion vuelv
 cuando cambia su fecha de modificacion (mejor correrlo cuando nadie esta usando la seccion).
 
 Uso:
-    python scripts/update_history_file.py [--path history/history_v3.db] [--only-extra] [--via-copy]
+    python scripts/update_history_file.py [--path history/history_v4.db] [--only-extra] [--via-copy]
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, ".")
 
-DEFAULT_PATH = "./history/history_v3.db"
+DEFAULT_PATH = "./history/history_v4.db"
 EXTRA_TIMEFRAMES = ("15m", "1w")
 
 

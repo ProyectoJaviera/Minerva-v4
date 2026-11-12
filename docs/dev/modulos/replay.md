@@ -7,7 +7,7 @@
 **Backtest en tiempo real** de la v3: recorre la historia minuto a minuto con las velas de 1 minuto de Bitunix y deja
 que la estrategia entre dentro de la vela (con órdenes de stop, límite o a mercado) y mire la vela en curso. Diseño y
 reglas en [`docs/v3/BACKTEST_TIEMPO_REAL.md`](../../v3/BACKTEST_TIEMPO_REAL.md). No participa del bot ni toca su base:
-lee y escribe solo `history/minute_v3.db`.
+lee y escribe solo `history/minute_v4.db`.
 
 ## Archivos
 

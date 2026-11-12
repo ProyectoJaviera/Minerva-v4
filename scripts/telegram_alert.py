@@ -1,7 +1,7 @@
 r"""Alerta externa de caida via Telegram (pre-Fase 5, item 1 del plan aprobado
 2026-10-14): sondea `GET /health` (`scripts/check_health.py`, reusado tal cual,
 sin duplicar su logica de HTTP/parseo) y avisa por Telegram si el bot de la v2
-(puerto 8002 por defecto; el 8000 es de la v1) esta STALE o SIN_RESPUESTA. Pensado para correr
+(puerto 8003 por defecto; el 8000 es de la v1) esta STALE o SIN_RESPUESTA. Pensado para correr
 desde el Programador de tareas de Windows cada 10 minutos, en un proceso COMPLETAMENTE
 separado del bot -- si el bot entero se cuelga, este script sigue pudiendo
 avisar porque nunca depende de su propio event loop.
@@ -43,7 +43,7 @@ parado en la raiz del repositorio: el `%cd%` se expande ANTES de que schtasks
 lo vea (verificado), asi que el comando que queda guardado en la tarea ya
 tiene la ruta absoluta de verdad:
 
-    schtasks /Create /SC MINUTE /MO 10 /TN "MinervaV3HealthAlert" /ST 00:00 /F ^
+    schtasks /Create /SC MINUTE /MO 10 /TN "MinervaV4HealthAlert" /ST 00:00 /F ^
         /TR "conhost.exe --headless %cd%\.venv\Scripts\python.exe %cd%\scripts\telegram_alert.py"
 
 SIN VENTANA DE CONSOLA (medido en este PC con tareas de prueba y un monitor de
@@ -55,7 +55,7 @@ el programa sin ninguna ventana y la tarea funciona igual. Para cambiar una
 tarea YA registrada sin tocar sus otros ajustes (conserva el "Iniciar en"):
 
     $py = "<carpeta del repo>\.venv\Scripts\python.exe"
-    $t = Get-ScheduledTask -TaskName MinervaV3HealthAlert
+    $t = Get-ScheduledTask -TaskName MinervaV4HealthAlert
     $t.Actions[0].Execute = "conhost.exe"
     $t.Actions[0].Arguments = "--headless $py scripts\telegram_alert.py"
     Set-ScheduledTask -InputObject $t
@@ -161,7 +161,7 @@ def _next_down_since(state: dict, current_status_name: str, now: datetime) -> st
 
 def _build_message(
     current_status_name: str, check_output: str, old_down_since: str | None, now: datetime,
-    port: int = 8002,
+    port: int = 8003,
 ) -> str:
     if current_status_name == "OK":
         desde = f" (estuvo caido desde {old_down_since})" if old_down_since else ""
@@ -275,7 +275,7 @@ def run(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8002)
+    parser.add_argument("--port", type=int, default=8003)
     parser.add_argument("--timeout", type=float, default=10.0)
     parser.add_argument("--state-file", default=DEFAULT_STATE_FILE)
     parser.add_argument("--reminder-minutes", type=float, default=DEFAULT_REMINDER_MINUTES)

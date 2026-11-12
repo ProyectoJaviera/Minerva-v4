@@ -1,6 +1,6 @@
 """Archivo local de velas de 1 minuto de Bitunix (LAST_PRICE), aparte de la base del bot.
 
-Vive por defecto en `history/minute_v3.db` (ajuste `MINUTE_DATA_DB`). Una tabla, `minute_bars`,
+Vive por defecto en `history/minute_v4.db` (ajuste `MINUTE_DATA_DB`). Una tabla, `minute_bars`,
 con clave `(symbol, open_time)` y sin rowid: unos 525 600 minutos por moneda y por ano. Se usa
 `sqlite3` sincronico porque las lecturas son grandes y secuenciales (el motor de repeticion las
 recorre de una vez) y la descarga escribe por lotes.

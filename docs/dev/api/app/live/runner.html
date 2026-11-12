@@ -143,6 +143,15 @@
                                 <a class="variable" href="#LiveRunner.paused">paused</a>
                         </li>
                         <li>
+                                <a class="variable" href="#LiveRunner.controls">controls</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#LiveRunner.rng">rng</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#LiveRunner.rates">rates</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#LiveRunner.symbols">symbols</a>
                         </li>
                         <li>
@@ -191,7 +200,7 @@
 
                         <div class="docstring"><p>El corredor de las pruebas en vivo: escucha el WebSocket publico y opera en paper.</p>
 
-<p>Un solo proceso atiende todas las pruebas activas de <code>history/live_v3.db</code>:</p>
+<p>Un solo proceso atiende todas las pruebas activas de <code>history/live_v4.db</code>:</p>
 
 <ol>
 <li>Se suscribe al canal <code>trade</code> de las monedas de las pruebas (mas BTC, que usan dos filtros).</li>
@@ -208,6 +217,10 @@ posiciones, anota su latido y, tras cada cierre de vela, reconcilia con las vela
 <p>Protecciones: si una moneda lleva mas de <code><a href="#STALE_SECONDS">STALE_SECONDS</a></code> sin ticks no se abren entradas en ella;
 una prueba detenida cierra sus posiciones con el ultimo precio (motivo <code>MANUAL</code>); al reiniciar,
 las posiciones guardadas siguen y el primer tick decide si un SL salto durante la caida.</p>
+
+<p>v4: cada prueba tiene un gemelo de control al azar (<code>app/live/control.py</code>) que opera con la misma
+configuracion y entradas sorteadas a la misma frecuencia. El corredor lo crea si falta, cuenta las
+velas elegibles y las senales de la prueba, y sortea las entradas del gemelo al cierre de cada vela.</p>
 
 <p>Solo usa endpoints publicos de datos. Nunca envia ordenes: todo es paper.</p>
 </div>
@@ -476,6 +489,8 @@ corredor a mano, sin red.</p>
 <li><strong>inline_eval:</strong>  evalua en el mismo hilo (para las pruebas); por defecto, en un hilo aparte.</li>
 <li><strong>ticks_retention_days:</strong>  borra cada hora los ticks grabados mas viejos que estos dias
 (<code>None</code> = guardar todo).</li>
+<li><strong>controls:</strong>  crea y opera el gemelo al azar de cada prueba (v4).</li>
+<li><strong>rng:</strong>  generador de numeros al azar del gemelo (para las pruebas).</li>
 </ul>
 </div>
 
@@ -483,7 +498,7 @@ corredor a mano, sin red.</p>
                             <div id="LiveRunner.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">LiveRunner</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">settings</span><span class="p">:</span> <span class="n"><a href="../config.html#Settings">app.config.Settings</a></span>,</span><span class="param">	<span class="n">store</span><span class="p">:</span> <span class="n"><a href="store.html#LiveStore">app.live.store.LiveStore</a></span>,</span><span class="param">	<span class="n">ticks</span><span class="p">:</span> <span class="n"><a href="store.html#TickStore">app.live.store.TickStore</a></span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">rest</span><span class="p">:</span> <span class="n"><a href="#RestSource">RestSource</a></span>,</span><span class="param">	<span class="n">clock</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">built</span><span class="o">-</span><span class="ow">in</span> <span class="n">function</span> <span class="n">time</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">on_symbols</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">Awaitable</span><span class="p">[</span><span class="kc">None</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">max_evals_per_cycle</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>,</span><span class="param">	<span class="n">inline_eval</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">ticks_retention_days</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
+        <span class="name">LiveRunner</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">settings</span><span class="p">:</span> <span class="n"><a href="../config.html#Settings">app.config.Settings</a></span>,</span><span class="param">	<span class="n">store</span><span class="p">:</span> <span class="n"><a href="store.html#LiveStore">app.live.store.LiveStore</a></span>,</span><span class="param">	<span class="n">ticks</span><span class="p">:</span> <span class="n"><a href="store.html#TickStore">app.live.store.TickStore</a></span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">rest</span><span class="p">:</span> <span class="n"><a href="#RestSource">RestSource</a></span>,</span><span class="param">	<span class="n">clock</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">built</span><span class="o">-</span><span class="ow">in</span> <span class="n">function</span> <span class="n">time</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">on_symbols</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">Awaitable</span><span class="p">[</span><span class="kc">None</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">max_evals_per_cycle</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>,</span><span class="param">	<span class="n">inline_eval</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">ticks_retention_days</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">controls</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>,</span><span class="param">	<span class="n">rng</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
         
     </div>
@@ -686,6 +701,39 @@ corredor a mano, sin red.</p>
         
     </div>
     <a class="headerlink" href="#LiveRunner.paused"></a>
+    
+    
+
+                            </div>
+                            <div id="LiveRunner.controls" class="classattr">
+                                <div class="attr variable">
+            <span class="name">controls</span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.controls"></a>
+    
+    
+
+                            </div>
+                            <div id="LiveRunner.rng" class="classattr">
+                                <div class="attr variable">
+            <span class="name">rng</span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.rng"></a>
+    
+    
+
+                            </div>
+                            <div id="LiveRunner.rates" class="classattr">
+                                <div class="attr variable">
+            <span class="name">rates</span><span class="annotation">: dict[int, tuple[int, int]]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.rates"></a>
     
     
 

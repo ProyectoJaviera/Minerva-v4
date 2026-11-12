@@ -16,7 +16,7 @@ guardadas en `scripts/v1_measurement_manifest.json`:
 Uso (en el PC o dentro de la imagen, en el netbook):
 
     python scripts/verify_v1_identity.py
-    docker run --rm minerva-v3:local python scripts/verify_v1_identity.py
+    docker run --rm minerva-v4:local python scripts/verify_v1_identity.py
 
 Sale con 0 si todo coincide y con 1 si algo difiere (y dice que). No usa red ni base.
 """

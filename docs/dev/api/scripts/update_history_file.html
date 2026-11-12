@@ -68,7 +68,7 @@
 <p>Es <code>scripts/download_history.py</code> (universo top-10 de CoinGecko mas los simbolos de control; velas
 LAST_PRICE y MARK_PRICE de 1h, 4h y 1d desde el piso real de Bitunix, y funding) escribiendo en un
 archivo SQLite APARTE de la base del bot: <code>EXPLORER_HISTORY_DB</code>, por defecto
-<code>./history/history_v3.db</code>; despues baja tambien las velas de <code><a href="#EXTRA_TIMEFRAMES">EXTRA_TIMEFRAMES</a></code> (15m y 1w, que la
+<code>./history/history_v4.db</code>; despues baja tambien las velas de <code><a href="#EXTRA_TIMEFRAMES">EXTRA_TIMEFRAMES</a></code> (15m y 1w, que la
 seccion ofrece y el backtest de la Fase 2 no usa) de los mismos simbolos. Ambos intervalos se
 verificaron contra la API publica de Bitunix el 2026-11-11 (la semanal abre el lunes 00:00 UTC).
 Es reanudable: correrlo de nuevo solo baja lo que falta. Las velas de Bitunix coinciden con las de
@@ -81,7 +81,7 @@ cuando cambia su fecha de modificacion (mejor correrlo cuando nadie esta usando 
 <h6 id="uso">Uso:</h6>
 
 <blockquote>
-  <p>python scripts/update_history_file.py [--path history/history_v3.db] [--only-extra] [--via-copy]</p>
+  <p>python scripts/update_history_file.py [--path history/history_v4.db] [--only-extra] [--via-copy]</p>
 </blockquote>
 </div>
 
@@ -92,7 +92,7 @@ cuando cambia su fecha de modificacion (mejor correrlo cuando nadie esta usando 
                 <section id="DEFAULT_PATH">
                     <div class="attr variable">
             <span class="name">DEFAULT_PATH</span>        =
-<span class="default_value">&#39;./history/history_v3.db&#39;</span>
+<span class="default_value">&#39;./history/history_v4.db&#39;</span>
 
         
     </div>

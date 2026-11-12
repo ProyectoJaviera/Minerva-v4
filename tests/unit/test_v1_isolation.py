@@ -56,17 +56,17 @@ def powershell(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 # --- el compose ---------------------------------------------------------------------------------
 
 
-def test_the_compose_names_everything_minerva_v3_and_pins_the_names():
+def test_the_compose_names_everything_minerva_v4_and_pins_the_names():
     data = compose()
     service = data["services"]["minerva"]
 
-    assert data["name"] == "minerva-v3"
-    assert service["image"] == "minerva-v3:local"
-    assert service["container_name"] == "minerva-v3-minerva-1"
+    assert data["name"] == "minerva-v4"
+    assert service["image"] == "minerva-v4:local"
+    assert service["container_name"] == "minerva-v4-minerva-1"
     # los volumenes y la red tienen nombre FIJO: no dependen del proyecto (`-p minerva` no los toca)
-    assert data["volumes"]["data"]["name"] == "minerva-v3_data"
-    assert data["volumes"]["logs"]["name"] == "minerva-v3_logs"
-    assert data["networks"]["default"]["name"] == "minerva-v3_default"
+    assert data["volumes"]["data"]["name"] == "minerva-v4_data"
+    assert data["volumes"]["logs"]["name"] == "minerva-v4_logs"
+    assert data["networks"]["default"]["name"] == "minerva-v4_default"
 
 
 def test_no_v1_name_survives_in_the_compose_once_comments_are_dropped():
@@ -78,11 +78,11 @@ def test_no_v1_name_survives_in_the_compose_once_comments_are_dropped():
     assert "minerva_" not in resolved.replace("minerva_estabilidad", "")
 
 
-def test_the_default_host_port_is_8002_and_the_real_bot_switches_default_to_false():
+def test_the_default_host_port_is_8003_and_the_real_bot_switches_default_to_false():
     text = COMPOSE.read_text(encoding="utf-8")
     service = compose()["services"]["minerva"]
 
-    assert '"127.0.0.1:${MINERVA_PORT:-8002}:8000"' in text
+    assert '"127.0.0.1:${MINERVA_PORT:-8003}:8000"' in text
     assert "MINERVA_PORT:-8000" not in text
     for name in REAL_BOT_SWITCHES:
         assert service["environment"][name] == "${MINERVA_REAL_BOT:-false}", name
@@ -93,10 +93,10 @@ def test_the_default_host_port_is_8002_and_the_real_bot_switches_default_to_fals
 
 
 @pytest.mark.parametrize("script", ["check_health.py", "telegram_alert.py", "telegram_daily.py"])
-def test_the_health_and_telegram_scripts_default_to_port_8002(script):
+def test_the_health_and_telegram_scripts_default_to_port_8003(script):
     source = (SCRIPTS / script).read_text(encoding="utf-8")
 
-    assert 'parser.add_argument("--port", type=int, default=8002)' in source
+    assert 'parser.add_argument("--port", type=int, default=8003)' in source
     assert "default=8000" not in source
 
 
@@ -107,23 +107,23 @@ def test_the_native_and_migration_scripts_default_to_ports_other_than_8000(scrip
     source = (SCRIPTS / script).read_text(encoding="utf-8")
     defaults = re.findall(r"\[int\]\$(?:Port|NativePort|DockerPort) = (\d+)", source)
 
-    assert defaults and set(defaults) == {"8002"}, (script, defaults)
+    assert defaults and set(defaults) == {"8003"}, (script, defaults)
 
 
 def test_the_migration_scripts_default_to_the_v2_project_and_task():
     for script in ("migrate_to_docker.ps1", "rollback_from_docker.ps1"):
         source = (SCRIPTS / script).read_text(encoding="utf-8")
-        assert '[string]$ProjectName = "minerva-v3"' in source, script
+        assert '[string]$ProjectName = "minerva-v4"' in source, script
     migrate = (SCRIPTS / "migrate_to_docker.ps1").read_text(encoding="utf-8")
-    assert '[string]$TaskName = "MinervaV3StartBot"' in migrate
+    assert '[string]$TaskName = "MinervaV4StartBot"' in migrate
     common = (SCRIPTS / "docker_common.ps1").read_text(encoding="utf-8")
-    assert '$script:ComposeProject = "minerva-v3"' in common
-    assert '$script:MarkerName = "MIGRADO_A_DOCKER_V3.txt"' in common
+    assert '$script:ComposeProject = "minerva-v4"' in common
+    assert '$script:MarkerName = "MIGRADO_A_DOCKER_V4.txt"' in common
 
 
 def test_the_marker_name_is_not_the_one_of_the_v1():
-    assert docker_support.MARKER_NAME == "MIGRADO_A_DOCKER_V3.txt"
-    assert docker_support.PROJECT_NAME == "minerva-v3"
+    assert docker_support.MARKER_NAME == "MIGRADO_A_DOCKER_V4.txt"
+    assert docker_support.PROJECT_NAME == "minerva-v4"
 
 
 def test_only_the_guards_name_the_v1_scheduled_tasks_in_code_and_scripts():
@@ -154,7 +154,7 @@ def test_compose_always_passes_the_v2_project_and_refuses_the_one_of_the_v1(monk
 
     docker_support.compose(["ps"])
 
-    assert calls and calls[0][calls[0].index("-p") + 1] == "minerva-v3"
+    assert calls and calls[0][calls[0].index("-p") + 1] == "minerva-v4"
 
     monkeypatch.setenv("COMPOSE_PROJECT_NAME", "minerva")
     calls.clear()

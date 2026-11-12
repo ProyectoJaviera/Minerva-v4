@@ -1,8 +1,8 @@
 """Archivos de las pruebas en vivo (SQLite, aparte de la base del bot).
 
-- `history/live_v3.db` (`LiveStore`): las pruebas que definio el dueno, sus posiciones abiertas,
+- `history/live_v4.db` (`LiveStore`): las pruebas que definio el dueno, sus posiciones abiertas,
   sus operaciones cerradas y un registro de eventos (senales, rechazos, avisos del feed).
-- `history/ticks_v3.db` (`TickStore`): cada operacion del canal `trade` del WebSocket publico
+- `history/ticks_v4.db` (`TickStore`): cada operacion del canal `trade` del WebSocket publico
   (hora en ms, precio, cantidad y lado). Es la historia segundo a segundo que Bitunix no entrega
   gratis hacia atras; medido el 2026-11-11, BTC trae ~2 operaciones por segundo por este canal.
 
@@ -64,6 +64,11 @@ CREATE TABLE IF NOT EXISTS live_control (
     value TEXT NOT NULL,
     changed_at_ms INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS live_control_rates (
+    test_id INTEGER PRIMARY KEY,
+    eligible_bars INTEGER NOT NULL DEFAULT 0,
+    signals INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE IF NOT EXISTS live_heartbeat (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     ts_ms INTEGER NOT NULL,
@@ -93,12 +98,14 @@ class StoredTest:
         status: `active` o `stopped`.
         created_at_ms: cuando se creo (solo cuentan las operaciones posteriores).
         stopped_at_ms: cuando se detuvo, o `None`.
+        control_of: si es el gemelo al azar de otra prueba, el id de esa prueba (v4).
     """
     id: int
     config: TestConfig
     status: str
     created_at_ms: int
     stopped_at_ms: int | None
+    control_of: int | None = None
 
 
 def _connect(path: Path, read_only: bool, schema: str) -> sqlite3.Connection:
@@ -108,6 +115,12 @@ def _connect(path: Path, read_only: bool, schema: str) -> sqlite3.Connection:
     conn = sqlite3.connect(path, timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(schema)
+    if schema is _LIVE_SCHEMA:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(live_tests)")}
+        if "control_of" not in cols:
+            # v4: el gemelo al azar apunta a su prueba. Los archivos de la v3 se migran solos.
+            conn.execute("ALTER TABLE live_tests ADD COLUMN control_of INTEGER")
+            conn.commit()
     return conn
 
 
@@ -122,6 +135,11 @@ class LiveStore:
     def __init__(self, path: str | Path, read_only: bool = False) -> None:
         self.path = Path(path)
         self._conn = _connect(self.path, read_only, _LIVE_SCHEMA)
+        tables = {r[0] for r in self._conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table'")}
+        cols = {r[1] for r in self._conn.execute("PRAGMA table_info(live_tests)")}
+        # Un archivo de la v3 abierto en solo lectura no tiene las columnas de la v4.
+        self._has_controls = "control_of" in cols and "live_control_rates" in tables
 
     def close(self) -> None:
         """Cierra la conexion."""
@@ -156,14 +174,16 @@ class LiveStore:
         return int(cur.lastrowid)
 
     def stop_test(self, test_id: int, now_ms: int | None = None) -> bool:
-        """Detiene una prueba activa (no borra nada; no se puede reanudar).
+        """Detiene una prueba activa y su gemelo al azar (no borra nada; no se puede reanudar).
+
+        Un gemelo no se detiene solo: se detiene con su prueba.
 
         Args:
             test_id: la prueba.
             now_ms: instante; por defecto, el reloj.
 
         Returns:
-            `True` si estaba activa y quedo detenida.
+            `True` si la prueba estaba activa y quedo detenida.
 
         Efectos:
             Escribe `live_tests`.
@@ -172,8 +192,77 @@ class LiveStore:
         with self._conn:
             cur = self._conn.execute(
                 "UPDATE live_tests SET status = 'stopped', stopped_at_ms = ? "
-                "WHERE id = ? AND status = 'active'", (now, test_id))
-        return cur.rowcount == 1
+                "WHERE id = ? AND status = 'active' AND control_of IS NULL", (now, test_id))
+            stopped = cur.rowcount == 1
+            if stopped:
+                self._conn.execute(
+                    "UPDATE live_tests SET status = 'stopped', stopped_at_ms = ? "
+                    "WHERE control_of = ? AND status = 'active'", (now, test_id))
+        return stopped
+
+    def ensure_controls(self, now_ms: int | None = None) -> list[int]:
+        """Crea el gemelo al azar de cada prueba activa que todavia no tiene uno (v4).
+
+        Args:
+            now_ms: instante de creacion; por defecto, el reloj.
+
+        Returns:
+            Los ids de los gemelos creados.
+
+        Efectos:
+            Escribe `live_tests` y `live_control_rates`.
+        """
+        from app.live.control import control_config
+
+        now = int(time.time() * 1000) if now_ms is None else now_ms
+        created = []
+        for test in self.tests(only_active=True):
+            if test.control_of is not None:
+                continue
+            has = self._conn.execute("SELECT 1 FROM live_tests WHERE control_of = ?",
+                                     (test.id,)).fetchone()
+            if has:
+                continue
+            twin = control_config(test.config)
+            with self._conn:
+                cur = self._conn.execute(
+                    "INSERT INTO live_tests (name, config_json, status, created_at_ms, control_of) "
+                    "VALUES (?, ?, 'active', ?, ?)", (twin.name, twin.to_json(), now, test.id))
+                self._conn.execute("INSERT OR IGNORE INTO live_control_rates (test_id) VALUES (?)",
+                                   (test.id,))
+            created.append(int(cur.lastrowid))
+        return created
+
+    def bump_rate(self, test_id: int, eligible: int = 0, signals: int = 0) -> None:
+        """Suma velas elegibles o senales al contador de frecuencia de una prueba (v4).
+
+        Args:
+            test_id: la prueba (no el gemelo).
+            eligible: velas elegibles a sumar.
+            signals: senales a sumar.
+
+        Efectos:
+            Escribe `live_control_rates`.
+        """
+        with self._conn:
+            self._conn.execute(
+                "INSERT INTO live_control_rates (test_id, eligible_bars, signals) VALUES (?, ?, ?) "
+                "ON CONFLICT(test_id) DO UPDATE SET eligible_bars = eligible_bars + excluded."
+                "eligible_bars, signals = signals + excluded.signals", (test_id, eligible, signals))
+
+    def rates(self) -> dict[int, tuple[int, int]]:
+        """Los contadores de frecuencia de todas las pruebas (v4).
+
+        Returns:
+            Un diccionario `test_id -> (velas elegibles, senales)`.
+
+        Efectos:
+            Lee `live_control_rates`.
+        """
+        if not self._has_controls:
+            return {}
+        return {int(r[0]): (int(r[1]), int(r[2])) for r in self._conn.execute(
+            "SELECT test_id, eligible_bars, signals FROM live_control_rates")}
 
     def tests(self, only_active: bool = False) -> list[StoredTest]:
         """Las pruebas guardadas, por id.
@@ -187,7 +276,9 @@ class LiveStore:
         Efectos:
             Lee `live_tests`.
         """
-        sql = "SELECT id, config_json, status, created_at_ms, stopped_at_ms FROM live_tests"
+        control_col = "control_of" if self._has_controls else "NULL"
+        sql = ("SELECT id, config_json, status, created_at_ms, stopped_at_ms, "
+               f"{control_col} FROM live_tests")
         if only_active:
             sql += " WHERE status = 'active'"
         out = []
@@ -196,7 +287,8 @@ class LiveStore:
                 cfg = TestConfig.from_json(row[1])
             except (ValueError, TypeError):
                 continue
-            out.append(StoredTest(int(row[0]), cfg, row[2], int(row[3]), row[4]))
+            out.append(StoredTest(int(row[0]), cfg, row[2], int(row[3]), row[4],
+                                  None if row[5] is None else int(row[5])))
         return out
 
     # --- posiciones ---

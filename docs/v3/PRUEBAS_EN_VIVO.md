@@ -101,6 +101,6 @@ estrategia tick a tick sobre lo grabado. `run --no-ticks` no graba.
 
 ## 7. Lo que sigue
 
-- El control al azar por prueba y un criterio de revisión fijado al crearla.
+- El control al azar por prueba: hecho en la v4 ([CONTROL_AL_AZAR.md](../v4/CONTROL_AL_AZAR.md)). Falta un criterio de revisión fijado al crearla.
 - Repetición tick a tick sobre los ticks grabados.
 - El LLM como filtro en el momento de la señal, con su demora medida (después del veredicto de la v1).

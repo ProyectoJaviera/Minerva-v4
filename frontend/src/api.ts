@@ -759,7 +759,7 @@ export function useExplorerRun() {
   });
 }
 
-// Estado de la captura de datos de la v2 (tareas MinervaV3*) y del historial local. Solo lectura.
+// Estado de la captura de datos de la v2 (tareas MinervaV4*) y del historial local. Solo lectura.
 export interface DataStatusBlock {
   last_at: string | null;
   stale: boolean;
@@ -919,6 +919,35 @@ export interface LiveSummary {
   avg_entry_delay_ms: number | null;
 }
 
+// v4: el gemelo de control al azar de una prueba (mismas monedas, marco y salida; entradas sorteadas).
+export interface LiveControl {
+  id: number;
+  name: string;
+  status: "active" | "stopped";
+  created_at_ms: number;
+  summary: LiveSummary;
+  open_positions: number;
+}
+
+export interface LiveRate {
+  eligible_bars: number;
+  signals: number;
+  rate: number;
+}
+
+export type LiveVerdict = "pocas_operaciones" | "le_gana" | "pierde" | "no_se_distingue";
+
+export interface LiveVsControl {
+  verdict: LiveVerdict;
+  strategy_mean: number | null;
+  control_mean: number | null;
+  diff: number | null;
+  t: number | null;
+  min_trades: number;
+  strategy_trades: number;
+  control_trades: number;
+}
+
 export interface LiveTestRow {
   id: number;
   status: "active" | "stopped";
@@ -927,6 +956,9 @@ export interface LiveTestRow {
   config: LiveConfig;
   summary: LiveSummary;
   open_positions: number;
+  control?: LiveControl | null;
+  rate?: LiveRate | null;
+  vs_control?: LiveVsControl | null;
 }
 
 export interface LiveTests {

@@ -6,7 +6,7 @@ porqué de la medición, lee la [metodología](METODOLOGIA.md).
 **APROBADA / RECHAZADA** — Las dos etiquetas con las que Claude juzga una señal. Se guardan una sola vez y no se
 pueden cambiar. Una sombra sin decisión es `SIN_LLM`, que **no** equivale a `RECHAZADA`.
 
-**API (de Minerva)** — Las rutas HTTP que sirve el propio bot en `127.0.0.1:8002`. Casi todas exigen iniciar sesión.
+**API (de Minerva)** — Las rutas HTTP que sirve el propio bot en `127.0.0.1:8003`. Casi todas exigen iniciar sesión.
 `GET /health` no.
 
 **ATR** — *Average True Range*: promedio del rango de movimiento de las últimas velas, una medida de volatilidad. Varias
@@ -84,7 +84,7 @@ resultados: hace falta además el registro oficial del veredicto.
 actual con el congelado en cada ciclo; si difieren, el etiquetado se detiene. Se ve en `/health` como
 `llm_labeling.frozen_hash_ok`.
 
-**Historial local** — El archivo `history/history_v3.db` con las velas y el funding de Bitunix que usan la pestaña
+**Historial local** — El archivo `history/history_v4.db` con las velas y el funding de Bitunix que usan la pestaña
 Indicadores, la investigación y la prueba hacia adelante de la v2. Se actualiza con `scripts/update_history_file.py`.
 
 **HOLD** — "No hacer nada": una evaluación de una estrategia que no produjo señal. También se registran.
@@ -96,7 +96,7 @@ aprobadas y rechazadas, dada la muestra.
 scheduler**, lo que detiene la medición. Se levanta con `/resume`.
 
 **Libro de órdenes (*order book*)** — Las órdenes de compra y venta que esperan en el exchange. La v2 graba una foto
-de los 50 primeros niveles cada 5 minutos en `history/market_v3.db`, porque no hay historial gratuito hacia atrás.
+de los 50 primeros niveles cada 5 minutos en `history/market_v4.db`, porque no hay historial gratuito hacia atrás.
 
 **Liquidación** — Cierre forzado de una posición apalancada cuando la pérdida consume el margen. Minerva la simula en
 margen aislado.
@@ -105,7 +105,7 @@ margen aislado.
 
 **Margen aislado** — El riesgo de una posición se limita al margen que se le asignó. Es el único modo que simula Minerva.
 
-**Marca de la mudanza** — El archivo `data/MIGRADO_A_DOCKER_V3.txt`: indica que el bot corre en Docker y que la base nativa
+**Marca de la mudanza** — El archivo `data/MIGRADO_A_DOCKER_V4.txt`: indica que el bot corre en Docker y que la base nativa
 de `data/` es una copia vieja. Ver [Pasar un bot nativo a Docker](MUDANZA_DOCKER.md).
 
 **Medición ciega** — Diseño por el cual nadie ve resultados (PnL, tasas de acierto, comparación entre aprobadas y
@@ -174,7 +174,7 @@ sola vez.
 puede reiniciar el bot sin cortar etiquetados en vuelo. Ver [Reinicios seguros](USO.md#reinicios-seguros).
 
 **Volumen (Docker)** — Almacenamiento interno de Docker donde viven la base de datos y los logs del contenedor
-(`minerva-v3_data`, `minerva-v3_logs`). Borrarlo borra la medición.
+(`minerva-v4_data`, `minerva-v4_logs`). Borrarlo borra la medición.
 
 **WAL** — *Write-Ahead Logging*: el modo de SQLite que usa Minerva. Por eso la base no se copia a mano, sino con las
 herramientas de respaldo.

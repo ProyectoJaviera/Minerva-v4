@@ -1,7 +1,7 @@
 """Estado de los datos de la v2 para el dashboard: captura hacia adelante e historial local.
 
 Lee, sin escribir nada, el archivo de datos capturados (`MARKET_DATA_DB`, por defecto
-`./history/market_v3.db`, que llenan las tareas `MinervaV3*` con
+`./history/market_v4.db`, que llenan las tareas `MinervaV4*` con
 `scripts/record_market_data.py`) y el archivo de historial (`EXPLORER_HISTORY_DB`). Sirve para
 ver de un vistazo si las tareas programadas estan funcionando: cuando fue la ultima foto de cada
 cosa, cuantas hubo en 24 h, los errores y los ultimos valores. No muestra resultados de ninguna
@@ -48,7 +48,7 @@ def market_status(path: str, now_ms: int | None = None) -> dict:
     """Estado del archivo de datos capturados.
 
     Args:
-        path: ruta de `market_v3.db`.
+        path: ruta de `market_v4.db`.
         now_ms: instante actual en ms (para las pruebas); por defecto, el reloj.
 
     Returns:
@@ -111,7 +111,7 @@ def history_status(path: str, now_ms: int | None = None) -> dict:
     """Ultima vela de cada marco del archivo de historial.
 
     Args:
-        path: ruta de `history_v3.db`.
+        path: ruta de `history_v4.db`.
         now_ms: instante actual en ms (para las pruebas); por defecto, el reloj.
 
     Returns:

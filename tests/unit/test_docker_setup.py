@@ -346,10 +346,10 @@ def test_the_compose_healthcheck_runs_the_script_with_a_long_start_period():
     assert int(health["retries"]) >= 2
 
 
-def test_the_default_host_port_is_8002_never_the_8000_of_the_v1_bot():
-    # El 8000 es del bot vivo de la v1 de este PC: la v2 publica por defecto el 8002 (el interno
+def test_the_default_host_port_is_8003_never_the_8000_of_the_v1_bot():
+    # El 8000 es del bot vivo de la v1 de este PC: la v2 publica por defecto el 8003 (el interno
     # de la imagen sigue siendo 8000, dentro del contenedor).
-    assert "127.0.0.1:${MINERVA_PORT:-8002}:8000" in [str(p) for p in _service()["ports"]]
+    assert "127.0.0.1:${MINERVA_PORT:-8003}:8000" in [str(p) for p in _service()["ports"]]
 
 
 # --- Dockerfile ----------------------------------------------------------------------------------
@@ -798,7 +798,7 @@ def test_docker_compose_accepts_the_file_and_resolves_the_v2_defaults(tmp_path):
     service = _compose_config(tmp_path)["services"]["minerva"]
 
     assert service["ports"][0]["host_ip"] == "127.0.0.1"
-    assert service["ports"][0]["published"] == "8002" and service["ports"][0]["target"] == 8000
+    assert service["ports"][0]["published"] == "8003" and service["ports"][0]["target"] == 8000
     assert service["restart"] == "unless-stopped"
     env = service["environment"]
     # el .env FALSO no entra al entorno del contenedor: se monta y lo lee la aplicacion
@@ -817,11 +817,11 @@ def test_docker_compose_accepts_the_file_and_resolves_the_v2_defaults(tmp_path):
 @pytest.mark.skipif(not _compose_cli_available(), reason="falta el CLI de docker compose")
 def test_docker_compose_applies_the_overrides_and_only_then_turns_the_switches_on(tmp_path):
     service = _compose_config(
-        tmp_path, MINERVA_REAL_BOT="true", MINERVA_PORT="8002", MINERVA_RESTART="no",
+        tmp_path, MINERVA_REAL_BOT="true", MINERVA_PORT="8003", MINERVA_RESTART="no",
     )["services"]["minerva"]
 
     port = service["ports"][0]
-    assert port["published"] == "8002" and port["host_ip"] == "127.0.0.1"
+    assert port["published"] == "8003" and port["host_ip"] == "127.0.0.1"
     assert service["restart"] == "no"
     for name in ("LLM_LIVE_LABELING_ENABLED", "TELEGRAM_COMMANDS_ENABLED",
                  "PAPER_EXECUTION_ENABLED", "NEWS_COLLECTION_ENABLED", "TELEGRAM_PUSH_ENABLED"):

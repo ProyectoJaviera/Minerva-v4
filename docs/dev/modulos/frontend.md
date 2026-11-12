@@ -20,7 +20,7 @@ CoinGecko debe verse junto a sus datos. Ver [Ocultamiento de resultados](../ZONA
 - `main.tsx` monta `App` dentro de un `QueryClientProvider` (por defecto `refetchInterval` de 45 s y un reintento).
 - `api.ts` es la **única** capa de datos: `apiFetch` envía la cookie de sesión (`credentials: "include"`) y reacciona a un 401; un hook `use*` por endpoint. Los tipos TypeScript **reflejan exactamente**
   lo que devuelve cada endpoint: si cambias un contrato del backend, cambia también el tipo y su prueba.
-- En desarrollo, `vite.config.ts` hace *proxy* de `/api` y `/health` al **puerto 8002** (servidor de desarrollo con una copia de la base), nunca al bot real del 8000.
+- En desarrollo, `vite.config.ts` hace *proxy* de `/api` y `/health` al **puerto 8003** (servidor de desarrollo con una copia de la base), nunca al bot real del 8000.
 - Un 401 de cualquier consulta limpia la sesión escribiendo la caché de `me` (`clearSession`), sin refetch.
 
 ## Archivos de configuración (fuera de `src/`)
@@ -28,7 +28,7 @@ CoinGecko debe verse junto a sus datos. Ver [Ocultamiento de resultados](../ZONA
 | Archivo | Para qué |
 |---|---|
 | `frontend/package.json` | Scripts: `dev`, `build` (`tsc --noEmit && vite build`), `preview`, `typecheck` y `test` (`vitest run`). Dependencias de ejecución: `react`, `react-dom` y `@tanstack/react-query`; el resto son de desarrollo |
-| `frontend/vite.config.ts` | Plugins de React y Tailwind y el *proxy* al puerto 8002 |
+| `frontend/vite.config.ts` | Plugins de React y Tailwind y el *proxy* al puerto 8003 |
 | `frontend/vitest.config.ts` | Entorno `jsdom`, `globals: true` y `src/setupTests.ts` |
 | `frontend/tsconfig.json` | Modo `strict`, `noEmit`, solo compila `src` |
 | `frontend/index.html` | La página que carga `/src/main.tsx` |

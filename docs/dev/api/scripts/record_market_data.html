@@ -92,9 +92,9 @@
 
                         <div class="docstring"><p>Graba hacia adelante datos de mercado que no tienen historial gratis (v2, solo lectura de APIs).</p>
 
-<p>Pensado para las tareas programadas <code>MinervaV3*</code> (<code>scripts/register_v3_data_tasks.ps1</code>). Cada
+<p>Pensado para las tareas programadas <code>MinervaV4*</code> (<code>scripts/register_v4_data_tasks.ps1</code>). Cada
 llamada toma UNA foto y termina; escribe en un archivo SQLite aparte, por defecto
-<code>./history/market_v3.db</code> (<code>--path</code>), nunca en la base del bot ni en <code>data/</code>.</p>
+<code>./history/market_v4.db</code> (<code>--path</code>), nunca en la base del bot ni en <code>data/</code>.</p>
 
 <p>Subcomandos:</p>
 
@@ -116,7 +116,7 @@ existe, BTCUSDT y ETHUSDT. Un fallo en un simbolo no corta a los demas: se regis
 <h6 id="uso">Uso:</h6>
 
 <blockquote>
-  <p>python scripts/record_market_data.py orderbook|funding|feargreed [--path history/market_v3.db]</p>
+  <p>python scripts/record_market_data.py orderbook|funding|feargreed [--path history/market_v4.db]</p>
 </blockquote>
 </div>
 
@@ -127,7 +127,7 @@ existe, BTCUSDT y ETHUSDT. Un fallo en un simbolo no corta a los demas: se regis
                 <section id="DEFAULT_PATH">
                     <div class="attr variable">
             <span class="name">DEFAULT_PATH</span>        =
-<span class="default_value">&#39;./history/market_v3.db&#39;</span>
+<span class="default_value">&#39;./history/market_v4.db&#39;</span>
 
         
     </div>

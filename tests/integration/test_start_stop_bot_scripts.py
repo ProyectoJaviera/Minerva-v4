@@ -2,7 +2,7 @@
 (continuidad operativa, plan pre-Fase 5 aprobado 2026-10-14). Corre el
 lifespan REAL completo (descubrimiento de universo, backfill de velas) --
 lento y contra la red real, nunca en CI por defecto. SIEMPRE contra una
-copia temporal de la base y el puerto 8002 -- jamas el puerto 8000 ni
+copia temporal de la base y el puerto 8003 -- jamas el puerto 8000 ni
 `data/minerva_estabilidad.db`.
 
 Ejecutar a mano con:
@@ -24,7 +24,7 @@ import pytest
 from tests.support.winproc import NO_WINDOW
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PORT = 8002
+PORT = 8003
 
 pytestmark = [
     pytest.mark.skipif(
@@ -80,7 +80,7 @@ def real_db_copy_for_bot(tmp_path):
     log_dir.mkdir()
     yield copy_path, log_dir
     # Red de seguridad: si el test falla a mitad de camino, no debe quedar
-    # nada corriendo en el puerto 8002.
+    # nada corriendo en el puerto 8003.
     _run_ps1("stop_bot.ps1", "-Port", str(PORT), timeout=30)
 
 
@@ -101,7 +101,7 @@ def test_start_refuses_a_second_instance_then_stop_frees_the_port(real_db_copy_f
     assert health["status"] == "ok"
     assert health["mode"] == "PAPER_TRADING"
     # Solo el bot real (8000) arma el brazo ejecutado de la cuenta paper (subfase 3.9): en el
-    # 8002 el interruptor queda apagado y no se escribe ninguna marca de activacion.
+    # 8003 el interruptor queda apagado y no se escribe ninguna marca de activacion.
     assert health["paper_execution"] == {
         "enabled": False, "active": False, "armed_since": None, "opened_today": 0,
         "skipped_today": 0,
@@ -147,7 +147,7 @@ def test_start_refuses_a_second_instance_then_stop_frees_the_port(real_db_copy_f
             freed = True
             break
         time.sleep(0.5)
-    assert freed, "el puerto 8002 sigue respondiendo despues de stop_bot.ps1"
+    assert freed, "el puerto 8003 sigue respondiendo despues de stop_bot.ps1"
 
 
 @pytest.mark.slow

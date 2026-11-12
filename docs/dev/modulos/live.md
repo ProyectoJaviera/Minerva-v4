@@ -7,7 +7,7 @@
 **Pruebas en vivo** de la v3: paper trading hacia adelante con el precio en tiempo real del WebSocket público de
 Bitunix. El dueño define pruebas (monedas, marco, indicadores, salida y modo) y un proceso aparte las opera tick a
 tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No participa del bot ni toca su base: usa
-`history/live_v3.db` y `history/ticks_v3.db`.
+`history/live_v4.db` y `history/ticks_v4.db`.
 
 ## Archivos
 
@@ -72,7 +72,7 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 - **Referencia pdoc:** [`api/app/live/config.html`](../api/app/live/config.html)
 - **Importa (internos):** `app.explorer.confluence`
-- **Lo importan:** `app.api.routes.live`, `app.live.runner`, `app.live.store`, `scripts.live_tests`
+- **Lo importan:** `app.api.routes.live`, `app.live.control`, `app.live.runner`, `app.live.store`, `scripts.live_tests`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -118,7 +118,7 @@ las posiciones (motivo `MANUAL`), vacía las velas y deja de mirar ticks; al enc
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/app/live/runner.html`](../api/app/live/runner.html)
-- **Importa (internos):** `app.config`, `app.core.logging`, `app.explorer.confluence`, `app.live.book`, `app.live.config`, `app.live.paper`, `app.live.store`, `app.persistence.models`, `app.research.combos`, `app.strategies.base`
+- **Importa (internos):** `app.config`, `app.core.logging`, `app.explorer.confluence`, `app.live.book`, `app.live.config`, `app.live.control`, `app.live.paper`, `app.live.store`, `app.persistence.models`, `app.research.combos`, `app.strategies.base`
 - **Lo importan:** `app.live.service`, `scripts.live_tests`
 - **Configuración que lee:** `LEVERAGE`
 - **Tablas que lee:** ninguno
@@ -142,13 +142,13 @@ las posiciones (motivo `MANUAL`), vacía las velas y deja de mirar ticks; al enc
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/app/live/store.html`](../api/app/live/store.html)
-- **Importa (internos):** `app.live.config`, `app.live.paper`
+- **Importa (internos):** `app.live.config`, `app.live.control`, `app.live.paper`
 - **Lo importan:** `app.api.routes.live`, `app.live.report`, `app.live.runner`, `app.live.service`, `scripts.live_tests`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`, `tests/unit/test_live_control.py`
 <!-- /hechos:app/live/store.py -->
 
 ### `app/live/report.py`
@@ -166,13 +166,13 @@ y entrar), `overview()` (corredor y todas las pruebas) y `detail()` (una prueba)
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/app/live/report.html`](../api/app/live/report.html)
-- **Importa (internos):** `app.live.paper`, `app.live.store`
+- **Importa (internos):** `app.live.control`, `app.live.paper`, `app.live.store`
 - **Lo importan:** `app.api.routes.live`, `scripts.live_tests`
 - **Configuración que lee:** `LEVERAGE`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`, `tests/unit/test_live_control.py`
 <!-- /hechos:app/live/report.py -->
 
 ### `app/live/service.py`
@@ -200,3 +200,30 @@ cliente REST y su propio WebSocket del canal `trade`.
 - **Tablas que crea o altera:** ninguno
 - **Pruebas que lo importan o citan:** `tests/unit/test_live_api.py`
 <!-- /hechos:app/live/service.py -->
+
+### `app/live/control.py`
+
+**Responsabilidad.** El gemelo de control al azar de cada prueba (v4): misma configuración que la prueba, entradas sorteadas a la frecuencia de señales de la prueba, y la comparación de los dos resultados. Ver `docs/v4/CONTROL_AL_AZAR.md`.
+
+**Funciones y clases clave.** `control_config` (copia con el nombre `Azar: ...`), `signal_rate` y `draw_entry` (si entra y en qué
+dirección), `entry_delay_ms` (instante dentro de la vela en modo `intrabar`), `RandomExitStrategy` (la salida de `ConfluenceStrategy`
+con solo el ATR(14)) y `compare` (prueba de Welch del resultado neto por operación, con veredicto desde 30 operaciones por lado).
+
+**Invariantes — no romper.** El gemelo no mira adelante: sortea con la frecuencia conocida antes de la vela. Su salida es la misma
+cuenta de la prueba (una prueba lo compara con `ConfluenceStrategy`). Nunca ajusta la estrategia.
+
+**Trampas conocidas.** `RandomExitStrategy` calcula el ATR en el constructor: `ConfluenceStrategy._distance` lee `_atr` antes de
+llamar a `_index`. Es una sola tirada de la suerte: con muchas pruebas, alguna le gana a su gemelo por azar.
+
+<!-- hechos:app/live/control.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/app/live/control.html`](../api/app/live/control.html)
+- **Importa (internos):** `app.candidates.common`, `app.explorer.confluence`, `app.indicators._pine`, `app.live.config`, `app.persistence.models`
+- **Lo importan:** `app.live.report`, `app.live.runner`, `app.live.store`, `scripts.live_tests`
+- **Configuración que lee:** ninguno
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** `tests/unit/test_live_control.py`
+<!-- /hechos:app/live/control.py -->

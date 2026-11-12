@@ -5,7 +5,7 @@ Uso (desde la raiz del repo, con el venv, despues de `scripts/download_minutes.p
     python scripts/replay_backtest.py --strategy donchian --timeframe 1h --start 2026-10-01
     python scripts/replay_backtest.py --strategy forming --symbols BTCUSDT ETHUSDT
 
-Lee solo el archivo de minutos (`history/minute_v3.db`, en solo lectura) y no usa la red ni la
+Lee solo el archivo de minutos (`history/minute_v4.db`, en solo lectura) y no usa la red ni la
 base del bot. El funding no se incluye todavia (las operaciones salen marcadas como aproximadas
 con tasa 0). Imprime, por moneda y en total, operaciones, PF, PnL neto y los contadores del motor
 (minutos con SL y TP a la vez, ordenes vencidas, velas con minutos faltantes).

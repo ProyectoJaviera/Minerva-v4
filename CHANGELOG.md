@@ -7,6 +7,14 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v4: el gemelo de control al azar — 2026-11-12
+
+- Nace la v4 a partir de la v3, con nombres propios (`minerva-v4`, puerto 8003, tareas `MinervaV4*`, archivos
+  `history/*_v4.db`) y candados que rechazan los de la v1, la v2 y la v3 (`tests/unit/test_v3_isolation.py`).
+- Cada prueba «En vivo» tiene un gemelo `Azar: ...` con la misma configuración y entradas sorteadas a la misma
+  frecuencia (`app/live/control.py`); la tarjeta «Contra el azar» dice si la prueba le gana a la suerte
+  ([`docs/v4/CONTROL_AL_AZAR.md`](docs/v4/CONTROL_AL_AZAR.md)).
+
 ## Minerva v3: un solo Minerva en el servidor — 2026-11-11
 
 - `scripts/verify_v1_identity.py` demuestra que la medición de la v3 es idéntica a la de la v1.0 (141 archivos
@@ -43,7 +51,7 @@ Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órd
 ## Minerva v2: captura de datos y documentación — 2026-11-11
 
 - `scripts/record_market_data.py` graba hacia adelante el libro de órdenes de Bitunix (50 niveles), el funding vigente y
-  el Fear & Greed en `history/market_v2.db`; `scripts/register_v3_data_tasks.ps1` registra las tareas
+  el Fear & Greed en `history/market_v2.db`; el script de tareas de datos (hoy `scripts/register_v4_data_tasks.ps1`) registra las tareas
   `MinervaV2OrderBook`, `MinervaV2Funding`, `MinervaV2FearGreed` y `MinervaV2HistoryUpdate`.
 - `scripts/update_history_file.py --via-copy` actualiza el historial en una copia y la cambia al final.
 - Documentación actualizada a la v2: README, índice, arquitectura, guía de instalación, glosario y avisos en los

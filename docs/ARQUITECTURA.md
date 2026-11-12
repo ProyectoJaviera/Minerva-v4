@@ -211,7 +211,7 @@ flowchart LR
 La imagen es multietapa (compila el dashboard con Node, instala las dependencias de Python con versiones exactas y
 deja una imagen final sin Node ni compiladores), corre como usuario sin privilegios y no lleva secretos. El
 `docker-compose.yml` publica el puerto solo en `127.0.0.1`, guarda la base y los logs en **volúmenes con nombre**
-(`minerva-v3_data` y `minerva-v3_logs`; SQLite en modo WAL no es fiable sobre las carpetas compartidas de Docker Desktop),
+(`minerva-v4_data` y `minerva-v4_logs`; SQLite en modo WAL no es fiable sobre las carpetas compartidas de Docker Desktop),
 monta el `.env` y `docs/` de solo lectura y define un *healthcheck* sobre `/health`. Más en
 [Seguridad](SEGURIDAD.md#el-contenedor).
 
@@ -246,10 +246,10 @@ Lo nuevo de la v2 **no toca el bucle del bot**: corre sin red sobre archivos loc
 ```mermaid
 flowchart LR
     BX["Bitunix<br/>velas, funding, libro"] --> UH["update_history_file.py<br/>(tarea cada 6 h)"]
-    UH --> HF[("history/history_v3.db<br/>velas 15m a 1w y funding")]
+    UH --> HF[("history/history_v4.db<br/>velas 15m a 1w y funding")]
     BX --> RM["record_market_data.py<br/>(tareas 5 min, 1 h, diaria)"]
     FG["alternative.me<br/>Fear & Greed"] --> RM
-    RM --> MD[("history/market_v3.db<br/>libro, funding, F&G")]
+    RM --> MD[("history/market_v4.db<br/>libro, funding, F&G")]
     HF --> EX["Pestaña Indicadores<br/>app/explorer"]
     HF --> ST["Pestaña Estudio<br/>app/research/forward.py"]
     HF --> RS["Rondas de investigación<br/>app/research + scripts/v2_*"]
@@ -267,9 +267,9 @@ flowchart LR
 | `app/explorer/` + `app/api/routes/explorer.py` | La pestaña Indicadores: confluencia de los indicadores elegidos (`confluence.py`) y backtest a pedido sobre el historial local, en un hilo aparte y de a una prueba por vez ([guía](v2/SECCION_INDICADORES.md)) |
 | `app/research/forward.py` + `app/api/routes/study.py` | La pestaña Estudio: la prueba hacia adelante de las estrategias en estudio (la misma de `scripts/v2_forward_test.py`), calculada en un hilo aparte y guardada hasta que cambie el historial, y el resumen fijo de las rondas (`study_summary.py`) |
 | `app/backtesting/` | El mismo motor de la Fase 2, con tres opciones nuevas que la v1 no usa: omitir la entrada si el `open` ya cruzó el SL, entrada con orden límite y salida por tiempo |
-| `scripts/update_history_file.py` | Mantiene `history/history_v3.db` (copia y reemplazo para no escribir en el archivo que se está leyendo) |
-| `scripts/record_market_data.py` | Graba hacia adelante el libro de órdenes (50 niveles), el funding vigente y el Fear & Greed en `history/market_v3.db` |
-| `scripts/register_v3_data_tasks.ps1` | Registra las tareas `MinervaV3OrderBook`, `MinervaV3Funding`, `MinervaV3FearGreed` y `MinervaV3HistoryUpdate` |
+| `scripts/update_history_file.py` | Mantiene `history/history_v4.db` (copia y reemplazo para no escribir en el archivo que se está leyendo) |
+| `scripts/record_market_data.py` | Graba hacia adelante el libro de órdenes (50 niveles), el funding vigente y el Fear & Greed en `history/market_v4.db` |
+| `scripts/register_v4_data_tasks.ps1` | Registra las tareas `MinervaV4OrderBook`, `MinervaV4Funding`, `MinervaV4FearGreed` y `MinervaV4HistoryUpdate` |
 
 El archivo de historial se abre en modo inmutable de solo lectura, y en Docker la carpeta `history/` se monta de solo
 lectura. Ninguna de estas piezas escribe en la base del bot.
