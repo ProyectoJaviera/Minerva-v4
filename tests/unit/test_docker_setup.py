@@ -448,6 +448,7 @@ def test_the_container_starts_uvicorn_in_exec_form_on_port_8000_and_declares_the
     cmd = next(line for line in lines if line.startswith("CMD "))
     assert json.loads(cmd[4:]) == [
         "python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000",
+        "--proxy-headers", "--forwarded-allow-ips", "*",
     ]
     assert "EXPOSE 8000" in lines
     health = next(line for line in lines if line.startswith("HEALTHCHECK"))

@@ -245,3 +245,26 @@ def test_tests_without_margin_or_leverage_show_the_defaults(tmp_path):
     detail = client.get(f"/api/live/tests/{test_id}").json()["config"]
     assert (row["margin_usdt"], row["leverage"]) == (7.0, 4)
     assert (detail["margin_usdt"], detail["leverage"]) == (7.0, 4)
+
+def test_behind_tailscale_serve_the_https_origin_is_accepted_with_proxy_headers(tmp_path):
+    """Como en el netbook: el navegador ve https; el contenedor, http con X-Forwarded-Proto."""
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+    app = FastAPI()
+    app.state.settings = make_settings(tmp_path)
+    app.include_router(auth_routes.router)
+    app.include_router(live_routes.router)
+    host = "minerva.ejemplo.ts.net"
+    client = TestClient(ProxyHeadersMiddleware(app, trusted_hosts="*"), base_url=f"http://{host}")
+    proxied = {"X-Forwarded-Proto": "https", "Origin": f"https://{host}",
+               "Sec-Fetch-Site": "same-origin"}
+    assert client.post("/api/auth/login", json={"username": "admin", "password": PASSWORD},
+                       headers=proxied).status_code == 200
+
+    ok = client.post("/api/live/tests", json=BODY, headers=proxied)
+    plain = client.post("/api/live/tests", json=BODY, headers={"Origin": f"https://{host}"})
+    foreign = client.post("/api/live/tests", json=BODY,
+                          headers={**proxied, "Origin": "https://evil.example"})
+
+    assert ok.status_code == 200
+    assert plain.status_code == 403 and foreign.status_code == 403

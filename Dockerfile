@@ -87,7 +87,11 @@ EXPOSE 8000
 
 # `python -m uvicorn` pone /app en sys.path (importa `app` desde aqui). La forma "exec" hace que uvicorn sea
 # PID 1 y reciba SIGTERM de `docker stop`: el cierre ordenado del lifespan (tareas, base de datos).
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# `--proxy-headers`: detras de `tailscale serve` (https en el netbook, http hacia el contenedor) uvicorn toma el
+# esquema de X-Forwarded-Proto; sin eso el control de mismo origen ve http frente a https y rechaza toda escritura
+# del dashboard ("Origen no permitido"). Confiar en cualquier IP es seguro aqui: el puerto solo se publica en
+# 127.0.0.1 del host, y la IP de origen dentro de Docker es la de su red interna, no la del cliente.
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
 
 # Sano = /health responde y el scheduler avanza (o esta en pausa deliberada). start-period largo: el primer
 # arranque descubre el universo y baja velas, y /health sale "stale" hasta el primer ciclo.

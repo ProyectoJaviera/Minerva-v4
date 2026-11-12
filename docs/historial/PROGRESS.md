@@ -2581,3 +2581,12 @@ Pedido: el dueño quiso probar la v3 en su PC antes de migrar. Se construyó la 
 - **Retención de ticks:** medido en el PC, 672 000 ticks y 47 MB en 6,3 h (~180 MB por día, ~65 GB al año). Se agregó `LIVE_TICKS_RETENTION_DAYS` (14 por defecto; `MINERVA_TICKS_DAYS` en el contenedor): cada hora se borran los ticks más viejos, en lotes, y el archivo deja de crecer (~2,5 GB).
 - **Evidencia real:** en ~6 h la Prueba01 abrió 14 posiciones y cerró 7 con precios de Bitunix (circuito completo de señal, entrada y salida en vivo).
 - **Guía de la mudanza solo con la v3 (pedido del dueño, 2026-11-12):** el dueño notó que la guía corría un comando con el Python de la v2. La v3 tiene ahora su propio entorno (`.venv`, Python 3.11 con uv; `uv pip install --system-certs -e ".[dev]"`). La guía usa solo la carpeta de la v3, con un paso 0 nuevo: apagar las tareas `MinervaV2*`, traer por última vez `market_v2.db` (única referencia a la v2, a propósito) y registrar las `MinervaV3*` con `scripts/register_v3_data_tasks.ps1`; el netbook recibe los archivos de `history\` de la v3 y en G.6 se quitan las tareas del PC con `-Remove`. Las referencias a `~/minerva` del netbook son a la v1 que se respalda, se detiene y queda para volver atrás.
+
+## 2026-11-12: «Origen no permitido» detrás de tailscale serve (v3)
+
+- Hallazgo tras la mudanza: en el netbook el dashboard se abre por `tailscale serve` (https) y el contenedor recibe
+  http. El control de mismo origen (`require_same_origin`) comparaba `https://...` con `http://...` y rechazaba toda
+  escritura (crear una prueba En vivo, el botón del bot, pausar).
+- Arreglo: el `CMD` del Dockerfile arranca uvicorn con `--proxy-headers --forwarded-allow-ips *`, así toma el esquema
+  de `X-Forwarded-Proto`. No se tocó `app/api/routes/control.py` (sigue idéntico a la v1.0). Confiar en cualquier IP es
+  seguro: el puerto solo se publica en 127.0.0.1. Sin cambio de comportamiento en la medición.
