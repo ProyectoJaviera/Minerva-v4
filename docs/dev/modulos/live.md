@@ -120,7 +120,7 @@ las posiciones (motivo `MANUAL`), vacía las velas y deja de mirar ticks; al enc
 - **Referencia pdoc:** [`api/app/live/runner.html`](../api/app/live/runner.html)
 - **Importa (internos):** `app.config`, `app.core.logging`, `app.explorer.confluence`, `app.live.book`, `app.live.config`, `app.live.paper`, `app.live.store`, `app.persistence.models`, `app.research.combos`, `app.strategies.base`
 - **Lo importan:** `app.live.service`, `scripts.live_tests`
-- **Configuración que lee:** ninguno
+- **Configuración que lee:** `LEVERAGE`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
@@ -168,7 +168,7 @@ y entrar), `overview()` (corredor y todas las pruebas) y `detail()` (una prueba)
 - **Referencia pdoc:** [`api/app/live/report.html`](../api/app/live/report.html)
 - **Importa (internos):** `app.live.paper`, `app.live.store`
 - **Lo importan:** `app.api.routes.live`, `scripts.live_tests`
-- **Configuración que lee:** ninguno
+- **Configuración que lee:** `LEVERAGE`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
@@ -194,7 +194,7 @@ cliente REST y su propio WebSocket del canal `trade`.
 - **Referencia pdoc:** [`api/app/live/service.html`](../api/app/live/service.html)
 - **Importa (internos):** `app.config`, `app.core.logging`, `app.live.runner`, `app.live.store`, `app.market.bitunix_rest`, `app.market.bitunix_ws`
 - **Lo importan:** `app.main`
-- **Configuración que lee:** `BITUNIX_RATE_LIMIT_PER_SEC`, `BITUNIX_REST_BASE_URL`, `BITUNIX_WS_PUBLIC_URL`, `LIVE_MAX_EVALS_PER_SECOND`, `LIVE_RECORD_TICKS`, `LIVE_TESTS_DB`, `LIVE_TESTS_ENABLED`, `LIVE_TICKS_DB`
+- **Configuración que lee:** `BITUNIX_RATE_LIMIT_PER_SEC`, `BITUNIX_REST_BASE_URL`, `BITUNIX_WS_PUBLIC_URL`, `LIVE_MAX_EVALS_PER_SECOND`, `LIVE_RECORD_TICKS`, `LIVE_TESTS_DB`, `LIVE_TESTS_ENABLED`, `LIVE_TICKS_DB`, `LIVE_TICKS_RETENTION_DAYS`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno

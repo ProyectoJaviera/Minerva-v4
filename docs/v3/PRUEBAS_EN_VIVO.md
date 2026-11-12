@@ -83,8 +83,8 @@ python scripts/live_tests.py run
 
 Mientras `run` está andando, cada operación del canal `trade` queda en `history/ticks_v3.db`
 (hora en milisegundos, precio, cantidad y lado). Es la historia fina que Bitunix no entrega gratis
-hacia atrás. Medido el 2026-11-11: unas 2 operaciones por segundo en BTC por este canal, del orden
-de decenas de MB por día para 10 monedas. Con eso se podrá repetir más adelante cualquier
+hacia atrás. Medido el 2026-11-12: unos 107 000 ticks por hora con 10 monedas, unos 180 MB por día. Se conservan
+los últimos 14 días (`LIVE_TICKS_RETENTION_DAYS`); cada hora se borran los más viejos. Con eso se podrá repetir más adelante cualquier
 estrategia tick a tick sobre lo grabado. `run --no-ticks` no graba.
 
 ## 6. Límites honestos

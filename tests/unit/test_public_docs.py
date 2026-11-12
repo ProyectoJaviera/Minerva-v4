@@ -561,8 +561,9 @@ def test_the_api_has_the_number_of_routes_the_documents_state():
     writes = {(method, path) for method, path in real if method != "GET"}
 
     # INFORME_FINAL.md es la foto del cierre de la Fase 6 (22 rutas); la v2 agrego las tres de la
-    # seccion «Indicadores» y la de «Estudio»; la v3, las seis de la pestana «En vivo».
-    assert len(real) == 32, "ARQUITECTURA.md dice 32 rutas: actualiza los docs"
+    # seccion «Indicadores» y la de «Estudio»; la v3, las seis de «En vivo» y el avance de
+    # Indicadores.
+    assert len(real) == 33, "ARQUITECTURA.md dice 33 rutas: actualiza los docs"
     # login, logout, las acciones de control (una sola ruta con tres acciones) y, de la v3, crear y
     # detener una prueba en vivo (solo tocan el archivo de pruebas).
     assert writes == {

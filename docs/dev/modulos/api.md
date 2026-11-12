@@ -657,7 +657,7 @@ guardan, pero solo operan donde `LIVE_TESTS_ENABLED` está encendido.
 - **Referencia pdoc:** [`api/app/api/routes/live.html`](../api/app/api/routes/live.html)
 - **Importa (internos):** `app.api.deps`, `app.api.routes.control`, `app.api.security`, `app.config`, `app.explorer.confluence`, `app.live.config`, `app.live.report`, `app.live.store`, `app.research.forward`
 - **Lo importan:** `app.main`
-- **Configuración que lee:** `LIVE_TESTS_DB`, `LIVE_TESTS_ENABLED`
+- **Configuración que lee:** `BACKTEST_SLIPPAGE_BPS`, `DEFAULT_MARGIN_USDT`, `LEVERAGE`, `LIVE_TESTS_DB`, `LIVE_TESTS_ENABLED`, `MAX_SL_MARGIN_LOSS_PCT`, `TAKER_FEE_PCT`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno

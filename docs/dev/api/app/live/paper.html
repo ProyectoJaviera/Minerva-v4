@@ -32,6 +32,9 @@
                     <a class="variable" href="#MS_PER_HOUR">MS_PER_HOUR</a>
             </li>
             <li>
+                    <a class="variable" href="#QTY_EPS">QTY_EPS</a>
+            </li>
+            <li>
                     <a class="class" href="#PaperPosition">PaperPosition</a>
                             <ul class="memberlist">
                         <li>
@@ -99,6 +102,27 @@
                         </li>
                         <li>
                                 <a class="variable" href="#PaperPosition.funding_approx">funding_approx</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#PaperPosition.qty_initial">qty_initial</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#PaperPosition.tp_levels">tp_levels</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#PaperPosition.breakeven">breakeven</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#PaperPosition.partials">partials</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#PaperPosition.realized_gross_usdt">realized_gross_usdt</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#PaperPosition.realized_fee_exit_usdt">realized_fee_exit_usdt</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#PaperPosition.realized_slippage_exit_usdt">realized_slippage_exit_usdt</a>
                         </li>
                         <li>
                                 <a class="function" href="#PaperPosition.to_dict">to_dict</a>
@@ -172,6 +196,9 @@
                         <li>
                                 <a class="variable" href="#ClosedTrade.decision_price">decision_price</a>
                         </li>
+                        <li>
+                                <a class="variable" href="#ClosedTrade.partials">partials</a>
+                        </li>
                 </ul>
 
             </li>
@@ -222,14 +249,19 @@
 llega en orden.</p>
 
 <ul>
-<li><strong>Entrada a mercado:</strong> se llena con el precio del primer tick posterior a la decision (comision
-taker y deslizamiento de la configuracion).</li>
+<li><strong>Entrada a mercado:</strong> se llena con el precio del primer tick posterior a la decision, con el
+margen y el apalancamiento de la prueba (comision taker y deslizamiento de la configuracion).</li>
 <li><strong>SL, trailing y liquidacion:</strong> disparan cuando un tick llega al nivel o lo pasa y se llenan al
 <strong>precio de ese tick</strong> (nunca mejor que el nivel: si el mercado salto, se sale donde se transo).</li>
 <li><strong>TP:</strong> dispara cuando un tick llega al nivel y se llena <strong>en el nivel</strong> (una orden limite de
 salida que descansa en el libro no mejora su precio).</li>
+<li><strong>TP parciales:</strong> hasta 3 niveles, cada uno cierra un % de la cantidad INICIAL (el ultimo nivel
+que se toca cierra lo que quede si los porcentajes suman 100). Con <code>breakeven</code>, al tocarse el
+primero el SL pasa al precio de entrada. Lo que queda abierto sigue con el SL, el trailing y la
+liquidacion. Las comisiones de salida y el deslizamiento se cobran sobre cada cierre parcial.</li>
 <li><strong>Trailing:</strong> se mueve con cada tick favorable y puede disparar desde el tick siguiente.</li>
-<li><strong>Funding:</strong> se acumula por el tiempo transcurrido entre ticks con la tasa vigente.</li>
+<li><strong>Funding:</strong> se acumula por el tiempo transcurrido entre ticks con la tasa vigente, sobre la
+parte que sigue abierta.</li>
 </ul>
 
 <p>Todo es puro (sin base ni red) y serializable, para que una posicion sobreviva a un reinicio.</p>
@@ -251,6 +283,18 @@ salida que descansa en el libro no mejora su precio).</li>
     
 
                 </section>
+                <section id="QTY_EPS">
+                    <div class="attr variable">
+            <span class="name">QTY_EPS</span>        =
+<span class="default_value">1e-12</span>
+
+        
+    </div>
+    <a class="headerlink" href="#QTY_EPS"></a>
+    
+    
+
+                </section>
                 <section id="PaperPosition">
                     <div class="attr class">
                     <div class="decorator decorator-dataclass">@dataclass</div>
@@ -262,14 +306,19 @@ salida que descansa en el libro no mejora su precio).</li>
     </div>
     <a class="headerlink" href="#PaperPosition"></a>
     
-            <div class="docstring"><p>Una posicion paper abierta (todos los campos son numeros o texto: se guarda como JSON).</p>
+            <div class="docstring"><p>Una posicion paper abierta (numeros, texto o listas: se guarda como JSON).</p>
+
+<p><code><a href="#PaperPosition.qty">qty</a></code> es lo que sigue abierto; <code><a href="#PaperPosition.qty_initial">qty_initial</a></code>, lo que se abrio. <code><a href="#PaperPosition.tp_levels">tp_levels</a></code> son
+<code>[precio, fraccion de la cantidad inicial, hecho]</code> y <code><a href="#PaperPosition.partials">partials</a></code> los cierres parciales ya hechos
+(<code>[precio, cantidad, hora, motivo]</code>). Las posiciones guardadas antes de los TP parciales se leen
+con los valores por defecto.</p>
 </div>
 
 
                             <div id="PaperPosition.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">PaperPosition</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">side</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">entry_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">entry_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">qty</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">notional</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">fee_entry_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">slippage_entry_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">original_sl</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">stop</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">tp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">trailing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">best</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">liq</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">sl_margin_loss_pct</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">signal_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">decision_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">last_tick_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">funding_paid_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>,</span><span class="param">	<span class="n">funding_approx</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span></span>)</span>
+        <span class="name">PaperPosition</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">side</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">entry_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">entry_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">qty</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">notional</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">fee_entry_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">slippage_entry_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">original_sl</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">stop</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">tp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">trailing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">best</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">liq</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">sl_margin_loss_pct</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">signal_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">decision_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">last_tick_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">funding_paid_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>,</span><span class="param">	<span class="n">funding_approx</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">qty_initial</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>,</span><span class="param">	<span class="n">tp_levels</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">breakeven</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">partials</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">realized_gross_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>,</span><span class="param">	<span class="n">realized_fee_exit_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>,</span><span class="param">	<span class="n">realized_slippage_exit_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span></span>)</span>
 
         
     </div>
@@ -511,6 +560,88 @@ salida que descansa en el libro no mejora su precio).</li>
     
 
                             </div>
+                            <div id="PaperPosition.qty_initial" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qty_initial</span><span class="annotation">: float</span>        =
+<span class="default_value">0.0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PaperPosition.qty_initial"></a>
+    
+    
+
+                            </div>
+                            <div id="PaperPosition.tp_levels" class="classattr">
+                                <div class="attr variable">
+            <span class="name">tp_levels</span><span class="annotation">: list</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PaperPosition.tp_levels"></a>
+    
+    
+
+                            </div>
+                            <div id="PaperPosition.breakeven" class="classattr">
+                                <div class="attr variable">
+            <span class="name">breakeven</span><span class="annotation">: bool</span>        =
+<span class="default_value">False</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PaperPosition.breakeven"></a>
+    
+    
+
+                            </div>
+                            <div id="PaperPosition.partials" class="classattr">
+                                <div class="attr variable">
+            <span class="name">partials</span><span class="annotation">: list</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PaperPosition.partials"></a>
+    
+    
+
+                            </div>
+                            <div id="PaperPosition.realized_gross_usdt" class="classattr">
+                                <div class="attr variable">
+            <span class="name">realized_gross_usdt</span><span class="annotation">: float</span>        =
+<span class="default_value">0.0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PaperPosition.realized_gross_usdt"></a>
+    
+    
+
+                            </div>
+                            <div id="PaperPosition.realized_fee_exit_usdt" class="classattr">
+                                <div class="attr variable">
+            <span class="name">realized_fee_exit_usdt</span><span class="annotation">: float</span>        =
+<span class="default_value">0.0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PaperPosition.realized_fee_exit_usdt"></a>
+    
+    
+
+                            </div>
+                            <div id="PaperPosition.realized_slippage_exit_usdt" class="classattr">
+                                <div class="attr variable">
+            <span class="name">realized_slippage_exit_usdt</span><span class="annotation">: float</span>        =
+<span class="default_value">0.0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PaperPosition.realized_slippage_exit_usdt"></a>
+    
+    
+
+                            </div>
                             <div id="PaperPosition.to_dict" class="classattr">
                                 <div class="attr function">
             
@@ -572,14 +703,16 @@ salida que descansa en el libro no mejora su precio).</li>
     </div>
     <a class="headerlink" href="#ClosedTrade"></a>
     
-            <div class="docstring"><p>Una operacion paper cerrada.</p>
+            <div class="docstring"><p>Una operacion paper cerrada (con sus cierres parciales, si los hubo).</p>
+
+<p><code><a href="#ClosedTrade.exit_price">exit_price</a></code> es el precio medio de salida ponderado por cantidad y <code><a href="#ClosedTrade.qty">qty</a></code> la cantidad inicial.</p>
 </div>
 
 
                             <div id="ClosedTrade.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">ClosedTrade</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">side</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">entry_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">exit_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">entry_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">exit_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">qty</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">fee_entry_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">fee_exit_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">slippage_cost_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">funding_paid_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">funding_approx</span><span class="p">:</span> <span class="nb">bool</span>,</span><span class="param">	<span class="n">pnl_gross_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">pnl_net_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">close_reason</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">sl_margin_loss_pct</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">signal_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">decision_price</span><span class="p">:</span> <span class="nb">float</span></span>)</span>
+        <span class="name">ClosedTrade</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">side</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">entry_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">exit_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">entry_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">exit_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">qty</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">fee_entry_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">fee_exit_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">slippage_cost_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">funding_paid_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">funding_approx</span><span class="p">:</span> <span class="nb">bool</span>,</span><span class="param">	<span class="n">pnl_gross_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">pnl_net_usdt</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">close_reason</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">sl_margin_loss_pct</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">signal_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">decision_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">partials</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">factory</span><span class="o">&gt;</span></span>)</span>
 
         
     </div>
@@ -797,6 +930,17 @@ salida que descansa en el libro no mejora su precio).</li>
     
 
                             </div>
+                            <div id="ClosedTrade.partials" class="classattr">
+                                <div class="attr variable">
+            <span class="name">partials</span><span class="annotation">: list</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ClosedTrade.partials"></a>
+    
+    
+
+                            </div>
                 </section>
                 <section id="OpenRefusal">
                     <div class="attr class">
@@ -852,7 +996,7 @@ salida que descansa en el libro no mejora su precio).</li>
                     <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">open_position</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">side</span><span class="p">:</span> <span class="n"><a href="../persistence/models.html#Side">app.persistence.models.Side</a></span>,</span><span class="param">	<span class="n">price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">ts_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">sl</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">tp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">trailing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">settings</span><span class="p">:</span> <span class="n"><a href="../config.html#Settings">app.config.Settings</a></span>,</span><span class="param">	<span class="n">signal_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">decision_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">margin_tiers_json</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n"><a href="#PaperPosition">PaperPosition</a></span> <span class="o">|</span> <span class="n"><a href="#OpenRefusal">OpenRefusal</a></span>:</span></span>
+        <span class="name">open_position</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">side</span><span class="p">:</span> <span class="n"><a href="../persistence/models.html#Side">app.persistence.models.Side</a></span>,</span><span class="param">	<span class="n">price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">ts_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">sl</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">tp</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">trailing</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">settings</span><span class="p">:</span> <span class="n"><a href="../config.html#Settings">app.config.Settings</a></span>,</span><span class="param">	<span class="n">signal_time_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">decision_price</span><span class="p">:</span> <span class="nb">float</span>,</span><span class="param">	<span class="n">margin_tiers_json</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">take_profits</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">breakeven</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span></span><span class="return-annotation">) -> <span class="n"><a href="#PaperPosition">PaperPosition</a></span> <span class="o">|</span> <span class="n"><a href="#OpenRefusal">OpenRefusal</a></span>:</span></span>
 
         
     </div>
@@ -867,12 +1011,18 @@ salida que descansa en el libro no mejora su precio).</li>
 <li><strong>price:</strong>  precio del tick de llenado.</li>
 <li><strong>ts_ms:</strong>  hora del tick, ms Unix.</li>
 <li><strong>sl:</strong>  SL pedido por la estrategia, o <code>None</code> para el SL de respaldo.</li>
-<li><strong>tp:</strong>  TP pedido, o <code>None</code> (si tampoco hay trailing se usa el TP de respaldo).</li>
+<li><strong>tp:</strong>  TP unico pedido, o <code>None</code> (si tampoco hay trailing ni TP parciales se usa el de
+respaldo). Se ignora si hay <code>take_profits</code>.</li>
 <li><strong>trailing:</strong>  distancia del trailing en precio, o <code>None</code>.</li>
-<li><strong>settings:</strong>  configuracion (margen, apalancamiento, comisiones, deslizamiento, topes).</li>
+<li><strong>settings:</strong>  configuracion (comisiones, deslizamiento, topes y valores por defecto).</li>
 <li><strong>signal_time_ms:</strong>  cuando se decidio la entrada.</li>
 <li><strong>decision_price:</strong>  el precio que se conocia al decidir.</li>
 <li><strong>margin_tiers_json:</strong>  escalones de margen del contrato (para la liquidacion).</li>
+<li><strong>margin_usdt:</strong>  margen de la operacion; por defecto, <code>DEFAULT_MARGIN_USDT</code>.</li>
+<li><strong>leverage:</strong>  apalancamiento; por defecto, <code>LEVERAGE</code>.</li>
+<li><strong>take_profits:</strong>  niveles parciales <code>(precio, fraccion de la cantidad inicial)</code>, en orden de
+cercania a la entrada.</li>
+<li><strong>breakeven:</strong>  al tocarse el primer TP parcial, el SL pasa al precio de entrada.</li>
 </ul>
 
 <h6 id="returns">Returns:</h6>
@@ -894,22 +1044,22 @@ salida que descansa en el libro no mejora su precio).</li>
     </div>
     <a class="headerlink" href="#close_position"></a>
     
-            <div class="docstring"><p>Cierra una posicion a un precio y calcula su resultado.</p>
+            <div class="docstring"><p>Cierra lo que queda de una posicion a un precio y calcula el resultado de toda la operacion.</p>
 
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
 <li><strong>pos:</strong>  la posicion.</li>
-<li><strong>exit_price:</strong>  precio de salida.</li>
+<li><strong>exit_price:</strong>  precio de salida de lo que queda abierto.</li>
 <li><strong>ts_ms:</strong>  hora de la salida, ms Unix.</li>
-<li><strong>reason:</strong>  <code>SL</code>, <code>TRAILING</code>, <code>LIQUIDATION</code>, <code>TP</code> o <code>MANUAL</code>.</li>
+<li><strong>reason:</strong>  <code>SL</code>, <code>TRAILING</code>, <code>BREAKEVEN</code>, <code>LIQUIDATION</code>, <code>TP</code>, <code>TPn</code> o <code>MANUAL</code>.</li>
 <li><strong>settings:</strong>  configuracion (comision y deslizamiento).</li>
 </ul>
 
 <h6 id="returns">Returns:</h6>
 
 <blockquote>
-  <p>La operacion cerrada.</p>
+  <p>La operacion cerrada, con los cierres parciales sumados.</p>
 </blockquote>
 </div>
 
@@ -925,12 +1075,12 @@ salida que descansa en el libro no mejora su precio).</li>
     </div>
     <a class="headerlink" href="#on_tick"></a>
     
-            <div class="docstring"><p>Aplica un tick a una posicion abierta: funding, salidas y trailing.</p>
+            <div class="docstring"><p>Aplica un tick a una posicion abierta: funding, salidas, TP parciales y trailing.</p>
 
 <h6 id="arguments">Arguments:</h6>
 
 <ul>
-<li><strong>pos:</strong>  la posicion (se modifica: funding, mejor precio y stop).</li>
+<li><strong>pos:</strong>  la posicion (se modifica: funding, cierres parciales, mejor precio y stop).</li>
 <li><strong>price:</strong>  precio del tick.</li>
 <li><strong>ts_ms:</strong>  hora del tick, ms Unix.</li>
 <li><strong>settings:</strong>  configuracion.</li>
@@ -942,7 +1092,7 @@ operacion queda marcada como aproximada).</li>
 <h6 id="returns">Returns:</h6>
 
 <blockquote>
-  <p>La operacion cerrada si el tick disparo una salida; si no, <code>None</code>.</p>
+  <p>La operacion cerrada si el tick cerro toda la posicion; si no, <code>None</code>.</p>
 </blockquote>
 </div>
 

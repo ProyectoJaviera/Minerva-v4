@@ -72,6 +72,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     add.add_argument("--window", type=int, default=DEFAULT_WINDOW)
     add.add_argument("--min-agree", type=int)
     add.add_argument("--eval-seconds", type=int, default=15)
+    add.add_argument("--margin", type=float, help="margen por operacion en USDT")
+    add.add_argument("--leverage", type=int, help="apalancamiento")
+    add.add_argument("--direction", choices=("both", "long", "short"), default="both")
+    add.add_argument("--tp", action="append", default=[], metavar="DIST:CIERRA",
+                     help="TP parcial: distancia %% y %% que cierra, p. ej. --tp 2:50 --tp 4:50")
+    add.add_argument("--breakeven", action="store_true", help="SL a la entrada tras el TP1")
+    add.add_argument("--max-open", type=int, help="maximo de posiciones abiertas a la vez")
 
     sub.add_parser("list", help="lista las pruebas")
     rep = sub.add_parser("report", help="resultados de una prueba o de todas")
@@ -124,7 +131,10 @@ def cmd_add(args: argparse.Namespace) -> int:
         cfg = validate(name=args.name, symbols=args.symbols, timeframe=args.timeframe,
                        indicators=args.indicators, mode=args.mode, exit_name=args.exit_name,
                        pct_exit=pct, window=args.window, min_agree=args.min_agree,
-                       eval_seconds=args.eval_seconds)
+                       eval_seconds=args.eval_seconds, margin_usdt=args.margin,
+                       leverage=args.leverage, direction=args.direction,
+                       take_profits=[tuple(float(x) for x in tp.split(":")) for tp in args.tp],
+                       breakeven=args.breakeven, max_open=args.max_open)
     except ValueError as exc:
         print(f"Prueba invalida: {exc}")
         return 1

@@ -217,3 +217,31 @@ async def test_the_service_opens_and_closes_the_websocket_with_the_symbols(tmp_p
     await asyncio.sleep(0)
     assert svc.ws is not first and started[-1] == ["SOLUSDT"]  # conexion nueva al volver
     await svc.aclose()
+
+
+def test_create_with_trading_options_and_options_list_them(tmp_path):
+    client = make_client(make_settings(tmp_path))
+    body = {**BODY, "margin_usdt": 30, "leverage": 5, "direction": "short",
+            "take_profits": [[1, 50], [2, 50]], "breakeven": True, "max_open": 3}
+    r = client.post("/api/live/tests", json=body)
+    assert r.status_code == 200
+    c = client.get(f"/api/live/tests/{r.json()['id']}").json()["config"]
+    assert (c["margin_usdt"], c["leverage"], c["direction"], c["max_open"]) == (30.0, 5, "short", 3)
+    assert c["take_profits"] == [[1.0, 50.0], [2.0, 50.0]] and c["breakeven"] is True
+    bad = client.post("/api/live/tests", json={**body, "take_profits": [[1, 80], [2, 80]]})
+    assert bad.status_code == 422 and "suman" in bad.json()["detail"]
+
+    opts = client.get("/api/live/options").json()
+    assert opts["leverage"]["max"] == 100 and opts["directions"] == ["both", "long", "short"]
+    assert opts["max_tp_levels"] == 3 and opts["margin"]["min"] == 1.0
+
+
+def test_tests_without_margin_or_leverage_show_the_defaults(tmp_path):
+    settings = make_settings(tmp_path, DEFAULT_MARGIN_USDT=7, LEVERAGE=4)
+    client = make_client(settings)
+    test_id = client.post("/api/live/tests", json=BODY).json()["id"]
+
+    row = client.get("/api/live/tests").json()["tests"][0]["config"]
+    detail = client.get(f"/api/live/tests/{test_id}").json()["config"]
+    assert (row["margin_usdt"], row["leverage"]) == (7.0, 4)
+    assert (detail["margin_usdt"], detail["leverage"]) == (7.0, 4)

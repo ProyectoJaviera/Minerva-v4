@@ -69,6 +69,36 @@ _result_cache: dict[tuple, dict] = {}
 RESULT_CACHE_SIZE = 32
 
 
+# Avance de la corrida en curso (hay una sola a la vez, `_run_lock`), para la barra de la pestana.
+# Cada moneda son dos pasos: la combinacion y su control al azar.
+_progress: dict = {"running": False, "done": 0, "total": 0, "symbol": None, "stage": None,
+                   "started_at": None, "finished_at": None}
+
+
+def progress() -> dict:
+    """El avance de la corrida en curso (o de la ultima).
+
+    Returns:
+        `running`, `done` y `total` (pasos: dos por moneda), `symbol` y `stage` (`combinacion` o
+        `control`) del paso en curso, `elapsed_s` y `eta_s` (estimado, o `None`).
+    """
+    p = dict(_progress)
+    now = time.time()
+    started = p.pop("started_at")
+    finished = p.pop("finished_at")
+    elapsed = None if started is None else (finished or now) - started
+    eta = None
+    if p["running"] and elapsed is not None and p["done"] > 0:
+        eta = elapsed / p["done"] * (p["total"] - p["done"])
+    p["elapsed_s"] = None if elapsed is None else round(elapsed, 1)
+    p["eta_s"] = None if eta is None else round(eta, 1)
+    return p
+
+
+def _set_progress(**changes) -> None:
+    _progress.update(changes)
+
+
 class HistoryFileMissingError(RuntimeError):
     """No existe el archivo de historial local."""
 
@@ -360,6 +390,8 @@ async def run_exploration_on_db(db: Database, req: ExplorerRequest, settings: Se
     exit_label = (pct_exit_label(*req.pct_exit) if req.pct_exit is not None
                   else EXITS[req.exit_name][0])
     by_key = {(s["symbol"], s["timeframe"]): s for s in series}
+    _set_progress(running=True, done=0, total=2 * len(req.symbols), symbol=None, stage=None,
+                  started_at=time.time(), finished_at=None)
     trades: list[RawTrade] = []
     control_trades: list[RawTrade] = []
     skipped = 0
@@ -371,6 +403,7 @@ async def run_exploration_on_db(db: Database, req: ExplorerRequest, settings: Se
         if info is None:
             missing.append({"symbol": symbol,
                             "reason": "No esta en el archivo de historial en este marco."})
+            _set_progress(done=_progress["done"] + 2)
             continue
         start = max(info["first_ms"], req.start_ms or 0)
         end = info["last_ms"]
@@ -378,18 +411,23 @@ async def run_exploration_on_db(db: Database, req: ExplorerRequest, settings: Se
             end = min(end, req.end_ms - 1)
         if end <= start:
             missing.append({"symbol": symbol, "reason": "Sin velas en el periodo pedido."})
+            _set_progress(done=_progress["done"] + 2)
             continue
         # Calentamiento previo: las velas antes de `start` solo sirven para que los indicadores
         # arranquen; cuentan las operaciones que entran desde `start`.
         step = interval_to_ms(req.timeframe) or 0
         load_from = max(info["first_ms"], start - combo.warmup * step)
         try:
+            _set_progress(symbol=symbol, stage="combinacion")
             t, sk = await run_backtest(db, combo, combo.name, symbol, req.timeframe, load_from,
                                        end, settings)
+            _set_progress(done=_progress["done"] + 1, stage="control")
             ct, _ = await run_backtest(db, control, control.name, symbol, req.timeframe,
                                        load_from, end, settings)
+            _set_progress(done=_progress["done"] + 1)
         except MissingHistoricalDataError as exc:
             missing.append({"symbol": symbol, "reason": str(exc)})
+            _set_progress(done=min(_progress["total"], (_progress["done"] // 2 + 1) * 2))
             continue
         trades.extend(x for x in t if _ms(x.entry_time) >= start)
         control_trades.extend(x for x in ct if _ms(x.entry_time) >= start)
@@ -397,6 +435,8 @@ async def run_exploration_on_db(db: Database, req: ExplorerRequest, settings: Se
         period_start = start if period_start is None else min(period_start, start)
         period_end = end if period_end is None else max(period_end, end)
 
+    _set_progress(running=False, done=_progress["total"], symbol=None, stage=None,
+                  finished_at=time.time())
     capital = settings.backtest_initial_capital
     return {
         "exploratory": True,
@@ -452,7 +492,11 @@ async def run_exploration(path: str, req: ExplorerRequest, settings: Settings) -
     async with _run_lock:
         if key in _result_cache:
             return {**_result_cache[key], "cached": True}
-        result = await asyncio.to_thread(asyncio.run, _run_in_own_loop(path, req, settings))
+        try:
+            result = await asyncio.to_thread(asyncio.run, _run_in_own_loop(path, req, settings))
+        finally:
+            if _progress["running"]:
+                _set_progress(running=False, finished_at=time.time())
         if len(_result_cache) >= RESULT_CACHE_SIZE:
             _result_cache.pop(next(iter(_result_cache)))
         _result_cache[key] = result

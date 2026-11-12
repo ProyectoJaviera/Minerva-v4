@@ -434,6 +434,32 @@ class TickStore:
             self._conn.executemany("INSERT INTO ticks VALUES (?, ?, ?, ?, ?)", rows)
         return len(rows)
 
+    def prune(self, older_than_ms: int, batch: int = 50_000) -> int:
+        """Borra los ticks mas viejos que un instante (en lotes, para no bloquear el archivo).
+
+        El espacio liberado se reutiliza para los ticks nuevos: el archivo deja de crecer cuando
+        llega al tamano de la retencion.
+
+        Args:
+            older_than_ms: se borran los ticks con `ts_ms` menor.
+            batch: filas por transaccion.
+
+        Returns:
+            Cuantos se borraron.
+
+        Efectos:
+            Escribe `ticks`.
+        """
+        total = 0
+        while True:
+            with self._conn:
+                cur = self._conn.execute(
+                    "DELETE FROM ticks WHERE rowid IN (SELECT rowid FROM ticks WHERE ts_ms < ? "
+                    "LIMIT ?)", (older_than_ms, batch))
+            total += cur.rowcount
+            if cur.rowcount < batch:
+                return total
+
     def count(self, symbol: str | None = None) -> int:
         """Cuantos ticks hay guardados.
 

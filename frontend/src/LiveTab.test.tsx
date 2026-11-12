@@ -15,6 +15,12 @@ const OPTIONS = {
   default_symbols: ["BTCUSDT", "ETHUSDT"],
   max_symbols: 30, max_window: 50, default_window: 5,
   eval_seconds: { min: 5, max: 3600, default: 60 },
+  margin: { min: 1, max: 100000, default: 5 },
+  leverage: { min: 1, max: 100, default: 10 },
+  directions: ["both", "long", "short"],
+  max_tp_levels: 3,
+  fees: { taker_pct: 0.0006, slippage_bps: 5 },
+  max_sl_margin_loss_pct: 50,
 };
 
 const SUMMARY = { trades: 3, wins: 2, winrate: 0.6667, pf: 1.8, net: 0.42, fees: 0.12, avg_entry_delay_ms: 900 };
@@ -85,7 +91,7 @@ describe("LiveTab", () => {
     const body = JSON.parse(String((post?.[1] as RequestInit).body));
     expect(body).toMatchObject({
       name: "Mi prueba", indicators: ["rf"], mode: "intrabar", timeframe: "15m",
-      symbols: ["BTCUSDT", "ETHUSDT"], exit_name: "s2_tp2r", eval_seconds: 60,
+      symbols: ["BTCUSDT", "ETHUSDT"], exit_name: "pct", sl_pct: 1, tp_pct: 2, eval_seconds: 60,
     });
   });
 
@@ -177,5 +183,39 @@ describe("LiveTab", () => {
     render(withQueryClient(<LiveTab />));
     expect(await screen.findByRole("status", { name: "Estado del bot" })).toHaveTextContent("sin respuesta");
     expect(screen.getByText(/el contenedor puede estar detenido/)).toBeInTheDocument();
+  });
+
+  it("arma un bot con margen, apalancamiento, direccion y TP parciales", async () => {
+    const fetchMock = mockFetch({
+      "/api/live/options": { status: 200, body: OPTIONS },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: [] } },
+      "POST /api/live/tests": { status: 200, body: { id: 8, name: "Bot real" } },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(withQueryClient(<LiveTab />));
+    fireEvent.change(await screen.findByLabelText("Nombre"), { target: { value: "Bot real" } });
+    fireEvent.click(screen.getByLabelText(/Range Filter/));
+    fireEvent.change(screen.getByLabelText("Dirección"), { target: { value: "long" } });
+    fireEvent.change(screen.getByLabelText("Margen por operación (USDT)"), { target: { value: "20" } });
+    fireEvent.change(screen.getByLabelText(/Apalancamiento/), { target: { value: "5" } });
+    expect(screen.getByText(/20.00 USDT × 5x = 100.00 USDT/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("SL %"), { target: { value: "2" } });
+    expect(screen.getByText(/pierdes 10.0 % del margen \(2.00 USDT/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Toma de ganancias"), { target: { value: "partial" } });
+    fireEvent.change(screen.getByLabelText("TP1: % que cierra"), { target: { value: "40" } });
+    expect(screen.getByText(/Cierran en total 90 %; el 10 % restante/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Agregar nivel"));
+    fireEvent.change(screen.getByLabelText("TP3: distancia %"), { target: { value: "5" } });
+    fireEvent.change(screen.getByLabelText("TP3: % que cierra"), { target: { value: "10" } });
+    expect(screen.queryByText("Agregar nivel")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/Mover el SL al precio de entrada/));
+    fireEvent.change(screen.getByLabelText("Máximo de posiciones abiertas (vacío = sin tope)"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear prueba" }));
+    expect(await screen.findByText(/Prueba 8 creada/)).toBeInTheDocument();
+    const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST");
+    expect(JSON.parse(String((post?.[1] as RequestInit).body))).toMatchObject({
+      direction: "long", margin_usdt: 20, leverage: 5, exit_name: "pct", sl_pct: 2, tp_pct: null,
+      take_profits: [[1.5, 40], [3, 50], [5, 10]], breakeven: true, max_open: 2,
+    });
   });
 });

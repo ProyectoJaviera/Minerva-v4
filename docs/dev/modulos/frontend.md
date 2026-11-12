@@ -240,8 +240,8 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** ninguno
-- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/Unavailable.tsx`
-- **Rutas HTTP que cita:** `/api/account`, `/api/arm`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/backtest/verdicts`, `/api/control/${action}`, `/api/control/audit`, `/api/control/info`, `/api/explorer/data-status`, `/api/explorer/options`, `/api/explorer/run`, `/api/live/bot`, `/api/live/options`, `/api/live/tests`, `/api/live/tests/${id}`, `/api/live/tests/${id}/stop`, `/api/llm/decisions/recent`, `/api/measurement/status`, `/api/memory/lessons`, `/api/memory/status`, `/api/news/recent`, `/api/news/status`, `/api/risk`, `/api/shadow-trades/recent`, `/api/study/forward`, `/api/universe`, `/health`
+- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/RunProgress.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/Unavailable.tsx`
+- **Rutas HTTP que cita:** `/api/account`, `/api/arm`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/backtest/verdicts`, `/api/control/${action}`, `/api/control/audit`, `/api/control/info`, `/api/explorer/data-status`, `/api/explorer/options`, `/api/explorer/progress`, `/api/explorer/run`, `/api/live/bot`, `/api/live/options`, `/api/live/tests`, `/api/live/tests/${id}`, `/api/live/tests/${id}/stop`, `/api/llm/decisions/recent`, `/api/measurement/status`, `/api/memory/lessons`, `/api/memory/status`, `/api/news/recent`, `/api/news/status`, `/api/risk`, `/api/shadow-trades/recent`, `/api/study/forward`, `/api/universe`, `/health`
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/api.ts -->
 
@@ -481,7 +481,7 @@ todavía no manda el campo.
 - **Importa (de `frontend/src/`):** ninguno
 - **Lo importan:** ninguno
 - **Rutas HTTP que cita:** ninguno
-- **Pruebas:** `frontend/src/AccountTab.test.tsx`, `frontend/src/App.test.tsx`, `frontend/src/ArmTab.test.tsx`, `frontend/src/DashboardView.test.tsx`, `frontend/src/IndicatorsTab.test.tsx`, `frontend/src/LiveTab.test.tsx`, `frontend/src/NewsMemoryCard.test.tsx`, `frontend/src/RiskTab.test.tsx`, `frontend/src/StudyTab.test.tsx`, `frontend/src/UniverseTab.test.tsx`
+- **Pruebas:** `frontend/src/AccountTab.test.tsx`, `frontend/src/App.test.tsx`, `frontend/src/ArmTab.test.tsx`, `frontend/src/DashboardView.test.tsx`, `frontend/src/IndicatorsTab.test.tsx`, `frontend/src/LiveTab.test.tsx`, `frontend/src/NewsMemoryCard.test.tsx`, `frontend/src/RiskTab.test.tsx`, `frontend/src/RunProgress.test.tsx`, `frontend/src/StudyTab.test.tsx`, `frontend/src/UniverseTab.test.tsx`
 <!-- /hechos:frontend/src/testUtils.tsx -->
 
 ### `frontend/src/IndicatorsTab.tsx`
@@ -503,7 +503,7 @@ resultado. Sin monedas o sin indicadores el botón queda deshabilitado.
 <!-- hechos:frontend/src/IndicatorsTab.tsx -->
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
-- **Importa (de `frontend/src/`):** `frontend/src/api.ts`, `frontend/src/components/Card.tsx`, `frontend/src/components/StatTile.tsx`, `frontend/src/components/Unavailable.tsx`, `frontend/src/format.ts`
+- **Importa (de `frontend/src/`):** `frontend/src/RunProgress.tsx`, `frontend/src/api.ts`, `frontend/src/components/Card.tsx`, `frontend/src/components/StatTile.tsx`, `frontend/src/components/Unavailable.tsx`, `frontend/src/format.ts`
 - **Lo importan:** `frontend/src/DashboardView.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/IndicatorsTab.test.tsx`
@@ -556,3 +556,26 @@ detalle (posiciones, operaciones y eventos), el formulario para crear una prueba
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/LiveTab.test.tsx`
 <!-- /hechos:frontend/src/LiveTab.tsx -->
+
+### `frontend/src/RunProgress.tsx`
+
+**Responsabilidad.** La ventana de carga de la pestaña «Indicadores» mientras corre una prueba: barra con el
+porcentaje, la moneda y el paso en curso (la combinación o su control al azar), el tiempo transcurrido y un estimado
+de lo que falta.
+
+**Funciones y clases clave.** `RunProgress`; los datos vienen de `useExplorerProgress` (`api.ts`), que consulta
+`GET /api/explorer/progress` cada segundo.
+
+**Invariantes — no romper.** Solo lee el avance; no cancela ni cambia la corrida.
+
+**Trampas conocidas.** Hay una sola corrida a la vez en el servidor: si otra pestaña lanzó una, la barra muestra la de
+esa.
+
+<!-- hechos:frontend/src/RunProgress.tsx -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Importa (de `frontend/src/`):** `frontend/src/api.ts`
+- **Lo importan:** `frontend/src/IndicatorsTab.tsx`
+- **Rutas HTTP que cita:** ninguno
+- **Pruebas:** `frontend/src/RunProgress.test.tsx`
+<!-- /hechos:frontend/src/RunProgress.tsx -->

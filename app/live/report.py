@@ -122,4 +122,7 @@ def _config_dict(cfg) -> dict:
     return {"name": cfg.name, "symbols": list(cfg.symbols), "timeframe": cfg.timeframe,
             "indicators": list(cfg.indicators), "mode": cfg.mode, "exit_name": cfg.exit_name,
             "pct_exit": None if cfg.pct_exit is None else list(cfg.pct_exit),
-            "window": cfg.window, "min_agree": cfg.min_agree, "eval_seconds": cfg.eval_seconds}
+            "window": cfg.window, "min_agree": cfg.min_agree, "eval_seconds": cfg.eval_seconds,
+            "margin_usdt": cfg.margin_usdt, "leverage": cfg.leverage, "direction": cfg.direction,
+            "take_profits": [list(tp) for tp in cfg.take_profits], "breakeven": cfg.breakeven,
+            "max_open": cfg.max_open}

@@ -202,6 +202,7 @@ en la operación en vivo**, salvo las tres variables que se señalan. Los criter
 | `LIVE_TESTS_DB` | v3: archivo SQLite de las pruebas en vivo (definiciones, posiciones, operaciones y eventos), aparte de la base del bot. En el contenedor, dentro del volumen de datos | `./history/live_v3.db` | Rara vez |
 | `LIVE_TICKS_DB` | v3: archivo SQLite donde se graba cada operación del canal `trade` (la historia segundo a segundo) | `./history/ticks_v3.db` | Rara vez |
 | `LIVE_RECORD_TICKS` | v3: graba los ticks en `LIVE_TICKS_DB` | `true` | `false` si falta disco |
+| `LIVE_TICKS_RETENTION_DAYS` | v3: días de ticks grabados que se conservan; cada hora se borran los más viejos y el archivo deja de crecer. Medido: unos 180 MB por día con 10 monedas (14 días ≈ 2,5 GB). `0` guarda todo | `14.0` | Más alto si sobra disco; más bajo en un disco chico |
 | `LIVE_MAX_EVALS_PER_SECOND` | v3: tope de evaluaciones de indicadores por segundo del corredor (lo que no entra espera al segundo siguiente). Protege a un equipo chico como el netbook | `4` | Más bajo en un equipo lento; más alto con muchas pruebas en un PC |
 | `MARKET_DATA_DB` | v2: archivo SQLite con los datos capturados hacia adelante (libro de órdenes, funding vigente y Fear & Greed) que llena `scripts/record_market_data.py` desde las tareas `MinervaV3*`; el dashboard solo lo lee (tarjeta «Datos capturados» de la pestaña «Indicadores») | `./history/market_v3.db` | Solo la captura de datos y esa tarjeta |
 
@@ -270,6 +271,7 @@ shell o en el `.env` de la raíz (Compose lo lee para interpolar). Todas son opc
 | `MINERVA_REAL_BOT` | `true`: los mismos interruptores que tenía el bot real de la v1 (etiquetado del LLM, Telegram, brazo ejecutado, noticias y avisos). `false`: una instancia de prueba, sin nada de eso | `false` | `true` solo a propósito, con un `.env` propio de la v2 |
 | `MINERVA_LIVE_TESTS` | v3: enciende las pruebas en vivo dentro del contenedor (`LIVE_TESTS_ENABLED`) | `true` | `false` para un contenedor sin pruebas en vivo |
 | `MINERVA_LIVE_EVALS` | v3: tope de evaluaciones de indicadores por segundo en el contenedor (`LIVE_MAX_EVALS_PER_SECOND`) | `4` | Más bajo si el equipo se satura |
+| `MINERVA_TICKS_DAYS` | v3: días de ticks grabados que se conservan en el contenedor (`LIVE_TICKS_RETENTION_DAYS`) | `14` | Según el disco libre |
 | `MINERVA_CPUS` | v3: tope de CPU del contenedor (núcleos). En el netbook protege al bot vivo de la v1 | `0.5` | Más alto en un PC |
 | `MINERVA_MEM_LIMIT` | v3: tope de memoria del contenedor | `600m` | Más alto en un PC con muchas pruebas |
 | `MINERVA_RESTART` | Política de reinicio del contenedor: `unless-stopped` (vuelve solo tras reiniciar Docker o el equipo, salvo que lo detengas tú) o `no` | `unless-stopped` | `no` para instancias de prueba |

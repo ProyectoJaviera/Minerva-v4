@@ -385,3 +385,24 @@ async def test_weekly_runs_with_weekly_camarilla(history):
     feats = confluence.compute_votes(pd.DataFrame(rows), "1w")
     assert feats["open_time"].tolist() == [r["open_time"] for r in rows]
     assert feats["cam_r3"].notna().sum() > 250
+
+
+@pytest.mark.asyncio
+async def test_progress_counts_two_steps_per_symbol_and_ends_idle(history, monkeypatch):
+    seen = []
+    real = service._set_progress
+
+    def spy(**changes):
+        real(**changes)
+        seen.append(service.progress())
+
+    monkeypatch.setattr(service, "_set_progress", spy)
+    await _run(history, symbols=["BTCUSDT", "XRPUSDT"], timeframe="1h", indicators=["rf"])
+
+    assert seen[0]["running"] is True and seen[0]["total"] == 4 and seen[0]["done"] == 0
+    assert any(s["stage"] == "control" and s["symbol"] == "BTCUSDT" for s in seen)
+    done_values = [s["done"] for s in seen]
+    assert done_values == sorted(done_values)  # nunca retrocede
+    final = service.progress()
+    assert final["running"] is False and final["done"] == final["total"] == 4
+    assert final["eta_s"] is None and final["elapsed_s"] is not None

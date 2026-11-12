@@ -511,3 +511,121 @@ async def test_switching_the_bot_off_closes_positions_ignores_ticks_and_on_reloa
     assert ("BTCUSDT", "15m") in runner.books  # velas recargadas desde REST
     kinds = [e[3] for e in store.events()]
     assert "PAUSE" in kinds and "RESUME" in kinds
+
+
+# --- operacion configurable: margen, apalancamiento, direccion, TP parciales -----------------
+
+
+def test_validate_accepts_and_roundtrips_the_trading_options():
+    c = cfg(margin_usdt=25, leverage=5, direction="long", take_profits=[(1.5, 50), (3, 50)],
+            breakeven=True, max_open=2, exit_name="pct", pct_exit=(1.0, None, 1.0))
+
+    assert (c.margin_usdt, c.leverage, c.direction, c.max_open) == (25.0, 5, "long", 2)
+    assert c.take_profits == ((1.5, 50.0), (3.0, 50.0)) and c.breakeven
+    assert TestConfig.from_json(c.to_json()) == c
+    old = TestConfig.from_json('{"name": "vieja", "symbols": ["BTCUSDT"], "timeframe": "1h", '
+                               '"indicators": ["rf"]}')
+    assert old.margin_usdt is None and old.take_profits == () and old.direction == "both"
+
+
+@pytest.mark.parametrize("kw", [
+    {"margin_usdt": 0.5}, {"leverage": 0}, {"leverage": 101}, {"direction": "up"},
+    {"take_profits": [(2, 50), (1, 50)]}, {"take_profits": [(1, 60), (2, 60)]},
+    {"take_profits": [(1, 10), (2, 10), (3, 10), (4, 10)]}, {"take_profits": [(1, 0)]},
+    {"breakeven": True}, {"max_open": 0},
+])
+def test_validate_rejects_bad_trading_options(kw):
+    with pytest.raises(ValueError):
+        cfg(**kw)
+
+
+def test_margin_and_leverage_set_the_size_the_fees_and_the_risk_cap():
+    s = make_settings()
+    pos = open_position(Side.LONG, 100.0, T0, sl=99.0, tp=110.0, trailing=None, settings=s,
+                        signal_time_ms=T0, decision_price=100.0, margin_usdt=50, leverage=3)
+    assert (pos.margin_usdt, pos.leverage, pos.notional) == (50, 3, pytest.approx(150))
+    assert pos.qty == pytest.approx(1.5) and pos.fee_entry_usdt == pytest.approx(150 * 0.0006)
+    assert pos.sl_margin_loss_pct == pytest.approx(3.0)  # 1 % del precio a 3x
+    capped = open_position(Side.LONG, 100.0, T0, sl=95.0, tp=None, trailing=None, settings=s,
+                           signal_time_ms=T0, decision_price=100.0, leverage=20)
+    assert isinstance(capped, OpenRefusal) and capped.reason == "RISK_CAP"  # 5 % a 20x = 100 %
+
+
+def test_partial_take_profits_close_by_level_and_add_up():
+    s = make_settings()
+    pos = open_position(Side.LONG, 100.0, T0, sl=98.0, tp=None, trailing=None, settings=s,
+                        signal_time_ms=T0, decision_price=100.0,
+                        take_profits=[(102.0, 0.5), (104.0, 0.5)])
+    assert pos.tp is None and len(pos.tp_levels) == 2
+
+    assert on_tick(pos, 102.5, T0 + 1, s) is None  # TP1: cierra la mitad en 102
+    assert pos.qty == pytest.approx(0.5) and pos.partials[0][3] == "TP1"
+    trade = on_tick(pos, 104.2, T0 + 2, s)  # TP2 cierra el resto en 104
+    assert trade.close_reason == "TP2" and trade.qty == pytest.approx(1.0)
+    assert trade.exit_price == pytest.approx(103.0)  # media ponderada
+    assert [p[3] for p in trade.partials] == ["TP1", "TP2"]
+    assert trade.pnl_gross_usdt == pytest.approx(0.5 * 2 + 0.5 * 4)
+    fees = 100 * 0.0006 + (51 + 52) * 0.0006
+    assert trade.pnl_net_usdt == pytest.approx(3.0 - fees)
+
+
+def test_breakeven_after_tp1_and_a_remainder_that_rides_the_trailing():
+    s = make_settings()
+    be = open_position(Side.LONG, 100.0, T0, sl=98.0, tp=None, trailing=None, settings=s,
+                       signal_time_ms=T0, decision_price=100.0,
+                       take_profits=[(102.0, 0.5)], breakeven=True)
+    on_tick(be, 102.0, T0 + 1, s)
+    assert be.stop == 100.0
+    trade = on_tick(be, 99.9, T0 + 2, s)
+    assert trade.close_reason == "BREAKEVEN"
+    assert trade.pnl_gross_usdt == pytest.approx(0.5 * 2 - 0.05)
+
+    rider = open_position(Side.SHORT, 100.0, T0, sl=102.0, tp=None, trailing=1.0, settings=s,
+                          signal_time_ms=T0, decision_price=100.0, take_profits=[(98.0, 0.3)])
+    on_tick(rider, 97.0, T0 + 1, s)  # TP1 cierra 30 %, el trailing sigue con el resto
+    assert rider.qty == pytest.approx(0.7) and rider.stop == pytest.approx(98.0)
+    trade = on_tick(rider, 98.1, T0 + 2, s)
+    assert trade.close_reason == "TRAILING" and len(trade.partials) == 2
+
+
+@pytest.mark.asyncio
+async def test_direction_filter_and_max_open_limit_the_entries(tmp_path):
+    signals = {("p", "BTCUSDT", True): Signal.SHORT, ("p", "ETHUSDT", True): Signal.LONG,
+               ("p", "SOLUSDT", True): Signal.LONG}
+    runner, store, _t, clock, ids, _s = make_runner(
+        tmp_path, cfg(symbols=["BTCUSDT", "ETHUSDT", "SOLUSDT"], mode="intrabar",
+                      eval_seconds=5, direction="long", max_open=1, margin_usdt=20, leverage=4),
+        signals=signals)
+    await runner.housekeeping()
+    for s in ("BTCUSDT", "ETHUSDT", "SOLUSDT"):
+        runner.on_tick(s, clock.ms, 100.0, 1.0, "buy")
+    clock.ms += 6000
+    await runner.housekeeping()
+
+    pending = sorted(k[1] for k in runner.pending)
+    assert pending == ["ETHUSDT"]  # BTC era corto (solo largos) y SOL superaba el maximo
+    assert any(e[3] == "SKIP" for e in store.events())
+    runner.on_tick("ETHUSDT", clock.ms + 1, 100.0, 1.0, "buy")
+    pos = runner.positions[(ids[0], "ETHUSDT")]
+    assert (pos.margin_usdt, pos.leverage) == (20, 4)
+
+
+def test_tick_store_prune_deletes_only_old_ticks_in_batches(tmp_path):
+    ticks = TickStore(tmp_path / "ticks.db")
+    ticks.append([("BTCUSDT", T0 + i, 1.0, 1.0, "buy") for i in range(25)])
+
+    assert ticks.prune(T0 + 20, batch=7) == 20
+    assert ticks.count() == 5
+    assert ticks.prune(T0 + 20) == 0
+    ticks.close()
+
+
+@pytest.mark.asyncio
+async def test_the_runner_prunes_ticks_older_than_the_retention(tmp_path):
+    runner, store, ticks, clock, ids, _s = make_runner(tmp_path, cfg(symbols=["BTCUSDT"]))
+    runner.ticks_retention_days = 1
+    ticks.append([("BTCUSDT", clock.ms - 2 * 86_400_000, 1.0, 1.0, "buy"),
+                  ("BTCUSDT", clock.ms - 3_600_000, 1.0, 1.0, "buy")])
+    await runner.housekeeping()
+
+    assert ticks.count() == 1

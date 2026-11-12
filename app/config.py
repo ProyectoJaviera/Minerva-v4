@@ -259,6 +259,8 @@ class Settings(BaseSettings):
     live_tests_db: str = Field(default="./history/live_v3.db", alias="LIVE_TESTS_DB")
     live_ticks_db: str = Field(default="./history/ticks_v3.db", alias="LIVE_TICKS_DB")
     live_record_ticks: bool = Field(default=True, alias="LIVE_RECORD_TICKS")
+    # Dias de ticks que se guardan (medido: ~180 MB por dia con 10 monedas); 0 = todos.
+    live_ticks_retention_days: float = Field(default=14.0, ge=0, alias="LIVE_TICKS_RETENTION_DAYS")
     live_max_evals_per_second: int = Field(default=4, ge=1, le=50,
                                            alias="LIVE_MAX_EVALS_PER_SECOND")
 

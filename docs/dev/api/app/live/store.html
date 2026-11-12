@@ -128,6 +128,9 @@
                                 <a class="function" href="#TickStore.append">append</a>
                         </li>
                         <li>
+                                <a class="function" href="#TickStore.prune">prune</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#TickStore.count">count</a>
                         </li>
                 </ul>
@@ -851,6 +854,43 @@ cortas, y el corredor relee las pruebas cada pocos segundos.</p>
 
 <blockquote>
   <p>Cuantos se escribieron.</p>
+</blockquote>
+
+<h6 id="efectos">Efectos:</h6>
+
+<blockquote>
+  <p>Escribe <code>ticks</code>.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="TickStore.prune" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">prune</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="n">older_than_ms</span><span class="p">:</span> <span class="nb">int</span>, </span><span class="param"><span class="n">batch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50000</span></span><span class="return-annotation">) -> <span class="nb">int</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#TickStore.prune"></a>
+    
+            <div class="docstring"><p>Borra los ticks mas viejos que un instante (en lotes, para no bloquear el archivo).</p>
+
+<p>El espacio liberado se reutiliza para los ticks nuevos: el archivo deja de crecer cuando
+llega al tamano de la retencion.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>older_than_ms:</strong>  se borran los ticks con <code>ts_ms</code> menor.</li>
+<li><strong>batch:</strong>  filas por transaccion.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Cuantos se borraron.</p>
 </blockquote>
 
 <h6 id="efectos">Efectos:</h6>

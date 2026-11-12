@@ -48,6 +48,7 @@ RELOAD_SECONDS = 10
 SAVE_SECONDS = 60
 FUNDING_SECONDS = 3600
 RECONCILE_DELAY_SECONDS = 8
+PRUNE_SECONDS = 3600
 WARMUP_PAGES = 4
 PAGE = 200
 
@@ -127,12 +128,15 @@ class LiveRunner:
         max_evals_per_cycle: cuantas evaluaciones de indicadores como maximo en cada llamada a
             `housekeeping` (una por segundo).
         inline_eval: evalua en el mismo hilo (para las pruebas); por defecto, en un hilo aparte.
+        ticks_retention_days: borra cada hora los ticks grabados mas viejos que estos dias
+            (`None` = guardar todo).
     """
 
     def __init__(self, settings: Settings, store: LiveStore, ticks: TickStore | None,
                  rest: RestSource, clock: Callable[[], float] = time.time,
                  on_symbols: Callable[[list[str]], Awaitable[None]] | None = None,
-                 max_evals_per_cycle: int = 4, inline_eval: bool = False) -> None:
+                 max_evals_per_cycle: int = 4, inline_eval: bool = False,
+                 ticks_retention_days: float | None = None) -> None:
         self.settings = settings
         self.store = store
         self.ticks = ticks
@@ -141,6 +145,8 @@ class LiveRunner:
         self.on_symbols = on_symbols
         self.max_evals_per_cycle = max(1, max_evals_per_cycle)
         self.inline_eval = inline_eval
+        self.ticks_retention_days = ticks_retention_days
+        self._next_prune = 0.0
         self._due_close: list[tuple[int, str]] = []
         self.tests: dict[int, StoredTest] = {}
         self.books: dict[tuple[str, str], CandleBook] = {}
@@ -328,17 +334,31 @@ class LiveRunner:
         sl = p.strategy.stop_price(p.frame, sig, price)
         tp = p.strategy.take_profit_price(p.frame, sig, price)
         trailing = p.strategy.trailing_distance(p.frame)
-        result = open_position(p.side, price, ts_ms, sl=sl, tp=tp, trailing=trailing,
-                               settings=self.settings, signal_time_ms=p.signal_time_ms,
-                               decision_price=p.decision_price)
+        test = self.tests.get(test_id)
+        cfg = test.config if test is not None else None
+        levels = None
+        if cfg is not None and cfg.take_profits:
+            sign = 1.0 if p.side == Side.LONG else -1.0
+            levels = [(price * (1 + sign * dist / 100), close / 100)
+                      for dist, close in cfg.take_profits]
+        result = open_position(
+            p.side, price, ts_ms, sl=sl, tp=tp, trailing=trailing, settings=self.settings,
+            signal_time_ms=p.signal_time_ms, decision_price=p.decision_price,
+            margin_usdt=None if cfg is None else cfg.margin_usdt,
+            leverage=None if cfg is None else cfg.leverage,
+            take_profits=levels, breakeven=bool(cfg is not None and cfg.breakeven),
+        )
         if isinstance(result, OpenRefusal):
             self.store.log("REFUSED", f"{p.side.value} {result.reason}: {result.detail}",
                            test_id=test_id, symbol=symbol, now_ms=ts_ms)
             return
         self.positions[(test_id, symbol)] = result
         self.store.save_position(test_id, symbol, result)
+        tps = ", ".join(f"{lv[0]:.6g} ({lv[1]:.0%})" for lv in result.tp_levels)
         self.store.log("OPEN", f"{p.side.value} a {price} (decidido a {p.decision_price}), "
-                       f"SL {result.stop}, TP {result.tp}, trailing {result.trailing}",
+                       f"margen {result.margin_usdt:g} USDT x{result.leverage}, "
+                       f"SL {result.stop:.6g}, "
+                       f"TP {tps or result.tp}, trailing {result.trailing}",
                        test_id=test_id, symbol=symbol, now_ms=ts_ms)
 
     # --- decisiones ---
@@ -462,6 +482,16 @@ class LiveRunner:
         if test_id not in self.tests or not self._can_enter(test_id, cfg, symbol, now_ms):
             return  # la prueba se detuvo o cambio algo mientras se calculaba
         signal, strat, frame = result
+        if cfg.direction != "both" and signal.value.lower() != cfg.direction:
+            return  # la prueba solo opera largos o solo cortos
+        if cfg.max_open is not None:
+            open_now = sum(1 for (tid, _s) in list(self.positions) + list(self.pending)
+                           if tid == test_id)
+            if open_now >= cfg.max_open:
+                self.store.log("SKIP", f"{signal.value}: ya hay {open_now} posiciones abiertas "
+                               f"(maximo {cfg.max_open})", test_id=test_id, symbol=symbol,
+                               now_ms=now_ms)
+                return
         key = (test_id, symbol)
         self._entry_bucket[key] = self.books[(symbol, cfg.timeframe)].current_bucket(now_ms)
         self.pending[key] = _Pending(Side(signal.value), now_ms, price, strat, frame)
@@ -557,6 +587,15 @@ class LiveRunner:
                                 if isinstance(r, dict) and r.get("fundingRate") is not None}
             except Exception as exc:  # noqa: BLE001 - sin funding la operacion queda aproximada
                 logger.warning("no se pudo leer el funding vigente: %s", exc)
+
+        if (self.ticks is not None and self.ticks_retention_days is not None
+                and now >= self._next_prune):
+            self._next_prune = now + PRUNE_SECONDS
+            cutoff = now_ms - int(self.ticks_retention_days * 86_400_000)
+            removed = self.ticks.prune(cutoff)
+            if removed:
+                logger.info("ticks: %d borrados por la retencion de %s dias", removed,
+                            self.ticks_retention_days)
 
         if now >= self._next_save:
             self._next_save = now + SAVE_SECONDS

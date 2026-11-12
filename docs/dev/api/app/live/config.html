@@ -41,6 +41,21 @@
                     <a class="variable" href="#MAX_SYMBOLS">MAX_SYMBOLS</a>
             </li>
             <li>
+                    <a class="variable" href="#DIRECTIONS">DIRECTIONS</a>
+            </li>
+            <li>
+                    <a class="variable" href="#MIN_MARGIN_USDT">MIN_MARGIN_USDT</a>
+            </li>
+            <li>
+                    <a class="variable" href="#MAX_MARGIN_USDT">MAX_MARGIN_USDT</a>
+            </li>
+            <li>
+                    <a class="variable" href="#MAX_LEVERAGE">MAX_LEVERAGE</a>
+            </li>
+            <li>
+                    <a class="variable" href="#MAX_TP_LEVELS">MAX_TP_LEVELS</a>
+            </li>
+            <li>
                     <a class="class" href="#TestConfig">TestConfig</a>
                             <ul class="memberlist">
                         <li>
@@ -75,6 +90,24 @@
                         </li>
                         <li>
                                 <a class="variable" href="#TestConfig.eval_seconds">eval_seconds</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.margin_usdt">margin_usdt</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.leverage">leverage</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.direction">direction</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.take_profits">take_profits</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.breakeven">breakeven</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.max_open">max_open</a>
                         </li>
                         <li>
                                 <a class="function" href="#TestConfig.to_json">to_json</a>
@@ -171,6 +204,66 @@ indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y 
     
 
                 </section>
+                <section id="DIRECTIONS">
+                    <div class="attr variable">
+            <span class="name">DIRECTIONS</span>        =
+<span class="default_value">(&#39;both&#39;, &#39;long&#39;, &#39;short&#39;)</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DIRECTIONS"></a>
+    
+    
+
+                </section>
+                <section id="MIN_MARGIN_USDT">
+                    <div class="attr variable">
+            <span class="name">MIN_MARGIN_USDT</span>        =
+<span class="default_value">1.0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MIN_MARGIN_USDT"></a>
+    
+    
+
+                </section>
+                <section id="MAX_MARGIN_USDT">
+                    <div class="attr variable">
+            <span class="name">MAX_MARGIN_USDT</span>        =
+<span class="default_value">100000.0</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MAX_MARGIN_USDT"></a>
+    
+    
+
+                </section>
+                <section id="MAX_LEVERAGE">
+                    <div class="attr variable">
+            <span class="name">MAX_LEVERAGE</span>        =
+<span class="default_value">100</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MAX_LEVERAGE"></a>
+    
+    
+
+                </section>
+                <section id="MAX_TP_LEVELS">
+                    <div class="attr variable">
+            <span class="name">MAX_TP_LEVELS</span>        =
+<span class="default_value">3</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MAX_TP_LEVELS"></a>
+    
+    
+
+                </section>
                 <section id="TestConfig">
                     <div class="attr class">
                     <div class="decorator decorator-dataclass">@dataclass(frozen=True)</div>
@@ -197,6 +290,13 @@ indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y 
 <li><strong>window:</strong>  velas que dura el voto de un indicador de evento.</li>
 <li><strong>min_agree:</strong>  cuantos indicadores deben coincidir (<code>None</code> = todos).</li>
 <li><strong>eval_seconds:</strong>  cada cuanto se reevalua en modo <code>intrabar</code>.</li>
+<li><strong>margin_usdt:</strong>  margen por operacion en USDT (<code>None</code> = <code>DEFAULT_MARGIN_USDT</code>).</li>
+<li><strong>leverage:</strong>  apalancamiento (<code>None</code> = <code>LEVERAGE</code>).</li>
+<li><strong>direction:</strong>  <code>both</code>, <code>long</code> (solo largos) o <code>short</code> (solo cortos).</li>
+<li><strong>take_profits:</strong>  TP parciales <code>((distancia % desde la entrada, % de la cantidad inicial que
+cierra), ...)</code>, hasta 3, de menor a mayor distancia; reemplazan al TP de la salida.</li>
+<li><strong>breakeven:</strong>  tras el primer TP parcial el SL pasa al precio de entrada.</li>
+<li><strong>max_open:</strong>  maximo de posiciones abiertas a la vez en la prueba (<code>None</code> = sin tope).</li>
 </ul>
 </div>
 
@@ -204,7 +304,7 @@ indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y 
                             <div id="TestConfig.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">TestConfig</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">symbols</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>,</span><span class="param">	<span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">indicators</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>,</span><span class="param">	<span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'close'</span>,</span><span class="param">	<span class="n">exit_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'s2_tp2r'</span>,</span><span class="param">	<span class="n">pct_exit</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">window</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">eval_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span></span>)</span>
+        <span class="name">TestConfig</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">symbols</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>,</span><span class="param">	<span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">indicators</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>,</span><span class="param">	<span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'close'</span>,</span><span class="param">	<span class="n">exit_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'s2_tp2r'</span>,</span><span class="param">	<span class="n">pct_exit</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">window</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">eval_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">direction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'both'</span>,</span><span class="param">	<span class="n">take_profits</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>,</span><span class="param">	<span class="n">breakeven</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">max_open</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
         
     </div>
@@ -329,6 +429,78 @@ indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y 
     
 
                             </div>
+                            <div id="TestConfig.margin_usdt" class="classattr">
+                                <div class="attr variable">
+            <span class="name">margin_usdt</span><span class="annotation">: float | None</span>        =
+<span class="default_value">None</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.margin_usdt"></a>
+    
+    
+
+                            </div>
+                            <div id="TestConfig.leverage" class="classattr">
+                                <div class="attr variable">
+            <span class="name">leverage</span><span class="annotation">: int | None</span>        =
+<span class="default_value">None</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.leverage"></a>
+    
+    
+
+                            </div>
+                            <div id="TestConfig.direction" class="classattr">
+                                <div class="attr variable">
+            <span class="name">direction</span><span class="annotation">: str</span>        =
+<span class="default_value">&#39;both&#39;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.direction"></a>
+    
+    
+
+                            </div>
+                            <div id="TestConfig.take_profits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">take_profits</span><span class="annotation">: tuple[tuple[float, float], ...]</span>        =
+<span class="default_value">()</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.take_profits"></a>
+    
+    
+
+                            </div>
+                            <div id="TestConfig.breakeven" class="classattr">
+                                <div class="attr variable">
+            <span class="name">breakeven</span><span class="annotation">: bool</span>        =
+<span class="default_value">False</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.breakeven"></a>
+    
+    
+
+                            </div>
+                            <div id="TestConfig.max_open" class="classattr">
+                                <div class="attr variable">
+            <span class="name">max_open</span><span class="annotation">: int | None</span>        =
+<span class="default_value">None</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.max_open"></a>
+    
+    
+
+                            </div>
                             <div id="TestConfig.to_json" class="classattr">
                                 <div class="attr function">
             
@@ -389,7 +561,7 @@ indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y 
                     <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">validate</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">symbols</span>,</span><span class="param">	<span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">indicators</span>,</span><span class="param">	<span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'close'</span>,</span><span class="param">	<span class="n">exit_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'s2_tp2r'</span>,</span><span class="param">	<span class="n">pct_exit</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">window</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">eval_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span></span><span class="return-annotation">) -> <span class="n"><a href="#TestConfig">TestConfig</a></span>:</span></span>
+        <span class="name">validate</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">symbols</span>,</span><span class="param">	<span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">indicators</span>,</span><span class="param">	<span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'close'</span>,</span><span class="param">	<span class="n">exit_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'s2_tp2r'</span>,</span><span class="param">	<span class="n">pct_exit</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">window</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">eval_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">direction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'both'</span>,</span><span class="param">	<span class="n">take_profits</span><span class="o">=</span><span class="p">()</span>,</span><span class="param">	<span class="n">breakeven</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">max_open</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n"><a href="#TestConfig">TestConfig</a></span>:</span></span>
 
         
     </div>
@@ -410,6 +582,13 @@ indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y 
 <li><strong>window:</strong>  1 a <code>MAX_WINDOW</code>.</li>
 <li><strong>min_agree:</strong>  1 a la cantidad de indicadores, o <code>None</code>.</li>
 <li><strong>eval_seconds:</strong>  <code><a href="#MIN_EVAL_SECONDS">MIN_EVAL_SECONDS</a></code> a <code><a href="#MAX_EVAL_SECONDS">MAX_EVAL_SECONDS</a></code>.</li>
+<li><strong>margin_usdt:</strong>  <code><a href="#MIN_MARGIN_USDT">MIN_MARGIN_USDT</a></code> a <code><a href="#MAX_MARGIN_USDT">MAX_MARGIN_USDT</a></code>, o <code>None</code>.</li>
+<li><strong>leverage:</strong>  1 a <code><a href="#MAX_LEVERAGE">MAX_LEVERAGE</a></code>, o <code>None</code>.</li>
+<li><strong>direction:</strong>  uno de <code><a href="#DIRECTIONS">DIRECTIONS</a></code>.</li>
+<li><strong>take_profits:</strong>  hasta <code><a href="#MAX_TP_LEVELS">MAX_TP_LEVELS</a></code> pares <code>(distancia %, % que cierra)</code>; distancias
+crecientes entre 0 y <code>MAX_TP_PCT</code>, y los porcentajes suman como mucho 100.</li>
+<li><strong>breakeven:</strong>  solo tiene sentido con TP parciales.</li>
+<li><strong>max_open:</strong>  1 a <code><a href="#MAX_SYMBOLS">MAX_SYMBOLS</a></code>, o <code>None</code>.</li>
 </ul>
 
 <h6 id="returns">Returns:</h6>

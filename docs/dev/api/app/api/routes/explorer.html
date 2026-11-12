@@ -38,6 +38,9 @@
                     <a class="function" href="#run">run</a>
             </li>
             <li>
+                    <a class="function" href="#progress_route">progress_route</a>
+            </li>
+            <li>
                     <a class="function" href="#data_status_route">data_status_route</a>
             </li>
     </ul>
@@ -165,6 +168,28 @@ historial.</li>
 
 <blockquote>
   <p>Lee el archivo de historial (solo lectura). No escribe en ninguna base.</p>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="progress_route">
+                    <div class="attr function">
+                    <div class="decorator decorator-router.get">@router.get(&#39;/progress&#39;)</div>
+
+        <span class="def">async def</span>
+        <span class="name">progress_route</span><span class="signature pdoc-code condensed">(<span class="return-annotation">) -> <span class="nb">dict</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#progress_route"></a>
+    
+            <div class="docstring"><p><code>GET /api/explorer/progress</code>: el avance de la corrida en curso, para la barra de carga.</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Ver <code>service.progress</code>.</p>
 </blockquote>
 </div>
 

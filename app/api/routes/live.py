@@ -30,7 +30,18 @@ from app.explorer.confluence import (
     WARMUP_BY_TIMEFRAME,
 )
 from app.live import report
-from app.live.config import MAX_EVAL_SECONDS, MAX_SYMBOLS, MIN_EVAL_SECONDS, MODES, validate
+from app.live.config import (
+    DIRECTIONS,
+    MAX_EVAL_SECONDS,
+    MAX_LEVERAGE,
+    MAX_MARGIN_USDT,
+    MAX_SYMBOLS,
+    MAX_TP_LEVELS,
+    MIN_EVAL_SECONDS,
+    MIN_MARGIN_USDT,
+    MODES,
+    validate,
+)
 from app.live.store import LiveStore
 from app.research.forward import SYMBOLS
 
@@ -54,6 +65,12 @@ class CreateTestRequest(BaseModel):
     window: int = DEFAULT_WINDOW
     min_agree: int | None = None
     eval_seconds: int = 60
+    margin_usdt: float | None = None
+    leverage: int | None = None
+    direction: str = Field(default="both", max_length=8)
+    take_profits: list[tuple[float, float]] = Field(default_factory=list, max_length=MAX_TP_LEVELS)
+    breakeven: bool = False
+    max_open: int | None = None
 
 
 class StopRequest(BaseModel):
@@ -87,7 +104,24 @@ async def options(settings: Settings = Depends(get_settings)) -> dict:
         "default_symbols": list(SYMBOLS), "max_symbols": MAX_SYMBOLS,
         "max_window": MAX_WINDOW, "default_window": DEFAULT_WINDOW,
         "eval_seconds": {"min": MIN_EVAL_SECONDS, "max": MAX_EVAL_SECONDS, "default": 60},
+        "margin": {"min": MIN_MARGIN_USDT, "max": MAX_MARGIN_USDT,
+                   "default": settings.default_margin_usdt},
+        "leverage": {"min": 1, "max": MAX_LEVERAGE, "default": settings.leverage},
+        "directions": list(DIRECTIONS), "max_tp_levels": MAX_TP_LEVELS,
+        "fees": {"taker_pct": settings.taker_fee_pct,
+                 "slippage_bps": settings.backtest_slippage_bps},
+        "max_sl_margin_loss_pct": settings.max_sl_margin_loss_pct,
     }
+
+
+def _with_defaults(config: dict, settings: Settings) -> dict:
+    """Completa el margen y el apalancamiento de una prueba que usa los valores por defecto."""
+    out = dict(config)
+    if out.get("margin_usdt") is None:
+        out["margin_usdt"] = settings.default_margin_usdt
+    if out.get("leverage") is None:
+        out["leverage"] = settings.leverage
+    return out
 
 
 @router.get("/tests")
@@ -105,6 +139,8 @@ async def list_tests(settings: Settings = Depends(get_settings)) -> dict:
     """
     out = await asyncio.to_thread(report.overview, settings.live_tests_db)
     out["enabled"] = settings.live_tests_enabled
+    for row in out["tests"]:
+        row["config"] = _with_defaults(row["config"], settings)
     return out
 
 
@@ -128,6 +164,7 @@ async def get_test(test_id: int, settings: Settings = Depends(get_settings)) -> 
     out = await asyncio.to_thread(report.detail, settings.live_tests_db, test_id)
     if out is None:
         raise HTTPException(status_code=404, detail="No existe esa prueba")
+    out["config"] = _with_defaults(out["config"], settings)
     return out
 
 
@@ -136,7 +173,10 @@ def _create(path: str, body: CreateTestRequest) -> dict:
     cfg = validate(name=body.name, symbols=body.symbols, timeframe=body.timeframe,
                    indicators=body.indicators, mode=body.mode, exit_name=body.exit_name,
                    pct_exit=pct, window=body.window, min_agree=body.min_agree,
-                   eval_seconds=body.eval_seconds)
+                   eval_seconds=body.eval_seconds, margin_usdt=body.margin_usdt,
+                   leverage=body.leverage, direction=body.direction,
+                   take_profits=body.take_profits, breakeven=body.breakeven,
+                   max_open=body.max_open)
     with LiveStore(path) as store:
         test_id = store.add_test(cfg)
     return {"id": test_id, "name": cfg.name}

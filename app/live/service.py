@@ -38,7 +38,8 @@ class LiveTestsService:
         self._ws_task: asyncio.Task | None = None
         self.runner = LiveRunner(settings, self.store, self.ticks, self.rest,
                                  on_symbols=self.sync_ws,
-                                 max_evals_per_cycle=settings.live_max_evals_per_second)
+                                 max_evals_per_cycle=settings.live_max_evals_per_second,
+                                 ticks_retention_days=settings.live_ticks_retention_days or None)
         self._stop = asyncio.Event()
         self.last_error: str | None = None
 

@@ -66,6 +66,12 @@ services:
       LIVE_TESTS_DB: /app/data/live_v3.db
       LIVE_TICKS_DB: /app/data/ticks_v3.db
       LIVE_MAX_EVALS_PER_SECOND: "${MINERVA_LIVE_EVALS:-4}"
+      LIVE_TICKS_RETENTION_DAYS: "${MINERVA_TICKS_DAYS:-14}"
+      # Historial y datos capturados (pestanas Indicadores, Estudio y la tarjeta de captura), montados
+      # de solo lectura en /app/history. Fijos aqui para que un `.env` heredado de la v1 o de la v2
+      # (con los nombres `_v2`) no los haga apuntar a un archivo que no existe.
+      EXPLORER_HISTORY_DB: /app/history/history_v3.db
+      MARKET_DATA_DB: /app/history/market_v3.db
     ports:
       # Publicado SOLO en loopback: la API nunca queda expuesta a la LAN ni a internet. Dentro del
       # contenedor el proceso escucha en 0.0.0.0 (asi funciona el port-forwarding de Docker); el

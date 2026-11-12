@@ -124,6 +124,16 @@ async def run(
                             detail=_missing_file_detail(settings.explorer_history_db)) from exc
 
 
+@router.get("/progress")
+async def progress_route() -> dict:
+    """`GET /api/explorer/progress`: el avance de la corrida en curso, para la barra de carga.
+
+    Returns:
+        Ver `service.progress`.
+    """
+    return service.progress()
+
+
 @router.get("/data-status")
 async def data_status_route(settings: Settings = Depends(get_settings)) -> dict:
     """`GET /api/explorer/data-status`: si la captura de datos de la v2 esta al dia.

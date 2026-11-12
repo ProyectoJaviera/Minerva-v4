@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import {
   ApiError,
   type LiveOptions,
@@ -122,19 +122,55 @@ function BotPanel({ enabled, alive, botOn, lastBeat, detail, onAskOff }: {
   );
 }
 
+const DIRECTION_LABEL: Record<string, string> = {
+  both: "Largos y cortos",
+  long: "Solo largos",
+  short: "Solo cortos",
+};
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <fieldset className="space-y-2 rounded border border-gray-200 p-3 dark:border-gray-700">
+      <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{title}</legend>
+      {children}
+    </fieldset>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
+      {label}
+      {children}
+    </label>
+  );
+}
+
 function CreateForm({ options }: { options: LiveOptions }) {
   const create = useCreateLiveTest();
   const [name, setName] = useState("");
   const [symbols, setSymbols] = useState(options.default_symbols.join(" "));
   const [timeframe, setTimeframe] = useState(options.timeframes[0] ?? "15m");
-  const [indicators, setIndicators] = useState<string[]>([]);
   const [mode, setMode] = useState("close");
-  const [exitName, setExitName] = useState(options.exits[0]?.id ?? "s2_tp2r");
-  const [slPct, setSlPct] = useState("1");
-  const [tpPct, setTpPct] = useState("2");
-  const [trailPct, setTrailPct] = useState("");
-  const [minAgree, setMinAgree] = useState("");
   const [evalSeconds, setEvalSeconds] = useState(String(options.eval_seconds.default));
+  const [indicators, setIndicators] = useState<string[]>([]);
+  const [minAgree, setMinAgree] = useState("");
+  const [windowBars, setWindowBars] = useState(String(options.default_window));
+  const [direction, setDirection] = useState("both");
+  const [margin, setMargin] = useState(String(options.margin.default));
+  const [leverage, setLeverage] = useState(String(options.leverage.default));
+  const [maxOpen, setMaxOpen] = useState("");
+  const [exitKind, setExitKind] = useState<"pct" | "atr">("pct");
+  const [atrExit, setAtrExit] = useState(options.exits.find((x) => x.id !== "pct")?.id ?? "s2_tp2r");
+  const [slPct, setSlPct] = useState("1");
+  const [tpMode, setTpMode] = useState<"single" | "partial" | "none">("single");
+  const [tpPct, setTpPct] = useState("2");
+  const [tps, setTps] = useState<{ dist: string; close: string }[]>([
+    { dist: "1.5", close: "50" },
+    { dist: "3", close: "50" },
+  ]);
+  const [breakeven, setBreakeven] = useState(false);
+  const [trailPct, setTrailPct] = useState("");
   const [created, setCreated] = useState<string | null>(null);
 
   function toggle(id: string) {
@@ -146,19 +182,38 @@ function CreateForm({ options }: { options: LiveOptions }) {
     return text.trim() === "" || !Number.isFinite(v) ? null : v;
   }
 
+  const marginN = num(margin) ?? options.margin.default;
+  const leverageN = num(leverage) ?? options.leverage.default;
+  const slN = num(slPct);
+  const riskPct = exitKind === "pct" && slN !== null ? slN * leverageN : null;
+  const partialTotal = tps.reduce((acc, tp) => acc + (num(tp.close) ?? 0), 0);
+
+  function setTp(i: number, key: "dist" | "close", value: string) {
+    setTps((cur) => cur.map((tp, j) => (j === i ? { ...tp, [key]: value } : tp)));
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
     setCreated(null);
+    const partial = tpMode === "partial";
     create.mutate(
       {
         name, symbols: symbols.split(/[\s,]+/).filter(Boolean), timeframe, indicators, mode,
-        exit_name: exitName,
-        sl_pct: exitName === "pct" ? num(slPct) : null,
-        tp_pct: exitName === "pct" ? num(tpPct) : null,
-        trail_pct: exitName === "pct" ? num(trailPct) : null,
-        window: options.default_window,
+        exit_name: exitKind === "pct" ? "pct" : atrExit,
+        sl_pct: exitKind === "pct" ? slN : null,
+        tp_pct: exitKind === "pct" && tpMode === "single" ? num(tpPct) : null,
+        trail_pct: exitKind === "pct" ? num(trailPct) : null,
+        window: num(windowBars) ?? options.default_window,
         min_agree: num(minAgree),
         eval_seconds: num(evalSeconds) ?? options.eval_seconds.default,
+        margin_usdt: marginN,
+        leverage: leverageN,
+        direction,
+        take_profits: partial
+          ? tps.map((tp) => [num(tp.dist) ?? 0, num(tp.close) ?? 0] as [number, number])
+          : [],
+        breakeven: partial && breakeven,
+        max_open: num(maxOpen),
       },
       { onSuccess: (r) => setCreated(`Prueba ${r.id} creada: «${r.name}». Empieza a operar en unos segundos.`) },
     );
@@ -167,59 +222,51 @@ function CreateForm({ options }: { options: LiveOptions }) {
   const field = "rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100";
   return (
     <form onSubmit={submit} className="space-y-3" aria-label="Nueva prueba en vivo">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-          Nombre
-          <input className={field} value={name} onChange={(e) => setName(e.target.value)} maxLength={60} required />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-          Monedas (separadas por espacio)
-          <input className={field} value={symbols} onChange={(e) => setSymbols(e.target.value)} />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-          Marco
-          <select className={field} value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
-            {options.timeframes.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-          Modo
-          <select className={field} value={mode} onChange={(e) => setMode(e.target.value)}>
-            {options.modes.map((m) => <option key={m} value={m}>{MODE_LABEL[m] ?? m}</option>)}
-          </select>
-        </label>
-        {mode === "intrabar" && (
-          <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-            Reevaluar cada (segundos)
-            <input className={field} value={evalSeconds} onChange={(e) => setEvalSeconds(e.target.value)} inputMode="numeric" />
-          </label>
-        )}
-        <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-          Cuántos deben coincidir (vacío = todos)
-          <input className={field} value={minAgree} onChange={(e) => setMinAgree(e.target.value)} inputMode="numeric" />
-        </label>
-        <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-          Salida
-          <select className={field} value={exitName} onChange={(e) => setExitName(e.target.value)}>
-            {options.exits.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
-          </select>
-        </label>
-        {exitName === "pct" && (
-          <div className="grid grid-cols-3 gap-2">
-            <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-              SL %<input className={field} value={slPct} onChange={(e) => setSlPct(e.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-              TP %<input className={field} value={tpPct} onChange={(e) => setTpPct(e.target.value)} />
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-300">
-              Trailing %<input className={field} value={trailPct} onChange={(e) => setTrailPct(e.target.value)} />
-            </label>
-          </div>
-        )}
-      </div>
-      <fieldset className="space-y-1">
-        <legend className="text-xs text-gray-600 dark:text-gray-300">Indicadores y filtros (se entra cuando coinciden)</legend>
+      <Section title="1. Mercado">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Nombre">
+            <input className={field} value={name} onChange={(e) => setName(e.target.value)} maxLength={60} required />
+          </Field>
+          <Field label="Monedas (separadas por espacio)">
+            <input className={field} value={symbols} onChange={(e) => setSymbols(e.target.value)} />
+          </Field>
+          <Field label="Marco">
+            <select className={field} value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
+              {options.timeframes.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </Field>
+          <Field label="Modo">
+            <select className={field} value={mode} onChange={(e) => setMode(e.target.value)}>
+              {options.modes.map((m) => <option key={m} value={m}>{MODE_LABEL[m] ?? m}</option>)}
+            </select>
+          </Field>
+          {mode === "intrabar" && (
+            <Field label="Reevaluar cada (segundos)">
+              <input className={field} value={evalSeconds} onChange={(e) => setEvalSeconds(e.target.value)} inputMode="numeric" />
+            </Field>
+          )}
+        </div>
+      </Section>
+
+      <Section title="2. Entrada">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Dirección">
+            <select className={field} value={direction} onChange={(e) => setDirection(e.target.value)}>
+              {options.directions.map((d) => <option key={d} value={d}>{DIRECTION_LABEL[d] ?? d}</option>)}
+            </select>
+          </Field>
+          <Field label={`Ventana de los eventos (velas, 1 a ${options.max_window})`}>
+            <input className={field} value={windowBars} onChange={(e) => setWindowBars(e.target.value)} inputMode="numeric" />
+          </Field>
+          <Field label="Cuántos deben coincidir (vacío = todos)">
+            <input className={field} value={minAgree} onChange={(e) => setMinAgree(e.target.value)} inputMode="numeric" />
+          </Field>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Los indicadores de estado votan en cada vela; los de evento (SFP, FVG, Camarilla…) se disparan en una vela y siguen
+          votando durante la ventana. Ventana chica: los eventos tienen que coincidir casi en la misma vela.
+        </p>
+        <p className="text-xs text-gray-600 dark:text-gray-300">Indicadores y filtros (se entra cuando coinciden)</p>
         <div className="grid gap-1 sm:grid-cols-2">
           {options.indicators.map((i) => (
             <label key={i.id} className="flex items-start gap-2 text-sm text-gray-800 dark:text-gray-200">
@@ -228,7 +275,114 @@ function CreateForm({ options }: { options: LiveOptions }) {
             </label>
           ))}
         </div>
-      </fieldset>
+      </Section>
+
+      <Section title="3. Posición">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Margen por operación (USDT)">
+            <input className={field} value={margin} onChange={(e) => setMargin(e.target.value)} inputMode="decimal" />
+          </Field>
+          <Field label={`Apalancamiento (1 a ${options.leverage.max}x)`}>
+            <input className={field} value={leverage} onChange={(e) => setLeverage(e.target.value)} inputMode="numeric" />
+          </Field>
+          <Field label="Máximo de posiciones abiertas (vacío = sin tope)">
+            <input className={field} value={maxOpen} onChange={(e) => setMaxOpen(e.target.value)} inputMode="numeric" />
+          </Field>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Tamaño de cada operación: {marginN.toFixed(2)} USDT × {leverageN}x = {(marginN * leverageN).toFixed(2)} USDT. Margen aislado; comisión
+          taker {(options.fees.taker_pct * 100).toFixed(2)} % por lado y deslizamiento de {options.fees.slippage_bps} pb.
+        </p>
+      </Section>
+
+      <Section title="4. Salida">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Stop loss">
+            <select className={field} value={exitKind} onChange={(e) => setExitKind(e.target.value as "pct" | "atr")}>
+              <option value="pct">En % del precio de entrada</option>
+              <option value="atr">Por volatilidad (ATR)</option>
+            </select>
+          </Field>
+          {exitKind === "pct" ? (
+            <Field label="SL %">
+              <input className={field} value={slPct} onChange={(e) => setSlPct(e.target.value)} inputMode="decimal" />
+            </Field>
+          ) : (
+            <Field label="Salida por ATR">
+              <select className={field} value={atrExit} onChange={(e) => setAtrExit(e.target.value)}>
+                {options.exits.filter((x) => x.id !== "pct").map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+              </select>
+            </Field>
+          )}
+          {exitKind === "pct" && (
+            <Field label="Trailing % (vacío = sin trailing)">
+              <input className={field} value={trailPct} onChange={(e) => setTrailPct(e.target.value)} inputMode="decimal" />
+            </Field>
+          )}
+        </div>
+        {riskPct !== null && (
+          <p className={`text-xs ${riskPct > options.max_sl_margin_loss_pct ? "text-red-700 dark:text-red-300" : "text-gray-500 dark:text-gray-400"}`}>
+            Si salta el SL pierdes {riskPct.toFixed(1)} % del margen ({((marginN * riskPct) / 100).toFixed(2)} USDT, sin comisiones).
+            {riskPct > options.max_sl_margin_loss_pct ? ` Supera el tope de ${options.max_sl_margin_loss_pct} %: las entradas se van a omitir.` : ""}
+          </p>
+        )}
+        <Field label="Toma de ganancias">
+          <select className={field} value={tpMode} onChange={(e) => setTpMode(e.target.value as "single" | "partial" | "none")}>
+            {exitKind === "pct" && <option value="single">Un solo TP (cierra todo)</option>}
+            {exitKind === "atr" && <option value="single">La del preset de ATR</option>}
+            <option value="partial">TP parciales (salida escalonada)</option>
+            {exitKind === "pct" && <option value="none">Sin TP (solo SL o trailing)</option>}
+          </select>
+        </Field>
+        {tpMode === "single" && exitKind === "pct" && (
+          <Field label="TP %">
+            <input className={field} value={tpPct} onChange={(e) => setTpPct(e.target.value)} inputMode="decimal" />
+          </Field>
+        )}
+        {tpMode === "partial" && (
+          <div className="space-y-2">
+            {tps.map((tp, i) => (
+              <div key={i} className="grid grid-cols-[auto_1fr_1fr_auto] items-end gap-2">
+                <span className="pb-1 text-xs font-medium text-gray-600 dark:text-gray-300">TP{i + 1}</span>
+                <Field label={`TP${i + 1}: distancia %`}>
+                  <input className={field} value={tp.dist} onChange={(e) => setTp(i, "dist", e.target.value)} inputMode="decimal" />
+                </Field>
+                <Field label={`TP${i + 1}: % que cierra`}>
+                  <input className={field} value={tp.close} onChange={(e) => setTp(i, "close", e.target.value)} inputMode="decimal" />
+                </Field>
+                <button
+                  type="button"
+                  onClick={() => setTps((cur) => cur.filter((_, j) => j !== i))}
+                  disabled={tps.length === 1}
+                  className="pb-1 text-xs text-red-700 underline disabled:opacity-40 dark:text-red-300"
+                >
+                  Quitar
+                </button>
+              </div>
+            ))}
+            <div className="flex flex-wrap items-center gap-3">
+              {tps.length < options.max_tp_levels && (
+                <button
+                  type="button"
+                  onClick={() => setTps((cur) => [...cur, { dist: "", close: "" }])}
+                  className="text-xs text-blue-700 underline dark:text-blue-300"
+                >
+                  Agregar nivel
+                </button>
+              )}
+              <span className={`text-xs ${partialTotal > 100 ? "text-red-700 dark:text-red-300" : "text-gray-500 dark:text-gray-400"}`}>
+                Cierran en total {partialTotal.toFixed(0)} %
+                {partialTotal < 100 ? `; el ${(100 - partialTotal).toFixed(0)} % restante sigue con el SL${exitKind === "pct" && num(trailPct) ? " y el trailing" : ""}` : ""}.
+              </span>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200">
+              <input type="checkbox" checked={breakeven} onChange={(e) => setBreakeven(e.target.checked)} />
+              Mover el SL al precio de entrada después del TP1
+            </label>
+          </div>
+        )}
+      </Section>
+
       <div className="flex items-center gap-3">
         <button
           type="submit"
@@ -257,7 +411,14 @@ function TestDetail({ id }: { id: number }) {
           <ul className="space-y-1">
             {d.positions.map((p) => (
               <li key={p.symbol} className="tabular-nums text-gray-800 dark:text-gray-200">
-                {p.symbol} {p.side} a {p.entry_price} desde {fmtTime(p.entry_time_ms)} · SL {p.stop} · TP {p.tp ?? "-"}
+                {p.symbol} {p.side} a {p.entry_price} desde {fmtTime(p.entry_time_ms)} · {p.margin_usdt} USDT x{p.leverage} ·
+                SL {p.stop} · TP{" "}
+                {p.tp_levels && p.tp_levels.length > 0
+                  ? p.tp_levels.map((lv, i) => `${lv[2] ? "✓ " : ""}TP${i + 1} ${lv[0].toPrecision(6)} (${Math.round(lv[1] * 100)} %)`).join(" · ")
+                  : (p.tp ?? "-")}
+                {p.qty_initial && p.qty !== undefined && p.qty < p.qty_initial
+                  ? ` · abierta ${Math.round((100 * p.qty) / p.qty_initial)} %`
+                  : ""}
               </li>
             ))}
           </ul>
@@ -276,7 +437,9 @@ function TestDetail({ id }: { id: number }) {
               {d.trades.slice(0, 30).map((t) => (
                 <tr key={`${t.symbol}-${t.exit_time_ms}`} className="text-gray-800 dark:text-gray-200">
                   <td>{fmtTime(t.exit_time_ms)}</td><td>{t.symbol}</td><td>{t.side}</td><td>{t.entry_price}</td>
-                  <td>{t.exit_price}</td><td>{t.close_reason}</td><td>{fmtUsdt(t.pnl_net_usdt)}</td>
+                  <td>{t.exit_price.toPrecision(6)}</td>
+                  <td>{t.partials && t.partials.length > 1 ? t.partials.map((pt) => pt[3]).join(" + ") : t.close_reason}</td>
+                  <td>{fmtUsdt(t.pnl_net_usdt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -305,8 +468,12 @@ function TestCard({ t, onStop }: { t: LiveTestRow; onStop: (t: LiveTestRow) => v
         <div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">[{t.id}] {c.name}</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {c.timeframe} · {MODE_LABEL[c.mode] ?? c.mode} · {c.indicators.join(" + ")} · salida {c.exit_name} ·{" "}
-            {c.symbols.length} monedas · desde {fmtTime(t.created_at_ms)}
+            {c.timeframe} · {MODE_LABEL[c.mode] ?? c.mode} · {c.indicators.join(" + ")} · {DIRECTION_LABEL[c.direction ?? "both"]} ·{" "}
+            {c.margin_usdt ?? "-"} USDT x{c.leverage ?? "-"} · SL {c.exit_name === "pct" && c.pct_exit ? `${c.pct_exit[0]} %` : c.exit_name}
+            {c.take_profits && c.take_profits.length > 0
+              ? ` · TP ${c.take_profits.map(([d, cl]) => `${d} %→${cl} %`).join(", ")}${c.breakeven ? " · SL a entrada tras TP1" : ""}`
+              : ""}
+            {" "}· {c.symbols.length} monedas · desde {fmtTime(t.created_at_ms)}
           </p>
         </div>
         <div className="flex items-center gap-2">

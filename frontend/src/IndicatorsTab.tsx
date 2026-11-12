@@ -10,6 +10,7 @@ import {
   useExplorerRun,
 } from "./api";
 import { Card } from "./components/Card";
+import { RunProgress } from "./RunProgress";
 import { StatTile } from "./components/StatTile";
 import { Unavailable } from "./components/Unavailable";
 import { fmtAgo, fmtCompact, fmtNum, fmtPct, fmtPercentValue, fmtSigned } from "./format";
@@ -295,7 +296,10 @@ function Form({ opts }: { opts: ExplorerOptions }) {
                   ))}
               </select>
             </label>
-            <label className="flex flex-col text-sm text-gray-700 dark:text-gray-300">
+            <label
+              className="flex flex-col text-sm text-gray-700 dark:text-gray-300"
+              title="Un indicador de evento (SFP, FVG, Camarilla...) se dispara en una vela y sigue votando durante estas velas. Chica: los eventos tienen que coincidir casi en la misma vela; grande: mas entradas, pero un evento viejo puede empujar una entrada tarde."
+            >
               Ventana de los eventos (velas)
               <input
                 type="number"
@@ -362,6 +366,7 @@ function Form({ opts }: { opts: ExplorerOptions }) {
           >
             {run.isPending ? "Calculando..." : `Probar en ${tfLabel(timeframe)}`}
           </button>
+          {run.isPending && <RunProgress />}
           {errorText && (
             <p role="alert" className="text-sm text-red-700 dark:text-red-400">
               {errorText}
@@ -411,7 +416,8 @@ function DataStatusCard() {
       {!market.available ? (
         <p role="status" className="text-sm text-gray-700 dark:text-gray-300">
           Todavia no hay datos capturados ({market.path}). Se llenan solos con las tareas programadas MinervaV3
-          (scriptsegister_v2_data_tasks.ps1).
+          (scripts
+egister_v2_data_tasks.ps1).
         </p>
       ) : (
         <>

@@ -882,6 +882,12 @@ export interface LiveOptions {
   max_window: number;
   default_window: number;
   eval_seconds: { min: number; max: number; default: number };
+  margin: { min: number; max: number; default: number };
+  leverage: { min: number; max: number; default: number };
+  directions: string[];
+  max_tp_levels: number;
+  fees: { taker_pct: number; slippage_bps: number };
+  max_sl_margin_loss_pct: number;
 }
 
 export interface LiveConfig {
@@ -895,6 +901,12 @@ export interface LiveConfig {
   window: number;
   min_agree: number | null;
   eval_seconds: number;
+  margin_usdt?: number | null;
+  leverage?: number | null;
+  direction?: string;
+  take_profits?: [number, number][];
+  breakeven?: boolean;
+  max_open?: number | null;
 }
 
 export interface LiveSummary {
@@ -941,6 +953,8 @@ export interface LiveTrade {
   close_reason: string;
   signal_time_ms: number;
   decision_price: number;
+  // cierres parciales: [precio, cantidad, hora, motivo]
+  partials?: [number, number, number, string][];
 }
 
 export interface LivePosition {
@@ -951,6 +965,12 @@ export interface LivePosition {
   stop: number;
   tp: number | null;
   trailing: number | null;
+  margin_usdt?: number;
+  leverage?: number;
+  qty?: number;
+  qty_initial?: number;
+  // TP parciales: [precio, fraccion de la cantidad inicial, hecho]
+  tp_levels?: [number, number, boolean][];
 }
 
 export interface LiveTestDetail extends Omit<LiveTestRow, "open_positions"> {
@@ -972,6 +992,12 @@ export interface LiveCreateBody {
   window: number;
   min_agree: number | null;
   eval_seconds: number;
+  margin_usdt?: number | null;
+  leverage?: number | null;
+  direction?: string;
+  take_profits?: [number, number][];
+  breakeven?: boolean;
+  max_open?: number | null;
 }
 
 export function useLiveOptions() {
@@ -1025,5 +1051,26 @@ export function useStopLiveTest() {
       queryClient.invalidateQueries({ queryKey: ["live-tests"] });
       queryClient.invalidateQueries({ queryKey: ["live-test"] });
     },
+  });
+}
+
+
+// Avance de la corrida de la pestana Indicadores (dos pasos por moneda: combinacion y control).
+export interface ExplorerProgress {
+  running: boolean;
+  done: number;
+  total: number;
+  symbol: string | null;
+  stage: "combinacion" | "control" | null;
+  elapsed_s: number | null;
+  eta_s: number | null;
+}
+
+export function useExplorerProgress(enabled: boolean) {
+  return useQuery({
+    queryKey: ["explorer-progress"],
+    queryFn: () => apiFetch<ExplorerProgress>("/api/explorer/progress"),
+    enabled,
+    refetchInterval: enabled ? 1000 : false,
   });
 }

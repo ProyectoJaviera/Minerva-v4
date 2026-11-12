@@ -298,8 +298,11 @@ Get-ScheduledTask -TaskName "MinervaV2*" | Select-Object TaskName, State
 - En la pestaña **Brazo ejecutado**, que no aparezcan decisiones tardías (`LATE_DECISION`) que antes no había. Si
   aparecen, baja las pruebas en vivo: `MINERVA_LIVE_EVALS=1` en el `.env` y
   `cd ~/minerva-v3 && docker compose up -d --no-build`, o apaga el bot de pruebas desde la pestaña En vivo.
-- `df -h`: los ticks grabados ocupan del orden de decenas de MB por día. Si falta espacio,
-  `LIVE_RECORD_TICKS=false` en el `.env` y `docker compose up -d --no-build`.
+- `df -h`: los ticks grabados ocupan unos 180 MB por día con 10 monedas; se guardan los últimos 14 días
+  (unos 2,5 GB) y los más viejos se borran solos. Con poco disco, `MINERVA_TICKS_DAYS=7` en el `.env` (o
+  `LIVE_RECORD_TICKS=false` para no grabar) y `docker compose up -d --no-build`.
+- **Indicadores en el netbook:** una prueba de 10 monedas en 15m tarda unos 2 minutos en el PC y bastante más en
+  el netbook, y usa el mismo procesador que la medición. Ahí conviene usar 1h o 4h, o pocas monedas.
 - `~/cron.log` debería quedar vacío o casi.
 
 ## I. Si algo sale mal: volver a la v1
