@@ -10,6 +10,7 @@ const SELECT_LABEL: Record<string, string> = {
   emax: "Par de EMAs",
   cloud: "Longitud del Cloud",
   cloud_retest: "Longitud del retesteo del Cloud",
+  fib: "Nivel de Fibonacci",
 };
 
 function groupsOf(options: IndicatorOption[]): Map<string, IndicatorOption[]> {

@@ -10,8 +10,9 @@ Todos los indicadores se tratan igual: cada uno **vota** alcista o bajista en ca
 - **De evento** (votan durante `window` velas desde su senal, incluida la de la senal): SFP,
   rechazo de Camarilla S3/R3, reversion del BB%B, cruce de WaveTrend en zona extrema, rechazo de
   zona de liquidez, Liquidity Grab, FVG y cruce de dos EMAs (largo cuando la rapida cruza hacia
-  arriba a la lenta, corto hacia abajo; como `ta.crossover`/`ta.crossunder`) y retesteo del Cloud
-  de Frost (rebote en el techo o en el piso de la nube). Si en la ventana
+  arriba a la lenta, corto hacia abajo; como `ta.crossover`/`ta.crossunder`), retesteo del Cloud
+  de Frost (rebote en el techo o en el piso de la nube) y rebote en un nivel Fibonacci de Frost
+  (0 / 38,2 / 50 / 61,8 / 81,2 %). Si en la ventana
   hubo senales de los dos lados, vale la mas reciente.
 
 **Entrada:** en la vela en que **todos** los indicadores elegidos coinciden (y en la anterior no
@@ -38,6 +39,7 @@ import pandas as pd
 from app.candidates.common import BAR_INDEX_COLUMN
 from app.candidates.sfp_reversal import random_direction
 from app.indicators._pine import pine_ema
+from app.indicators.levels import fib_bounce_signals, frost_fibonacci
 from app.indicators.trend_filters import (
     RANGE_FILTER_SENSITIVITY,
     cloud_retest_signals,
@@ -62,6 +64,10 @@ INDICATORS: dict[str, tuple[str, str, str, str]] = {
                     "long_bb_reversal", "short_bb_reversal"),
     "wt_cross": ("WaveTrend: cruce en zona extrema (+-72)", "evento",
                  "long_wt_cross", "short_wt_cross"),
+    **{f"fib{_code}": (f"Fibonacci de Frost: rebote en el {_label} a favor de la ultima pierna",
+                        "evento", f"long_fib{_code}", f"short_fib{_code}")
+       for _code, _label in (("0", "0 % (ultimo pivote)"), ("382", "38,2 %"), ("500", "50 %"),
+                             ("618", "61,8 %"), ("812", "81,2 %"))},
     "cloud_retest36": ("Retesteo del Cloud de Frost (36): rebote en el techo (largo) o en el piso "
                        "(corto)", "evento", "long_cloud_retest36", "short_cloud_retest36"),
     "cloud_retest50": ("Retesteo del Cloud de Frost (50): rebote en el techo (largo) o en el piso "
@@ -123,6 +129,13 @@ INDICATOR_VARIANTS.update({f"emax_{f}_{s}": ("emax", f"EMA {f} / EMA {s}")
 # - Evento `cloud_retest<n>` (`cloud_retest_signals`): la vela anterior cerro afuera, esta toca la
 #   nube y vuelve a cerrar afuera; rebote en el techo = largo, en el piso = corto.
 CLOUD_LENGTHS = (36, 50)
+# Fibonacci de Frost (`frost_fibonacci`, zigzag de 23 velas): niveles entre los dos ultimos
+# pivotes fijos v1 y v2 (`v1 + (v2 - v1) * r`). Evento `fib<n>` (`fib_bounce_signals`): la vela
+# toca el nivel y cierra del lado de la ultima pierna (largo si fue de subida, corto si fue de
+# bajada) sin que el precio haya roto el 100 % desde v1.
+FIB_LEVELS = {"fib0": 0.0, "fib382": 0.382, "fib500": 0.5, "fib618": 0.618, "fib812": 0.812}
+INDICATOR_VARIANTS.update({ind: ("fib", f"{r * 100:g} %".replace(".", ","))
+                           for ind, r in FIB_LEVELS.items()})
 INDICATOR_VARIANTS.update({f"cloud{n}": ("cloud", f"Longitud {n}") for n in CLOUD_LENGTHS})
 INDICATOR_VARIANTS.update({f"cloud_retest{n}": ("cloud_retest", f"Longitud {n}")
                            for n in CLOUD_LENGTHS})
@@ -132,6 +145,7 @@ INDICATOR_GROUP_LABELS: dict[str, str] = {
     "emax": "Cruce de dos EMAs (largo al cruzar hacia arriba, corto hacia abajo)",
     "cloud": "Cloud de Frost: cierre sobre el techo (alcista) / bajo el piso (bajista)",
     "cloud_retest": "Retesteo del Cloud de Frost: rebote en el techo (largo) o en el piso (corto)",
+    "fib": "Rebote en un nivel Fibonacci de Frost (a favor de la ultima pierna)",
 }
 RF_MODE_COLUMNS = {"rf_scalp": "scalping", "rf_swing": "swing"}
 
@@ -310,6 +324,10 @@ def compute_votes(df: pd.DataFrame, interval: str, btc: pd.DataFrame | None = No
         out[f"bear_cloud{n}"] = (close_all < cloud["cloud_bottom"]).to_numpy()
         long, short = cloud_retest_signals(out, cloud)
         out[f"long_cloud_retest{n}"], out[f"short_cloud_retest{n}"] = long, short
+    fib = frost_fibonacci(out)
+    for ind, ratio in FIB_LEVELS.items():
+        long, short = fib_bounce_signals(out, fib, ratio)
+        out[f"long_{ind}"], out[f"short_{ind}"] = long, short
     atr = out["x_atr14"]
     fvg = fvg_signals(out, atr)
     out["long_fvg"] = fvg["fvg_long"].to_numpy()

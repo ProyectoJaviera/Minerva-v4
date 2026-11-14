@@ -23,6 +23,10 @@ compara contra el grafico de TradingView, para BTCUSDT y ETHUSDT:
    piso = EMA del minimo) de las ultimas 3 velas cerradas y los ultimos `--cloud-count`
    retesteos (rebote en el techo = LARGO, en el piso = CORTO), como `cloud_retest<n>`. En
    TradingView: Frost con «Cloud» encendido y la misma longitud.
+6. Con `--fib`, el Fibonacci de Frost (zigzag de 23 velas) de la ultima vela cerrada: los
+   pivotes v2 y v1 (hora UTC y precio) y los niveles 0 / 38,2 / 50 / 61,8 / 81,2 / 100 / 125 /
+   150 %, mas las ultimas `--fib-count` senales de rebote de cada nivel de entrada (como
+   `fib<n>`). En TradingView: Frost con «Show Fibonacci Targets» y «Show Fibonacci Levels».
 
 Con `--end AAAA-MM-DD` todo se calcula como si «ahora» fuera esa fecha a las 00:00 UTC, para
 comparar semanas pasadas; con `--skip-camarilla` se omiten los niveles.
@@ -39,6 +43,7 @@ Es de solo lectura: no lee `.env`, no abre ninguna base y no escribe nada.
     python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --rf-mode swing
     python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --ema-cross 9 21
     python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --cloud 50
+    python scripts/v2_tradingview_check.py --interval 1d --skip-camarilla --sfp-count 0 --fib
     python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-count 15
 """
 
@@ -58,7 +63,14 @@ sys.path.insert(0, ".")
 from app.config import Settings  # noqa: E402
 from app.explorer.confluence import EMA_LENGTHS, ema_cross_signals  # noqa: E402
 from app.indicators._pine import pine_atr, pine_ema  # noqa: E402
-from app.indicators.levels import DAY_MS, camarilla_levels  # noqa: E402
+from app.indicators.levels import (  # noqa: E402
+    DAY_MS,
+    FIB_LEVEL_COLUMNS,
+    FROST_FIB_RATIOS,
+    camarilla_levels,
+    fib_bounce_signals,
+    frost_fibonacci,
+)
 from app.indicators.structure import sfp_signals  # noqa: E402
 from app.indicators.trend_filters import (  # noqa: E402
     RANGE_FILTER_SENSITIVITY,
@@ -391,12 +403,59 @@ def cloud_lines(symbol: str, bars: pd.DataFrame, length: int, count: int,
     return lines
 
 
+def fib_lines(symbol: str, bars: pd.DataFrame, count: int, interval: str) -> list[str]:
+    """Lineas con el Fibonacci de Frost de la ultima vela y las ultimas senales de rebote.
+
+    Usa las mismas funciones que los indicadores `fib<n>` (`frost_fibonacci` y
+    `fib_bounce_signals`).
+
+    Args:
+        symbol: simbolo.
+        bars: velas con `open_time`, `open`, `high`, `low` y `close`.
+        count: senales de rebote a mostrar por nivel (las mas recientes).
+        interval: etiqueta de la temporalidad, solo para el texto.
+
+    Returns:
+        Las lineas de texto.
+    """
+    fib = frost_fibonacci(bars)
+    last = fib.iloc[-1]
+    lines = [f"Fibonacci de Frost {symbol} {interval} en la ultima vela cerrada "
+             f"({_utc(int(bars['open_time'].iat[-1]))} UTC)"]
+    if int(last["fib_leg"]) == 0:
+        return lines + ["  todavia sin tres pivotes en el historial descargado"]
+    for name in ("v2", "v1"):
+        pos = int(last[f"fib_{name}_pos"])
+        lines.append(f"  pivote {name}: {float(last[f'fib_{name}']):.2f} "
+                     f"({_utc(int(bars['open_time'].iat[pos]))} UTC)")
+    leg = ("subida (largos en los rebotes)" if last["fib_leg"] > 0
+           else "bajada (cortos en los rebotes)")
+    lines.append(f"  ultima pierna fija: {leg}")
+    lines += [f"  {r * 100:g} % = {float(last[col]):.2f}"
+              for r, col in zip(FROST_FIB_RATIOS, FIB_LEVEL_COLUMNS, strict=True)]
+    for ratio in (0.0, 0.382, 0.5, 0.618, 0.812):
+        long, short = fib_bounce_signals(bars, fib, ratio)
+        idx = [i for i in range(len(bars)) if long[i] or short[i]][-count:]
+        lines.append(f"Rebotes en el {ratio * 100:g} % {symbol} {interval}: ultimos {count}")
+        if not idx:
+            lines.append("  ninguno en el historial descargado")
+        for i in idx:
+            col = FIB_LEVEL_COLUMNS[FROST_FIB_RATIOS.index(ratio)]
+            o, h, lo, c = (float(bars[k].iat[i]) for k in ("open", "high", "low", "close"))
+            side = "LARGO" if long[i] else "CORTO"
+            lines.append(f"  {_utc(int(bars['open_time'].iat[i]))}  {side}  "
+                         f"nivel {float(fib[col].iat[i - 1]):.2f}  "
+                         f"O {o:.2f}  H {h:.2f}  L {lo:.2f}  C {c:.2f}")
+    return lines
+
+
 async def build_report(client: Any, symbols: list[str], days: list[date], sfp_count: int,
                        history_bars: int, now_ms: int, interval: str = "1h",
                        rf_count: int = 0, bar_count: int = 0,
                        rf_mode: str = "intraday", ema_cross: tuple[int, int] | None = None,
                        ema_count: int = 10, cloud: int | None = None,
-                       cloud_count: int = 8) -> list[str]:
+                       cloud_count: int = 8, fib: bool = False,
+                       fib_count: int = 3) -> list[str]:
     """Descarga las velas y arma el informe completo.
 
     Args:
@@ -414,6 +473,8 @@ async def build_report(client: Any, symbols: list[str], days: list[date], sfp_co
         ema_count: cruces de EMAs a mostrar.
         cloud: longitud del Cloud de Frost a listar, o `None`.
         cloud_count: retesteos del Cloud a mostrar.
+        fib: si lista el Fibonacci de Frost.
+        fib_count: senales de rebote a mostrar por nivel.
 
     Returns:
         Las lineas del informe.
@@ -445,6 +506,8 @@ async def build_report(client: Any, symbols: list[str], days: list[date], sfp_co
             lines += ema_cross_lines(symbol, bars, ema_cross[0], ema_cross[1], ema_count, interval)
         if cloud:
             lines += cloud_lines(symbol, bars, cloud, cloud_count, interval)
+        if fib:
+            lines += fib_lines(symbol, bars, fib_count, interval)
         lines.append("")
     return lines
 
@@ -475,6 +538,10 @@ def main() -> None:
                         help="lista el Cloud de Frost y sus retesteos (p. ej. 36 o 50)")
     parser.add_argument("--cloud-count", type=int, default=8,
                         help="retesteos del Cloud a mostrar con --cloud")
+    parser.add_argument("--fib", action="store_true",
+                        help="lista el Fibonacci de Frost y sus rebotes")
+    parser.add_argument("--fib-count", type=int, default=3,
+                        help="rebotes por nivel a mostrar con --fib")
     parser.add_argument("--bars", type=int, default=0,
                         help="velas OHLC a listar antes del corte (0 = ninguna)")
     parser.add_argument("--end", help="corte AAAA-MM-DD (00:00 UTC) para mirar semanas pasadas")
@@ -498,7 +565,8 @@ def main() -> None:
                                       args.history_bars, now_ms, args.interval, args.rf_count,
                                       args.bars, args.rf_mode,
                                       tuple(args.ema_cross) if args.ema_cross else None,
-                                      args.ema_count, args.cloud, args.cloud_count)
+                                      args.ema_count, args.cloud, args.cloud_count,
+                                      args.fib, args.fib_count)
         finally:
             await client.aclose()
 

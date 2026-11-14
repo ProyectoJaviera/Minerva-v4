@@ -7,6 +7,17 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v4: el Fibonacci de Frost — 2026-11-14
+
+- El Fibonacci de Frost (`frost_fibonacci`): zigzag de 23 velas y niveles entre los dos últimos pivotes fijos
+  (`v1 + (v2 - v1) · r`). Los niveles son 0, 38,2, 50, 61,8 y 81,2 %, y los objetivos 100, 125 y 150 %. En BTCUSDT 1D
+  coinciden con el gráfico de TradingView del dueño, con una diferencia menor que el tick.
+- Evento «Rebote en un nivel Fibonacci de Frost» (`fib0`, `fib382`, `fib500`, `fib618`, `fib812`): la vela toca el
+  nivel y cierra del lado de la última pierna (largo si fue de subida, corto si fue de bajada), sin que el precio
+  haya roto el 100 % desde el pivote. En las pestañas «En vivo» e «Indicadores» es una casilla con el selector
+  «Nivel de Fibonacci».
+- `scripts/v2_tradingview_check.py --fib --fib-count N` lista los pivotes, los niveles y los últimos rebotes.
+
 ## Minerva v4: el Cloud de Frost — 2026-11-14
 
 - El «Cloud» de Frost (techo = EMA del máximo, media = EMA del cierre, piso = EMA del mínimo; `frost_cloud`) con

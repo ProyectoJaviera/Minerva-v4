@@ -121,31 +121,36 @@ al calentamiento. No mezclar con `engine.ema`, que arranca con el primer valor (
 ### `app/indicators/levels.py`
 
 **Responsabilidad.** Niveles Camarilla (R1–R4, S1–S4) del día UTC anterior para cada vela, agregando el máximo, el
-mínimo y el cierre del día desde las propias velas de la serie.
+mínimo y el cierre del día desde las propias velas de la serie; y el Fibonacci de Frost (zigzag de 23 velas).
 
 **Funciones y clases clave.**
 - `camarilla_levels(df, interval_ms, require_complete)` — necesita `open_time` en milisegundos UTC; devuelve
   `cam_prev_high/low/close` y `cam_r4` … `cam_s4`.
 - `camarilla_from_hlc(high, low, close)` — la fórmula: `C ± (H − L) · 1.1 / d`, con `d` = 12, 6, 4, 2.
+- `frost_fibonacci(df, period)` — pivotes `fib_v1`/`fib_v2` (y sus posiciones), `fib_leg` y los niveles
+  `fib_000` … `fib_1500` (`v1 + (v2 − v1) · r`, `FROST_FIB_RATIOS`); `fib_bounce_signals(df, fib, ratio)` — rebote en
+  un nivel a favor de la última pierna, con los niveles de la vela anterior y sin romper el 100 %.
 
 **Invariantes — no romper.**
 - Las velas del día `D` usan solo el día `D − 1` completo; con `require_complete` un día con velas faltantes (o con un
   cierre NaN) no da niveles.
 - `open_time` estrictamente creciente y una duración de vela que divida un día (si no, `ValueError`).
 
-**Trampas conocidas.** El DataFrame del motor de backtest no trae `open_time`: conectarlo exige pasarlo.
+**Trampas conocidas.** El DataFrame del motor de backtest no trae `open_time`: conectarlo exige pasarlo. El zigzag
+del Fibonacci es un bucle en Python (una pasada por vela); un empate con el máximo o el mínimo de la ventana cuenta
+como pivote (en Pine, `ta.highestbars` con empates no está documentado; con BTC 1D los niveles coinciden).
 
 <!-- hechos:app/indicators/levels.py -->
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/app/indicators/levels.html`](../api/app/indicators/levels.html)
 - **Importa (internos):** `app.indicators._pine`
-- **Lo importan:** `app.candidates.camarilla_s3_r3`, `scripts.v2_tradingview_check`
+- **Lo importan:** `app.candidates.camarilla_s3_r3`, `app.explorer.confluence`, `scripts.v2_tradingview_check`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_indicators_v2_causality.py`, `tests/unit/test_indicators_v2_levels.py`, `tests/unit/test_strategies_v2.py`, `tests/unit/test_v2_tradingview_check_script.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_explorer.py`, `tests/unit/test_indicators_v2_causality.py`, `tests/unit/test_indicators_v2_levels.py`, `tests/unit/test_strategies_v2.py`, `tests/unit/test_v2_tradingview_check_script.py`
 <!-- /hechos:app/indicators/levels.py -->
 
 ### `app/indicators/oscillators.py`

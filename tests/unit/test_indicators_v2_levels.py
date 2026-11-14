@@ -110,3 +110,86 @@ def test_missing_open_time_is_rejected():
 def test_empty_frame_returns_empty_levels():
     df = pd.DataFrame({"open_time": [], "high": [], "low": [], "close": []})
     assert camarilla_levels(df).empty
+
+
+# --- Fibonacci de Frost -----------------------------------------------------------------------
+
+
+def test_frost_fibonacci_zigzag_and_levels_by_hand():
+    from app.indicators.levels import FIB_LEVEL_COLUMNS, frost_fibonacci
+
+    df = pd.DataFrame({
+        #       0     1     2     3     4    5     6     7
+        "high": [10.0, 11.0, 12.0, 11.0, 10.0, 12.0, 14.0, 13.0],
+        "low": [9.0, 10.0, 11.0, 10.0, 8.0, 11.0, 12.0, 9.5],
+    })
+    out = frost_fibonacci(df, period=3)
+    assert FIB_LEVEL_COLUMNS == ("fib_000", "fib_382", "fib_500", "fib_618", "fib_812",
+                                 "fib_1000", "fib_1250", "fib_1500")
+    # 2: maximo de 3 velas (12) -> pivote; 3: minimo empatado (10) -> pivote bajista; 4: minimo
+    # mas bajo (8) corre ese pivote; 5: maximo (12) -> tercer pivote: v1 = 8 (vela 4), v2 = 12.
+    assert out["fib_v1"].iloc[:5].isna().all() and (out["fib_leg"].iloc[:5] == 0).all()
+    row = out.iloc[5]
+    assert (row["fib_v1"], row["fib_v2"], row["fib_v1_pos"], row["fib_v2_pos"]) == (8, 12, 4, 2)
+    assert row["fib_leg"] == -1
+    assert row["fib_000"] == 8 and row["fib_500"] == 10 and row["fib_1000"] == 12
+    assert row["fib_1500"] == 14
+    # 6: maximo mas alto (14) corre el pivote en curso: v1 y v2 no cambian.
+    assert (out["fib_v1"].iat[6], out["fib_v2"].iat[6]) == (8, 12)
+    # 7: minimo de 3 velas -> pivote nuevo: v1 = 14 (vela 6), v2 = 8; pierna de subida.
+    row = out.iloc[7]
+    assert (row["fib_v1"], row["fib_v2"], row["fib_v1_pos"], row["fib_leg"]) == (14, 8, 6, 1)
+    assert row["fib_500"] == 11 and row["fib_618"] == pytest.approx(14 - 6 * 0.618)
+    with pytest.raises(ValueError):
+        frost_fibonacci(df, period=0)
+    with pytest.raises(ValueError):
+        frost_fibonacci(df.drop(columns="low"))
+
+
+def _fib_frame(leg: int, v1: float, v2: float, n: int) -> pd.DataFrame:
+    from app.indicators.levels import FIB_LEVEL_COLUMNS, FROST_FIB_RATIOS
+
+    out = pd.DataFrame({"fib_v1": [v1] * n, "fib_v2": [v2] * n, "fib_v1_pos": [0] * n,
+                        "fib_v2_pos": [0] * n, "fib_leg": [leg] * n})
+    for r, col in zip(FROST_FIB_RATIOS, FIB_LEVEL_COLUMNS, strict=True):
+        out[col] = v1 + (v2 - v1) * r
+    return out
+
+
+def test_fib_bounce_long_needs_touch_close_above_and_no_break_of_100():
+    from app.indicators.levels import fib_bounce_signals
+
+    fib = _fib_frame(1, 14.0, 8.0, 6)  # pierna de subida 8 -> 14; el 50 % es 11
+    df = pd.DataFrame({
+        #        0     1     2     3     4     5
+        "high": [14.0, 13.0, 12.0, 11.5, 11.5, 11.6],
+        "low": [13.0, 11.5, 10.8, 10.5, 7.5, 10.9],
+        "close": [13.5, 12.0, 11.5, 10.9, 11.2, 11.3],
+    })
+    long, short = fib_bounce_signals(df, fib, 0.5)
+    # 1: no toca; 2: toca 11 y cierra sobre -> largo; 3: cierra bajo; 4: perfora el 100 % (8);
+    # 5: ya se perforo desde el pivote -> nada.
+    assert long.tolist() == [False, False, True, False, False, False]
+    assert not short.any()
+    # nivel 0 (el maximo v1 = 14): largo si la vela lo pasa y cierra sobre el
+    df0 = pd.DataFrame({"high": [14.0, 13.0, 14.5], "low": [13.0, 12.0, 12.5],
+                        "close": [13.5, 12.5, 14.2]})
+    long0, _ = fib_bounce_signals(df0, _fib_frame(1, 14.0, 8.0, 3), 0.0)
+    assert long0.tolist() == [False, False, True]
+    with pytest.raises(ValueError):
+        fib_bounce_signals(df, fib, 0.7)
+
+
+def test_fib_bounce_short_is_the_mirror():
+    from app.indicators.levels import fib_bounce_signals
+
+    fib = _fib_frame(-1, 8.0, 14.0, 5)  # pierna de bajada 14 -> 8; el 61,8 % es 11.708
+    df = pd.DataFrame({
+        "high": [9.0, 11.0, 11.8, 14.5, 11.8],
+        "low": [8.0, 10.0, 11.0, 11.0, 11.0],
+        "close": [8.5, 10.5, 11.2, 11.3, 11.2],
+    })
+    long, short = fib_bounce_signals(df, fib, 0.618)
+    # 1: no llega; 2: toca y cierra bajo -> corto; 3: perfora el 100 % (14); 4: ya roto.
+    assert short.tolist() == [False, False, True, False, False]
+    assert not long.any()

@@ -43,6 +43,21 @@
             <li>
                     <a class="function" href="#camarilla_levels">camarilla_levels</a>
             </li>
+            <li>
+                    <a class="variable" href="#FROST_FIB_PERIOD">FROST_FIB_PERIOD</a>
+            </li>
+            <li>
+                    <a class="variable" href="#FROST_FIB_RATIOS">FROST_FIB_RATIOS</a>
+            </li>
+            <li>
+                    <a class="variable" href="#FIB_LEVEL_COLUMNS">FIB_LEVEL_COLUMNS</a>
+            </li>
+            <li>
+                    <a class="function" href="#frost_fibonacci">frost_fibonacci</a>
+            </li>
+            <li>
+                    <a class="function" href="#fib_bounce_signals">fib_bounce_signals</a>
+            </li>
     </ul>
 
 
@@ -181,6 +196,136 @@ si es <code>False</code>, se usan las velas que haya.</li>
 <ul>
 <li><strong>ValueError:</strong>  si falta una columna, <code>open_time</code> no es estrictamente creciente o la
 duracion de la vela no divide un dia.</li>
+</ul>
+</div>
+
+
+                </section>
+                <section id="FROST_FIB_PERIOD">
+                    <div class="attr variable">
+            <span class="name">FROST_FIB_PERIOD</span>        =
+<span class="default_value">23</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FROST_FIB_PERIOD"></a>
+    
+    
+
+                </section>
+                <section id="FROST_FIB_RATIOS">
+                    <div class="attr variable">
+            <span class="name">FROST_FIB_RATIOS</span>        =
+<span class="default_value">(0.0, 0.382, 0.5, 0.618, 0.812, 1.0, 1.25, 1.5)</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FROST_FIB_RATIOS"></a>
+    
+    
+
+                </section>
+                <section id="FIB_LEVEL_COLUMNS">
+                    <div class="attr variable">
+            <span class="name">FIB_LEVEL_COLUMNS</span>        =
+<span class="default_value">(&#39;fib_000&#39;, &#39;fib_382&#39;, &#39;fib_500&#39;, &#39;fib_618&#39;, &#39;fib_812&#39;, &#39;fib_1000&#39;, &#39;fib_1250&#39;, &#39;fib_1500&#39;)</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FIB_LEVEL_COLUMNS"></a>
+    
+    
+
+                </section>
+                <section id="frost_fibonacci">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">frost_fibonacci</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">df</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>, </span><span class="param"><span class="n">period</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">23</span></span><span class="return-annotation">) -> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#frost_fibonacci"></a>
+    
+            <div class="docstring"><p>Zigzag y niveles Fibonacci de Frost, vela a vela y causales.</p>
+
+<p>Un maximo de zigzag es una vela cuyo <code>high</code> es el mayor de las ultimas <code>period</code> velas
+(incluida ella; un empate cuenta) y un minimo, el espejo con <code>low</code>. La direccion pasa a 1 con
+un maximo sin minimo en la misma vela y a -1 con un minimo sin maximo. En cada vela con maximo
+o minimo: si la direccion cambio respecto de la vela anterior se agrega un pivote nuevo; si no,
+el pivote en curso se corre solo si es mas extremo. Los niveles usan los dos pivotes ya fijos
+anteriores al pivote en curso: <code>v1</code> (el ultimo fijo) y <code>v2</code> (el anterior), con
+<code>nivel(r) = v1 + (v2 - v1) * r</code>, como Frost.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>df:</strong>  velas con <code>high</code> y <code>low</code>.</li>
+<li><strong>period:</strong>  ventana del zigzag (&gt;= 1; Frost usa 23).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>DataFrame con el indice de <code>df</code>: <code>fib_v1</code>, <code>fib_v2</code> (precios), <code>fib_v1_pos</code>, <code>fib_v2_pos</code>
+  (posiciones 0..n-1 de esas velas), <code>fib_leg</code> (+1 si <code>v1 &gt; v2</code>, es decir la ultima pierna
+  fija fue de subida y termino en un maximo; -1 al reves) y una columna por nivel de
+  <code><a href="#FIB_LEVEL_COLUMNS">FIB_LEVEL_COLUMNS</a></code> (<code>fib_000</code>, <code>fib_382</code>, ..., <code>fib_1500</code>). NaN (y <code>fib_leg</code> 0) hasta
+  tener tres pivotes.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  si faltan columnas o <code>period</code> es menor que 1.</li>
+</ul>
+</div>
+
+
+                </section>
+                <section id="fib_bounce_signals">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">fib_bounce_signals</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">df</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>,</span><span class="param">	<span class="n">fib</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>,</span><span class="param">	<span class="n">ratio</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#fib_bounce_signals"></a>
+    
+            <div class="docstring"><p>Rebotes en un nivel Fibonacci de Frost a favor de la ultima pierna fija.</p>
+
+<p>Se usan los niveles de la vela anterior (los que ya estaban dibujados cuando abrio la vela):</p>
+
+<ul>
+<li>Largo en la vela <code>i</code>: la ultima pierna fue de subida (<code>v1 &gt; v2</code>), la vela toca el nivel con
+su minimo (<code>low &lt;= nivel</code>) y cierra sobre el (<code>close &gt; nivel</code>), y desde el pivote <code>v1</code> hasta
+esta vela ningun minimo perforo <code>v2</code> (el 100 %: si lo perforo, la pierna ya no es un
+retroceso).</li>
+<li>Corto: espejo (pierna de bajada, <code>high &gt;= nivel</code>, <code>close &lt; nivel</code>, ningun maximo sobre <code>v2</code>).</li>
+</ul>
+
+<p>Con el nivel 0 (<code>v1</code>) la regla es la misma: en una pierna de subida, largo si la vela pasa el
+maximo <code>v1</code> y cierra sobre el.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>df:</strong>  velas con <code>high</code>, <code>low</code> y <code>close</code> (mismo orden que <code>fib</code>).</li>
+<li><strong>fib:</strong>  salida de <code><a href="#frost_fibonacci">frost_fibonacci</a></code>.</li>
+<li><strong>ratio:</strong>  uno de <code><a href="#FROST_FIB_RATIOS">FROST_FIB_RATIOS</a></code>.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>(largo, corto)</code>: arrays booleanos; sin tres pivotes no hay senal.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  si <code>ratio</code> no es uno de <code><a href="#FROST_FIB_RATIOS">FROST_FIB_RATIOS</a></code>.</li>
 </ul>
 </div>
 

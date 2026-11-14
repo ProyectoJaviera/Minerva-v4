@@ -80,6 +80,9 @@
                     <a class="function" href="#cloud_lines">cloud_lines</a>
             </li>
             <li>
+                    <a class="function" href="#fib_lines">fib_lines</a>
+            </li>
+            <li>
                     <a class="function" href="#build_report">build_report</a>
             </li>
             <li>
@@ -128,6 +131,10 @@ depende del arranque de la historia.</li>
 piso = EMA del minimo) de las ultimas 3 velas cerradas y los ultimos <code>--cloud-count</code>
 retesteos (rebote en el techo = LARGO, en el piso = CORTO), como <code>cloud_retest&lt;n&gt;</code>. En
 TradingView: Frost con «Cloud» encendido y la misma longitud.</li>
+<li>Con <code>--fib</code>, el Fibonacci de Frost (zigzag de 23 velas) de la ultima vela cerrada: los
+pivotes v2 y v1 (hora UTC y precio) y los niveles 0 / 38,2 / 50 / 61,8 / 81,2 / 100 / 125 /
+150 %, mas las ultimas <code>--fib-count</code> senales de rebote de cada nivel de entrada (como
+<code>fib&lt;n&gt;</code>). En TradingView: Frost con «Show Fibonacci Targets» y «Show Fibonacci Levels».</li>
 </ol>
 
 <p>Con <code>--end AAAA-MM-DD</code> todo se calcula como si «ahora» fuera esa fecha a las 00:00 UTC, para
@@ -145,6 +152,7 @@ python scripts/v2_tradingview_check.py --interval 4h --skip-camarilla --rf-count
 python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --rf-mode swing
 python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --ema-cross 9 21
 python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --cloud 50
+python scripts/v2_tradingview_check.py --interval 1d --skip-camarilla --sfp-count 0 --fib
 python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-count 15
 </code></pre>
 </div>
@@ -562,11 +570,44 @@ y <code>cloud_retest_signals</code>).</p>
 
 
                 </section>
+                <section id="fib_lines">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">fib_lines</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">bars</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>,</span><span class="param">	<span class="n">count</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">interval</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#fib_lines"></a>
+    
+            <div class="docstring"><p>Lineas con el Fibonacci de Frost de la ultima vela y las ultimas senales de rebote.</p>
+
+<p>Usa las mismas funciones que los indicadores <code>fib&lt;n&gt;</code> (<code>frost_fibonacci</code> y
+<code>fib_bounce_signals</code>).</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>symbol:</strong>  simbolo.</li>
+<li><strong>bars:</strong>  velas con <code>open_time</code>, <code>open</code>, <code>high</code>, <code>low</code> y <code>close</code>.</li>
+<li><strong>count:</strong>  senales de rebote a mostrar por nivel (las mas recientes).</li>
+<li><strong>interval:</strong>  etiqueta de la temporalidad, solo para el texto.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Las lineas de texto.</p>
+</blockquote>
+</div>
+
+
+                </section>
                 <section id="build_report">
                     <div class="attr function">
             
         <span class="def">async def</span>
-        <span class="name">build_report</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">client</span><span class="p">:</span> <span class="n">Any</span>,</span><span class="param">	<span class="n">symbols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>,</span><span class="param">	<span class="n">days</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">]</span>,</span><span class="param">	<span class="n">sfp_count</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">history_bars</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">now_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">interval</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'1h'</span>,</span><span class="param">	<span class="n">rf_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">bar_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">rf_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'intraday'</span>,</span><span class="param">	<span class="n">ema_cross</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">ema_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>,</span><span class="param">	<span class="n">cloud</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">cloud_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>:</span></span>
+        <span class="name">build_report</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">client</span><span class="p">:</span> <span class="n">Any</span>,</span><span class="param">	<span class="n">symbols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>,</span><span class="param">	<span class="n">days</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">]</span>,</span><span class="param">	<span class="n">sfp_count</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">history_bars</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">now_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">interval</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'1h'</span>,</span><span class="param">	<span class="n">rf_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">bar_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">rf_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'intraday'</span>,</span><span class="param">	<span class="n">ema_cross</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">ema_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>,</span><span class="param">	<span class="n">cloud</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">cloud_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span>,</span><span class="param">	<span class="n">fib</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">fib_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>:</span></span>
 
         
     </div>
@@ -591,6 +632,8 @@ y <code>cloud_retest_signals</code>).</p>
 <li><strong>ema_count:</strong>  cruces de EMAs a mostrar.</li>
 <li><strong>cloud:</strong>  longitud del Cloud de Frost a listar, o <code>None</code>.</li>
 <li><strong>cloud_count:</strong>  retesteos del Cloud a mostrar.</li>
+<li><strong>fib:</strong>  si lista el Fibonacci de Frost.</li>
+<li><strong>fib_count:</strong>  senales de rebote a mostrar por nivel.</li>
 </ul>
 
 <h6 id="returns">Returns:</h6>

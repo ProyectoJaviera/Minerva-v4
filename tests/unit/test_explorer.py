@@ -264,6 +264,26 @@ def test_cloud_state_and_retest_vote_like_frost_cloud():
             "cloud_retest", f"Longitud {n}")
 
 
+def test_fibonacci_bounces_vote_like_frost_fibonacci():
+    from app.indicators.levels import fib_bounce_signals, frost_fibonacci
+
+    df = _random_walk(31)
+    feats = confluence.compute_votes(df, "1h")
+    fib = frost_fibonacci(df)
+    total = 0
+    for ind, ratio in confluence.FIB_LEVELS.items():
+        _, kind, long_col, short_col = confluence.INDICATORS[ind]
+        assert kind == "evento"
+        assert confluence.INDICATOR_VARIANTS[ind][0] == "fib"
+        long, short = fib_bounce_signals(df, fib, ratio)
+        assert feats[long_col].tolist() == long.tolist()
+        assert feats[short_col].tolist() == short.tolist()
+        total += int(long.sum() + short.sum())
+    assert total > 0
+    assert [confluence.INDICATOR_VARIANTS[i][1] for i in confluence.FIB_LEVELS] == [
+        "0 %", "38,2 %", "50 %", "61,8 %", "81,2 %"]
+
+
 def test_strategy_validates_its_parameters():
     for kwargs in ({"indicators": []}, {"indicators": ["nope"]}, {"window": 0},
                    {"window": confluence.MAX_WINDOW + 1}, {"exit_name": "x"}, {"interval": "2h"}):

@@ -251,6 +251,16 @@ def test_options_group_the_frost_cloud(tmp_path):
     assert by_id["cloud_retest50"]["group_label"].startswith("Retesteo del Cloud de Frost")
 
 
+def test_options_group_the_fibonacci_levels(tmp_path):
+    out = make_client(make_settings(tmp_path)).get("/api/live/options").json()
+    fib = [i for i in out["indicators"] if i.get("group") == "fib"]
+    assert [i["id"] for i in fib] == ["fib0", "fib382", "fib500", "fib618", "fib812"]
+    assert {i["kind"] for i in fib} == {"evento"}
+    assert fib[3]["variant"] == "61,8 %"
+    assert fib[0]["group_label"] == (
+        "Rebote en un nivel Fibonacci de Frost (a favor de la ultima pierna)")
+
+
 def test_create_with_trading_options_and_options_list_them(tmp_path):
     client = make_client(make_settings(tmp_path))
     body = {**BODY, "margin_usdt": 30, "leverage": 5, "direction": "short",

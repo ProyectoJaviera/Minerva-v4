@@ -2666,3 +2666,15 @@ Pedido del dueño: integrar el «Cloud» de Frost. Él lo lee así: si una vela 
 - **Selector:** «Longitud del Cloud» y «Longitud del retesteo del Cloud» en `IndicatorPicker`.
 - **Script:** `scripts/v2_tradingview_check.py --cloud LONGITUD --cloud-count N`.
 - Sin cambio de comportamiento para las pruebas existentes: los indicadores nuevos solo se usan si se eligen.
+
+## v4: el Fibonacci de Frost (2026-11-14)
+
+Pedido del dueño: agregar el indicador de Fibonacci de Frost, con el nivel 0 incluido.
+
+- **Cálculo** (verificado en el código de referencia de Frost, fuera del repositorio; reimplementado): zigzag con ventana fija de 23 velas. Un máximo de zigzag es una vela cuyo máximo es el mayor de las últimas 23 (un empate cuenta) y un mínimo, el espejo. La dirección cambia con un máximo sin mínimo (o al revés). Al cambiar se agrega un pivote; si no cambia, el pivote en curso se corre si es más extremo. Los niveles usan los dos pivotes fijos anteriores al pivote en curso: `v1` (el último) y `v2` (el anterior), con `nivel(r) = v1 + (v2 - v1) · r`. Frost dibuja 38,2 / 50 / 61,8 / 81,2 % (su 81,2 %, no el 78,6 % clásico) y los objetivos 100 / 125 / 150 %; se agregó el 0 % (`v1`) a pedido del dueño. `frost_fibonacci` y `fib_bounce_signals` en `app/indicators/levels.py`, con test de causalidad.
+- **Validación:** en BTCUSDT 1D (última vela cerrada 2026-11-13) `v1` = 87378,8 (máximo del 21-sep), `v2` = 74909,5 (mínimo del 15-sep). Los siete niveles coinciden con el gráfico del dueño en TradingView con una diferencia menor que 0,05 (redondeo al tick).
+- **Evento** `fib0`, `fib382`, `fib500`, `fib618`, `fib812` (grupo `fib`): se usan los niveles de la vela anterior (los ya dibujados al abrir la vela). Largo si la última pierna fue de subida (`v1 > v2`), la vela toca el nivel con su mínimo y cierra sobre él, y desde el pivote `v1` ningún mínimo perforó `v2`. Corto en el espejo. Con el 0 % la regla es la misma: en una pierna de subida, largo si la vela pasa el máximo `v1` y cierra sobre él (en la práctica es una ruptura del último máximo).
+- **Decisión:** se usan los niveles de la vela anterior porque el zigzag de la vela actual puede cambiar en esa misma vela (un máximo nuevo agrega un pivote) y el nivel con el que se compara dejaría de ser el que se veía.
+- **Observación:** en 1D los rebotes se repiten varios días seguidos en el mismo nivel (por ejemplo, el 50 % el 22, 23 y 28 de octubre). Como evento, eso vota durante la ventana y entra una sola vez. En 1h, desde que el precio rompió el 100 % el 12-nov, ya no hay rebotes válidos hasta que se forme una pierna nueva.
+- **Script:** `scripts/v2_tradingview_check.py --fib --fib-count N`.
+- Sin cambio de comportamiento para las pruebas existentes: los indicadores nuevos solo se usan si se eligen.

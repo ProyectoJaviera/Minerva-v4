@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.indicators.levels import camarilla_levels
+from app.indicators.levels import camarilla_levels, fib_bounce_signals, frost_fibonacci
 from app.indicators.oscillators import bb_percent_b, wavetrend
 from app.indicators.structure import liquidity_zones, pivot_high, pivot_low, sfp_signals
 from app.indicators.trend_filters import cloud_retest_signals, frost_cloud, range_filter, vidya_band
@@ -60,6 +60,10 @@ INDICATORS = {
     "vidya_band": vidya_band,
     "bb_percent_b": lambda df: bb_percent_b(df["close"]),
     "wavetrend": wavetrend,
+    "frost_fibonacci": frost_fibonacci,
+    "fib_bounce": lambda df: pd.DataFrame(
+        dict(zip(("long", "short"), fib_bounce_signals(df, frost_fibonacci(df), 0.618),
+                 strict=True)), index=df.index),
     "frost_cloud": lambda df: frost_cloud(df, 36),
     "cloud_retest": lambda df: pd.DataFrame(
         dict(zip(("long", "short"), cloud_retest_signals(df, frost_cloud(df, 36)), strict=True)),

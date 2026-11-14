@@ -76,7 +76,8 @@ con una salida fija en múltiplos del ATR(14).
   `EMA_LENGTHS` (9, 21, 50, 100, 144, 200: filtros de estado `ema9` … `ema200`, con `ema` = EMA 144) y los 15
   cruces de evento `emax_<rápida>_<lenta>` (`ema_cross_signals()`, como `ta.crossover`/`ta.crossunder` al cierre),
   `CLOUD_LENGTHS` (36 y 50: estado `cloud<n>` y retesteo `cloud_retest<n>` del Cloud de Frost),
-  `INDICATOR_VARIANTS` / `INDICATOR_GROUP_LABELS` (grupos `rf`, `emax`, `cloud` y `cloud_retest`) e `indicator_options()` (la lista de las
+  `FIB_LEVELS` (rebotes `fib0` … `fib812` en los niveles Fibonacci de Frost),
+  `INDICATOR_VARIANTS` / `INDICATOR_GROUP_LABELS` (grupos `rf`, `emax`, `cloud`, `cloud_retest` y `fib`) e `indicator_options()` (la lista de las
   rutas `/api/live/options` y `/api/explorer/options`), `event_votes()`, `confluence_signals()` (con `min_agree`: al menos N votos del mismo lado y más que el contrario) y
   `ConfluenceStrategy` (precalcula las entradas como arrays; el control
   sortea la dirección con el mismo SHA-256 del preregistro).
@@ -94,7 +95,7 @@ no se pasa la serie de BTC.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/app/explorer/confluence.html`](../api/app/explorer/confluence.html)
-- **Importa (internos):** `app.candidates.common`, `app.candidates.sfp_reversal`, `app.indicators._pine`, `app.indicators.trend_filters`, `app.research.combos`, `app.research.round3`, `app.strategies.base`
+- **Importa (internos):** `app.candidates.common`, `app.candidates.sfp_reversal`, `app.indicators._pine`, `app.indicators.levels`, `app.indicators.trend_filters`, `app.research.combos`, `app.research.round3`, `app.strategies.base`
 - **Lo importan:** `app.api.routes.explorer`, `app.api.routes.live`, `app.explorer.service`, `app.live.config`, `app.live.control`, `app.live.runner`, `scripts.live_tests`, `scripts.v2_tradingview_check`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno

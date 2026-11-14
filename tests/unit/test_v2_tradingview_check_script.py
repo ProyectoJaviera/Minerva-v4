@@ -170,6 +170,19 @@ def test_cloud_lines_list_the_last_levels_and_retests():
         "  ninguno en el historial descargado")
 
 
+def test_fib_lines_print_pivots_levels_and_bounces():
+    df = _walk(600)
+    lines = check.fib_lines("BTCUSDT", df, 2, "1h")
+    assert lines[0].startswith("Fibonacci de Frost BTCUSDT 1h en la ultima vela cerrada")
+    assert lines[1].startswith("  pivote v2: ") and lines[2].startswith("  pivote v1: ")
+    assert lines[3].startswith("  ultima pierna fija: ")
+    assert [s.split(" = ")[0].strip() for s in lines[4:12]] == [
+        "0 %", "38.2 %", "50 %", "61.8 %", "81.2 %", "100 %", "125 %", "150 %"]
+    assert sum(s.startswith("Rebotes en el ") for s in lines) == 5
+    short = check.fib_lines("BTCUSDT", df.iloc[:10], 2, "1h")
+    assert short[-1] == "  todavia sin tres pivotes en el historial descargado"
+
+
 def test_bars_lines_print_the_last_candles():
     df = _walk(5)
     lines = check.bars_lines("ETHUSDT", df, 2, "4h")
