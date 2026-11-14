@@ -168,6 +168,35 @@ describe("LiveTab", () => {
     });
   });
 
+  it("elige el modo del Range Filter (Intraday, Scalping o Swing)", async () => {
+    const fetchMock = mockFetch({
+      "/api/live/options": {
+        status: 200,
+        body: {
+          ...OPTIONS,
+          indicators: [
+            { id: "rf", label: "RF Intraday", kind: "estado", group: "rf", variant: "Intraday Mode" },
+            { id: "rf_scalp", label: "RF Scalping", kind: "estado", group: "rf", variant: "Scalping Mode" },
+            { id: "rf_swing", label: "RF Swing", kind: "estado", group: "rf", variant: "Swing Mode" },
+            { id: "ema", label: "EMA 144", kind: "estado" },
+          ],
+        },
+      },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: [] } },
+      "POST /api/live/tests": { status: 200, body: { id: 8, name: "RF swing" } },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(withQueryClient(<LiveTab />));
+    fireEvent.change(await screen.findByLabelText("Nombre"), { target: { value: "RF swing" } });
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+    fireEvent.click(screen.getByLabelText("Range Filter (Frost)"));
+    fireEvent.change(screen.getByLabelText("Modo del Range Filter"), { target: { value: "rf_swing" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear prueba" }));
+    expect(await screen.findByText(/Prueba 8 creada/)).toBeInTheDocument();
+    const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST");
+    expect(JSON.parse(String((post?.[1] as RequestInit).body)).indicators).toEqual(["rf_swing"]);
+  });
+
   it("muestra el motivo si el servidor rechaza la prueba", async () => {
     vi.stubGlobal("fetch", mockFetch({
       "/api/live/options": { status: 200, body: OPTIONS },

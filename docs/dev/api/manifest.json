@@ -17,7 +17,7 @@
     "app/api/routes/control.py": "1824ae4fa79f530bda72eb29797a58813bb94bbd95b4e0895ae00a0e5e0b2a68",
     "app/api/routes/explorer.py": "8ad217eb603c8c541b140d98af9450f9a493b6060407051ebd1762e79175eb1e",
     "app/api/routes/health.py": "8d92bf117adfb17e36ba5ae2362ae4a48b53d237531ad9d869971056ab798324",
-    "app/api/routes/live.py": "e4a657310219cf69284bbe74f8449dbc0bd9fe01ba1fff291b438dd0688bf319",
+    "app/api/routes/live.py": "b0f8273133149316c70ab1a0e83d7a92abdba4ab02879764121af8da0e285747",
     "app/api/routes/llm_decisions.py": "7df77f71b733d5eb6c1ac18569c876f990b1905d8d8e021bf14426611d609d7d",
     "app/api/routes/measurement.py": "df40cbd21daf5347fee23de6e37864e22b753df4cfd65e19b2f324a29c47fec5",
     "app/api/routes/memory.py": "0fd966fcd29dd194bfed44b21d8b752a18b870d69fd54e3372dc9623ee969a27",
@@ -54,7 +54,7 @@
     "app/execution/paper_backend.py": "931a1984cf0cd868b6173e65dc65fa0b31f249e29d4f4cd500d50e1ad5b85588",
     "app/execution/pnl.py": "7ab503a17db0196488f0e65b7f80339b4d70702e6ae8f58ed553f41de1137039",
     "app/explorer/__init__.py": "4774a2d7d48ca1a04285dbf39a62c4b2ce931dd08097f8e5c9d728adfce285f8",
-    "app/explorer/confluence.py": "2ceecbf0cca82d0597eed40958e5a6d69a546061a29869cb4b99f90f2f8be759",
+    "app/explorer/confluence.py": "3aa0a6eb560e4e66c3cc7fd34726967e9723a920364f5bc5112d0d60f06fe292",
     "app/explorer/data_status.py": "dca6e6e2a71fd8f73e183712c43fcfad940c58b2b3842a26a9b7d31657ae3381",
     "app/explorer/service.py": "26387013ec5b30d91aa5a8001c3bc5d13ed698d85874f8f5d22f36c885c76cd3",
     "app/indicators/__init__.py": "9ae4bf2201986e284ff94a8cd588640b82c5e5cfb9a9803dc524a69921ab2371",
@@ -232,7 +232,7 @@
     "scripts/v2_round3.py": "3d1f6f3d5e45f92c9237160be29e6d74fad2a6007a40749ee99558e36df1bfec",
     "scripts/v2_round3_reserved.py": "91ce61afa4275fc7a5e000376a17ba0d9293a9dcc8c08111eacddaf0672a5529",
     "scripts/v2_round4.py": "5f7b8c0924d70d5562d3a740228dcd85046665a41e6f6b0c817316649280c44c",
-    "scripts/v2_tradingview_check.py": "c890267e808e55e8ff6897796ab6debc476171f1f5352498537d222a5fcfe8dc",
+    "scripts/v2_tradingview_check.py": "a6e4900c5b277ac499b0bc42a2506043aa38e1b96d754ea21ee7c415cdf30bd3",
     "scripts/verify_v1_identity.py": "ff2bc84e5fbce63ffb19b56456dc2488509864dabb0daae0e073a1765f12b989"
   },
   "generador": "scripts/build_dev_docs.py",
@@ -285,7 +285,7 @@
     "app/execution/paper_backend.html": "03283d86d1054062ccff8e1d192ecb947d640d1b6b7ee8c33941e876e2151483",
     "app/execution/pnl.html": "452dad711905f9f769b799954d5faeb1fa8401c3e06e2ab7d5fb3f0c5ee18351",
     "app/explorer.html": "420925bd4a19539e588063595b8a39a63adc588cee0f1c4566987a96a2c18d03",
-    "app/explorer/confluence.html": "3222fc59531263e585c513f10773bc46c6b41bf5301a589834998b87b499518b",
+    "app/explorer/confluence.html": "37a4a3855dc5314ac0f92e927d3b10235d53305d18d8a9629543fad9e2e3c165",
     "app/explorer/data_status.html": "73a3b14a2701347744fa808eae2e0647a9f841802448ece5a4baf2fde9b9e3ee",
     "app/explorer/service.html": "4479e3a602ce6939a917f0ae183fd7271f857ec3c960168f39793855cd32a24a",
     "app/indicators.html": "0be3591e42976b69426fed83795fcab2f03f1e7ab46a872153a1c350b3788b2a",
@@ -465,7 +465,7 @@
     "scripts/v2_round3.html": "0616e78193f9906617ec85ac6e8009dd38868bcebc2c8dd0d4dd47c2f329a273",
     "scripts/v2_round3_reserved.html": "344f75a6fab601b3f63858e3a83f700cdc429390dfa5849112885b9a9fefeb3d",
     "scripts/v2_round4.html": "35ed62594ed28500cc75cd8bc2a72199f6ab1d227818d6c2a12802b013dd5c10",
-    "scripts/v2_tradingview_check.html": "a4784c1d4dc20ea368d746d5d6349e60405fcf2beb92898251d7ac9037cfedda",
+    "scripts/v2_tradingview_check.html": "2900559f82245963a4181e4412f97f6f8f96fbbd5e6a3aa2ec6419c3b6861769",
     "scripts/verify_v1_identity.html": "d450dd4147892ce896d563bba9a3293ac16568cabe60e68e5661374275ac1f03"
   }
 }

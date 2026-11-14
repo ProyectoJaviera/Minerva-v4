@@ -873,7 +873,8 @@ export function useStudyForward() {
 
 export interface LiveOptions {
   enabled: boolean;
-  indicators: { id: string; label: string; kind: "estado" | "evento" }[];
+  // `group`/`variant`: modos de un mismo indicador (p. ej. el Range Filter en Intraday, Scalping o Swing).
+  indicators: { id: string; label: string; kind: "estado" | "evento"; group?: string; variant?: string }[];
   exits: { id: string; label: string }[];
   timeframes: string[];
   modes: string[];

@@ -229,10 +229,10 @@ queda «bajista» hasta el primer cruce real (comportamiento del original, con p
 
 - **Referencia pdoc:** [`api/app/indicators/trend_filters.html`](../api/app/indicators/trend_filters.html)
 - **Importa (internos):** `app.indicators._pine`
-- **Lo importan:** `app.candidates.range_filter_flip`, `app.research.combos`, `scripts.v2_tradingview_check`
+- **Lo importan:** `app.candidates.range_filter_flip`, `app.explorer.confluence`, `app.research.combos`, `scripts.v2_tradingview_check`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_indicators_v2_causality.py`, `tests/unit/test_indicators_v2_trend_oscillators.py`, `tests/unit/test_v2_tradingview_check_script.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_explorer.py`, `tests/unit/test_indicators_v2_causality.py`, `tests/unit/test_indicators_v2_trend_oscillators.py`, `tests/unit/test_v2_tradingview_check_script.py`
 <!-- /hechos:app/indicators/trend_filters.py -->

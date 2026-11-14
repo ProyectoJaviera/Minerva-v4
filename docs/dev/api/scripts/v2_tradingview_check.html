@@ -109,8 +109,9 @@ el agregado coincide con la vela diaria que usaria TradingView.</li>
 <li>Las ultimas 10 senales SFP (pivote 5/1) en 1h (o 4h con <code>--interval 4h</code>), con la hora UTC de
 la vela de barrida (donde el original pone la etiqueta «SFP») y de la vela de confirmacion (la
 flecha, que es la senal), mas el ATR(14) de la vela de senal (el del colchon del SL).</li>
-<li>Con <code>--rf-count N</code>, los ultimos N giros del Range Filter de Frost (modo Intraday; el ▲/▼ de
-Frost), con la EMA 144 y el ATR(14) de esa vela, que es lo que usa <code>range_filter_flip_ema144</code>.</li>
+<li>Con <code>--rf-count N</code>, los ultimos N giros del Range Filter de Frost (el ▲/▼ de los «AI Tags»
+de Frost), con la EMA 144 y el ATR(14) de esa vela, que es lo que usa <code>range_filter_flip_ema144</code>.
+El modo por defecto es Intraday; <code>--rf-mode scalping</code> o <code>--rf-mode swing</code> usan los otros dos.</li>
 </ol>
 
 <p>Con <code>--end AAAA-MM-DD</code> todo se calcula como si «ahora» fuera esa fecha a las 00:00 UTC, para
@@ -125,6 +126,7 @@ Bitunix y poner el grafico en UTC: con otro exchange los precios difieren un poc
 <pre><code>python scripts/v2_tradingview_check.py
 python scripts/v2_tradingview_check.py --symbols BTCUSDT --days 2026-11-06 --sfp-count 5
 python scripts/v2_tradingview_check.py --interval 4h --skip-camarilla --rf-count 10
+python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --rf-mode swing
 python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-count 15
 </code></pre>
 </div>
@@ -443,13 +445,13 @@ python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-c
                     <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">rf_lines</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">bars</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>,</span><span class="param">	<span class="n">count</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">interval</span><span class="p">:</span> <span class="nb">str</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>:</span></span>
+        <span class="name">rf_lines</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">bars</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>,</span><span class="param">	<span class="n">count</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">interval</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'intraday'</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>:</span></span>
 
         
     </div>
     <a class="headerlink" href="#rf_lines"></a>
     
-            <div class="docstring"><p>Lineas con los ultimos <code>count</code> giros del Range Filter (modo Intraday), EMA 144 y ATR(14).</p>
+            <div class="docstring"><p>Lineas con los ultimos <code>count</code> giros del Range Filter, EMA 144 y ATR(14).</p>
 
 <p>Usa las mismas funciones que <code>range_filter_flip_ema144</code> (<code>range_filter</code>, <code>pine_ema</code>,
 <code>pine_atr</code>). Un giro solo es senal del candidato si el cierre esta del lado de la EMA.</p>
@@ -461,6 +463,7 @@ python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-c
 <li><strong>bars:</strong>  velas con <code>open_time</code>, <code>high</code>, <code>low</code> y <code>close</code>.</li>
 <li><strong>count:</strong>  cuantos giros mostrar (los mas recientes).</li>
 <li><strong>interval:</strong>  etiqueta de la temporalidad, solo para el texto.</li>
+<li><strong>mode:</strong>  modo de Frost (<code>intraday</code>, <code>scalping</code> o <code>swing</code>; ver <code>RANGE_FILTER_SENSITIVITY</code>).</li>
 </ul>
 
 <h6 id="returns">Returns:</h6>
@@ -476,7 +479,7 @@ python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-c
                     <div class="attr function">
             
         <span class="def">async def</span>
-        <span class="name">build_report</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">client</span><span class="p">:</span> <span class="n">Any</span>,</span><span class="param">	<span class="n">symbols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>,</span><span class="param">	<span class="n">days</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">]</span>,</span><span class="param">	<span class="n">sfp_count</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">history_bars</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">now_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">interval</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'1h'</span>,</span><span class="param">	<span class="n">rf_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">bar_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>:</span></span>
+        <span class="name">build_report</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">client</span><span class="p">:</span> <span class="n">Any</span>,</span><span class="param">	<span class="n">symbols</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>,</span><span class="param">	<span class="n">days</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">]</span>,</span><span class="param">	<span class="n">sfp_count</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">history_bars</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">now_ms</span><span class="p">:</span> <span class="nb">int</span>,</span><span class="param">	<span class="n">interval</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'1h'</span>,</span><span class="param">	<span class="n">rf_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">bar_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>,</span><span class="param">	<span class="n">rf_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'intraday'</span></span><span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>:</span></span>
 
         
     </div>
@@ -496,6 +499,7 @@ python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-c
 <li><strong>interval:</strong>  temporalidad de SFP y Range Filter (<code>1h</code> o <code>4h</code>).</li>
 <li><strong>rf_count:</strong>  giros del Range Filter a mostrar (0 = ninguno).</li>
 <li><strong>bar_count:</strong>  velas OHLC a listar (0 = ninguna).</li>
+<li><strong>rf_mode:</strong>  modo del Range Filter (<code>intraday</code>, <code>scalping</code> o <code>swing</code>).</li>
 </ul>
 
 <h6 id="returns">Returns:</h6>

@@ -90,7 +90,7 @@ no se pasa la serie de BTC.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/app/explorer/confluence.html`](../api/app/explorer/confluence.html)
-- **Importa (internos):** `app.candidates.common`, `app.candidates.sfp_reversal`, `app.indicators._pine`, `app.research.combos`, `app.research.round3`, `app.strategies.base`
+- **Importa (internos):** `app.candidates.common`, `app.candidates.sfp_reversal`, `app.indicators._pine`, `app.indicators.trend_filters`, `app.research.combos`, `app.research.round3`, `app.strategies.base`
 - **Lo importan:** `app.api.routes.explorer`, `app.api.routes.live`, `app.explorer.service`, `app.live.config`, `app.live.control`, `app.live.runner`, `scripts.live_tests`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno

@@ -2,7 +2,8 @@
 
 Todos los indicadores se tratan igual: cada uno **vota** alcista o bajista en cada vela.
 
-- **De estado** (votan siempre): EMA 144, estado del Range Filter, tendencia de la banda VIDYA,
+- **De estado** (votan siempre): EMA 144, estado del Range Filter (en sus tres modos de Frost:
+  Intraday, Scalping y Swing), tendencia de la banda VIDYA,
   WaveTrend (`wt1` sobre / bajo `wt2`), funding contra su mediana de 30 dias, regimen de BTC (cierre
   sobre / bajo su EMA 200) y fuerza relativa contra BTC (retorno de 180 velas).
 - **De evento** (votan durante `window` velas desde su senal, incluida la de la senal): SFP,
@@ -34,6 +35,7 @@ import pandas as pd
 from app.candidates.common import BAR_INDEX_COLUMN
 from app.candidates.sfp_reversal import random_direction
 from app.indicators._pine import pine_ema
+from app.indicators.trend_filters import RANGE_FILTER_SENSITIVITY, range_filter
 from app.research.combos import SEED, compute_features
 from app.research.round3 import BTC_EMA, FUNDING_WINDOW_DAYS, RS_BARS, fvg_signals
 from app.strategies.base import BaseStrategy, Signal
@@ -52,7 +54,12 @@ INDICATORS: dict[str, tuple[str, str, str, str]] = {
                     "long_bb_reversal", "short_bb_reversal"),
     "wt_cross": ("WaveTrend: cruce en zona extrema (+-72)", "evento",
                  "long_wt_cross", "short_wt_cross"),
-    "rf": ("Range Filter (Frost): estado alcista / bajista", "estado", "bull_rf", "bear_rf"),
+    "rf": ("Range Filter (Frost, Intraday Mode): estado alcista / bajista", "estado",
+           "bull_rf", "bear_rf"),
+    "rf_scalp": ("Range Filter (Frost, Scalping Mode): estado alcista / bajista", "estado",
+                 "bull_rf_scalp", "bear_rf_scalp"),
+    "rf_swing": ("Range Filter (Frost, Swing Mode): estado alcista / bajista", "estado",
+                 "bull_rf_swing", "bear_rf_swing"),
     "vidya": ("Banda VIDYA (F. Trail de Frost): tendencia", "estado", "bull_vidya", "bear_vidya"),
     "wt": ("WaveTrend: wt1 sobre / bajo wt2", "estado", "bull_wt", "bear_wt"),
     "ema": ("Cierre sobre / bajo la EMA 144", "estado", "bull_ema", "bear_ema"),
@@ -61,6 +68,16 @@ INDICATORS: dict[str, tuple[str, str, str, str]] = {
     "btc": ("Regimen de BTC: cierre sobre / bajo su EMA 200", "estado", "bull_btc", "bear_btc"),
     "rs": ("Fuerza relativa contra BTC (retorno de 180 velas)", "estado", "bull_rs", "bear_rs"),
 }
+
+# Modos del Range Filter, como el selector "AI Tags" de Frost: id -> (grupo, nombre del modo).
+# "rf" es el Intraday Mode (sensibilidad 3.5, el de siempre); los otros solo cambian el
+# multiplicador del rango lento (Scalping 1.3, Swing 4.2; ver `RANGE_FILTER_SENSITIVITY`).
+INDICATOR_VARIANTS: dict[str, tuple[str, str]] = {
+    "rf": ("rf", "Intraday Mode"),
+    "rf_scalp": ("rf", "Scalping Mode"),
+    "rf_swing": ("rf", "Swing Mode"),
+}
+RF_MODE_COLUMNS = {"rf_scalp": "scalping", "rf_swing": "swing"}
 
 # id -> (etiqueta, SL en ATR(14), TP en multiplos del SL o None, trailing en ATR o None)
 EXITS: dict[str, tuple[str, float, float | None, float | None]] = {
@@ -181,6 +198,12 @@ def compute_votes(df: pd.DataFrame, interval: str, btc: pd.DataFrame | None = No
         out["open_time"] = df["open_time"].to_numpy(dtype="int64")
     else:
         out = compute_features(df, interval).copy()
+    close_all = out["close"].astype(float)
+    for ind, mode in RF_MODE_COLUMNS.items():
+        rf = range_filter(close_all, slow_mult=RANGE_FILTER_SENSITIVITY[mode])
+        _, _, bull_col, bear_col = INDICATORS[ind]
+        out[bull_col] = (rf["rf_state"] == 1).to_numpy()
+        out[bear_col] = (rf["rf_state"] == -1).to_numpy()
     atr = out["x_atr14"]
     fvg = fvg_signals(out, atr)
     out["long_fvg"] = fvg["fvg_long"].to_numpy()

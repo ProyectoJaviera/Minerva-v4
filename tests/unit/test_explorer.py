@@ -117,6 +117,32 @@ def test_a_single_state_indicator_enters_on_its_flips_like_the_range_filter_trig
     assert short.tolist() == feats["short_rf_flip"].astype(bool).tolist()
 
 
+def test_range_filter_modes_vote_with_frost_sensitivity():
+    from app.indicators.trend_filters import RANGE_FILTER_SENSITIVITY, range_filter
+
+    rng = random.Random(5)
+    price, rows = 100.0, []
+    for i in range(1500):
+        c = price * (1 + rng.uniform(-0.02, 0.02))
+        rows.append({"open_time": START_MS + i * 3_600_000, "open": price,
+                     "high": max(price, c) * 1.003, "low": min(price, c) * 0.997, "close": c})
+        price = c
+    df = pd.DataFrame(rows)
+    feats = confluence.compute_votes(df, "1h")
+    flips = {}
+    for ind, mode in (("rf", "intraday"), ("rf_scalp", "scalping"), ("rf_swing", "swing")):
+        rf = range_filter(df["close"], slow_mult=RANGE_FILTER_SENSITIVITY[mode])
+        _, kind, bull_col, bear_col = confluence.INDICATORS[ind]
+        assert kind == "estado"
+        assert feats[bull_col].tolist() == (rf["rf_state"] == 1).tolist()
+        assert feats[bear_col].tolist() == (rf["rf_state"] == -1).tolist()
+        assert confluence.INDICATOR_VARIANTS[ind][0] == "rf"
+        long, short = confluence.confluence_signals(feats, [ind], 1)
+        flips[ind] = int(long.sum() + short.sum())
+    # Scalping (1.3) gira mas seguido que Intraday (3.5), y este mas que Swing (4.2).
+    assert flips["rf_scalp"] > flips["rf"] > flips["rf_swing"] > 0
+
+
 def test_strategy_validates_its_parameters():
     for kwargs in ({"indicators": []}, {"indicators": ["nope"]}, {"window": 0},
                    {"window": confluence.MAX_WINDOW + 1}, {"exit_name": "x"}, {"interval": "2h"}):

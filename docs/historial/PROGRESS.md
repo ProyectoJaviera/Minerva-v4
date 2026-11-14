@@ -2619,3 +2619,13 @@ Pedido del dueño: entender uno por uno los 14 indicadores y filtros de la confl
 - **Hallazgo:** el Liquidity Grab de Frost coincidió en 2 de 5 señales. En su código Pine, `ta.lowest`/`ta.highest` se evalúan dentro de un `if`, así que miran las últimas 30 evaluaciones y no las últimas 30 velas: Frost marca grabs que no cumplen su propia regla. Minerva aplica la regla como está pensada (sin cambio de comportamiento).
 - Los estados sin dibujo en TradingView (WaveTrend wt1/wt2, EMA 144, funding, régimen de BTC y fuerza relativa) se ilustraron con gráficos propios hechos con los datos públicos de Bitunix y el cálculo de Minerva.
 - Sin cambios de código.
+
+## v4: Range Filter en sus tres modos de Frost (2026-11-14)
+
+Pedido del dueño: poder usar el Range Filter en los tres modos del selector «AI Tags» de Frost, no solo en el Intraday.
+
+- **Indicadores nuevos en la confluencia:** `rf` sigue siendo el Intraday Mode (multiplicador 3.5, sin cambios); se agregan `rf_scalp` (Scalping Mode, 1.3) y `rf_swing` (Swing Mode, 4.2). Solo cambia el multiplicador del rango lento (`RANGE_FILTER_SENSITIVITY` en `app/indicators/trend_filters.py`).
+- **En vivo:** selector de modo del Range Filter en el formulario de la prueba (`frontend/src/LiveTab.tsx`, `app/api/routes/live.py`).
+- **Script de validación:** `scripts/v2_tradingview_check.py` acepta `--rf-mode intraday|scalping|swing`.
+- **Validación:** en BTCUSDT 1h los 36 giros (12 por modo) coinciden con las flechas de Frost en TradingView.
+- Sin cambio de comportamiento para las pruebas existentes: los modos nuevos solo se usan si se eligen.

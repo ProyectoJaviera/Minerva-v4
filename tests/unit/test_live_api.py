@@ -219,6 +219,14 @@ async def test_the_service_opens_and_closes_the_websocket_with_the_symbols(tmp_p
     await svc.aclose()
 
 
+def test_options_group_the_range_filter_modes(tmp_path):
+    out = make_client(make_settings(tmp_path)).get("/api/live/options").json()
+    by_id = {i["id"]: i for i in out["indicators"]}
+    assert [(by_id[k]["group"], by_id[k]["variant"]) for k in ("rf", "rf_scalp", "rf_swing")] == [
+        ("rf", "Intraday Mode"), ("rf", "Scalping Mode"), ("rf", "Swing Mode")]
+    assert "group" not in by_id["ema"]
+
+
 def test_create_with_trading_options_and_options_list_them(tmp_path):
     client = make_client(make_settings(tmp_path))
     body = {**BODY, "margin_usdt": 30, "leverage": 5, "direction": "short",

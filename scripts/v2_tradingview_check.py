@@ -10,8 +10,9 @@ compara contra el grafico de TradingView, para BTCUSDT y ETHUSDT:
 2. Las ultimas 10 senales SFP (pivote 5/1) en 1h (o 4h con `--interval 4h`), con la hora UTC de
    la vela de barrida (donde el original pone la etiqueta «SFP») y de la vela de confirmacion (la
    flecha, que es la senal), mas el ATR(14) de la vela de senal (el del colchon del SL).
-3. Con `--rf-count N`, los ultimos N giros del Range Filter de Frost (modo Intraday; el ▲/▼ de
-   Frost), con la EMA 144 y el ATR(14) de esa vela, que es lo que usa `range_filter_flip_ema144`.
+3. Con `--rf-count N`, los ultimos N giros del Range Filter de Frost (el ▲/▼ de los «AI Tags»
+   de Frost), con la EMA 144 y el ATR(14) de esa vela, que es lo que usa `range_filter_flip_ema144`.
+   El modo por defecto es Intraday; `--rf-mode scalping` o `--rf-mode swing` usan los otros dos.
 
 Con `--end AAAA-MM-DD` todo se calcula como si «ahora» fuera esa fecha a las 00:00 UTC, para
 comparar semanas pasadas; con `--skip-camarilla` se omiten los niveles.
@@ -25,6 +26,7 @@ Es de solo lectura: no lee `.env`, no abre ninguna base y no escribe nada.
     python scripts/v2_tradingview_check.py
     python scripts/v2_tradingview_check.py --symbols BTCUSDT --days 2026-11-06 --sfp-count 5
     python scripts/v2_tradingview_check.py --interval 4h --skip-camarilla --rf-count 10
+    python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --rf-mode swing
     python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-count 15
 """
 
@@ -45,7 +47,7 @@ from app.config import Settings  # noqa: E402
 from app.indicators._pine import pine_atr, pine_ema  # noqa: E402
 from app.indicators.levels import DAY_MS, camarilla_levels  # noqa: E402
 from app.indicators.structure import sfp_signals  # noqa: E402
-from app.indicators.trend_filters import range_filter  # noqa: E402
+from app.indicators.trend_filters import RANGE_FILTER_SENSITIVITY, range_filter  # noqa: E402
 from app.market.bitunix_rest import BitunixRestClient  # noqa: E402
 
 HOUR_MS = 3_600_000
@@ -258,8 +260,9 @@ def sfp_lines(symbol: str, hourly: pd.DataFrame, count: int, interval: str = "1h
     return lines
 
 
-def rf_lines(symbol: str, bars: pd.DataFrame, count: int, interval: str) -> list[str]:
-    """Lineas con los ultimos `count` giros del Range Filter (modo Intraday), EMA 144 y ATR(14).
+def rf_lines(symbol: str, bars: pd.DataFrame, count: int, interval: str,
+             mode: str = "intraday") -> list[str]:
+    """Lineas con los ultimos `count` giros del Range Filter, EMA 144 y ATR(14).
 
     Usa las mismas funciones que `range_filter_flip_ema144` (`range_filter`, `pine_ema`,
     `pine_atr`). Un giro solo es senal del candidato si el cierre esta del lado de la EMA.
@@ -269,15 +272,17 @@ def rf_lines(symbol: str, bars: pd.DataFrame, count: int, interval: str) -> list
         bars: velas con `open_time`, `high`, `low` y `close`.
         count: cuantos giros mostrar (los mas recientes).
         interval: etiqueta de la temporalidad, solo para el texto.
+        mode: modo de Frost (`intraday`, `scalping` o `swing`; ver `RANGE_FILTER_SENSITIVITY`).
 
     Returns:
         Las lineas de texto.
     """
-    rf = range_filter(bars["close"])
+    rf = range_filter(bars["close"], slow_mult=RANGE_FILTER_SENSITIVITY[mode])
     ema = pine_ema(bars["close"], 144)
     atr = pine_atr(bars, 14)
     flips = [(i, bool(rf.at[i, "rf_buy"])) for i in rf.index[rf["rf_buy"] | rf["rf_sell"]]]
-    lines = [f"Range Filter {symbol} {interval}: ultimos {count} giros (hora UTC de apertura)"]
+    lines = [f"Range Filter {symbol} {interval} modo {mode}: ultimos {count} giros "
+             "(hora UTC de apertura)"]
     if not flips:
         lines.append("  ninguno en el historial descargado")
     for i, buy in flips[-count:]:
@@ -294,7 +299,8 @@ def rf_lines(symbol: str, bars: pd.DataFrame, count: int, interval: str) -> list
 
 async def build_report(client: Any, symbols: list[str], days: list[date], sfp_count: int,
                        history_bars: int, now_ms: int, interval: str = "1h",
-                       rf_count: int = 0, bar_count: int = 0) -> list[str]:
+                       rf_count: int = 0, bar_count: int = 0,
+                       rf_mode: str = "intraday") -> list[str]:
     """Descarga las velas y arma el informe completo.
 
     Args:
@@ -307,6 +313,7 @@ async def build_report(client: Any, symbols: list[str], days: list[date], sfp_co
         interval: temporalidad de SFP y Range Filter (`1h` o `4h`).
         rf_count: giros del Range Filter a mostrar (0 = ninguno).
         bar_count: velas OHLC a listar (0 = ninguna).
+        rf_mode: modo del Range Filter (`intraday`, `scalping` o `swing`).
 
     Returns:
         Las lineas del informe.
@@ -333,7 +340,7 @@ async def build_report(client: Any, symbols: list[str], days: list[date], sfp_co
         if sfp_count:
             lines += sfp_lines(symbol, bars, sfp_count, interval)
         if rf_count:
-            lines += rf_lines(symbol, bars, rf_count, interval)
+            lines += rf_lines(symbol, bars, rf_count, interval, rf_mode)
         lines.append("")
     return lines
 
@@ -354,6 +361,8 @@ def main() -> None:
                         help="temporalidad de SFP y Range Filter")
     parser.add_argument("--rf-count", type=int, default=0,
                         help="giros del Range Filter a mostrar (0 = ninguno)")
+    parser.add_argument("--rf-mode", choices=sorted(RANGE_FILTER_SENSITIVITY),
+                        default="intraday", help="modo del Range Filter de Frost")
     parser.add_argument("--bars", type=int, default=0,
                         help="velas OHLC a listar antes del corte (0 = ninguna)")
     parser.add_argument("--end", help="corte AAAA-MM-DD (00:00 UTC) para mirar semanas pasadas")
@@ -371,7 +380,7 @@ def main() -> None:
         try:
             return await build_report(client, args.symbols, days, args.sfp_count,
                                       args.history_bars, now_ms, args.interval, args.rf_count,
-                                      args.bars)
+                                      args.bars, args.rf_mode)
         finally:
             await client.aclose()
 

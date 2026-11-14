@@ -32,6 +32,12 @@
                     <a class="variable" href="#INDICATORS">INDICATORS</a>
             </li>
             <li>
+                    <a class="variable" href="#INDICATOR_VARIANTS">INDICATOR_VARIANTS</a>
+            </li>
+            <li>
+                    <a class="variable" href="#RF_MODE_COLUMNS">RF_MODE_COLUMNS</a>
+            </li>
+            <li>
                     <a class="variable" href="#EXITS">EXITS</a>
             </li>
             <li>
@@ -161,7 +167,8 @@
 <p>Todos los indicadores se tratan igual: cada uno <strong>vota</strong> alcista o bajista en cada vela.</p>
 
 <ul>
-<li><strong>De estado</strong> (votan siempre): EMA 144, estado del Range Filter, tendencia de la banda VIDYA,
+<li><strong>De estado</strong> (votan siempre): EMA 144, estado del Range Filter (en sus tres modos de Frost:
+Intraday, Scalping y Swing), tendencia de la banda VIDYA,
 WaveTrend (<code>wt1</code> sobre / bajo <code>wt2</code>), funding contra su mediana de 30 dias, regimen de BTC (cierre
 sobre / bajo su EMA 200) y fuerza relativa contra BTC (retorno de 180 velas).</li>
 <li><strong>De evento</strong> (votan durante <code>window</code> velas desde su senal, incluida la de la senal): SFP,
@@ -191,11 +198,36 @@ para cualquier marco (15m a 1w). Todo es causal: la vela <code>i</code> usa solo
                     <div class="attr variable">
             <span class="name">INDICATORS</span><span class="annotation">: dict[str, tuple[str, str, str, str]]</span>        =
 <input id="INDICATORS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="INDICATORS-view-value"></label><span class="default_value">{&#39;sfp&#39;: (&#39;SFP del HeatMap (barrida de swing con cierre de vuelta)&#39;, &#39;evento&#39;, &#39;long_sfp&#39;, &#39;short_sfp&#39;), &#39;camarilla&#39;: (&#39;Camarilla: rechazo de S3 (largo) o R3 (corto)&#39;, &#39;evento&#39;, &#39;long_camarilla&#39;, &#39;short_camarilla&#39;), &#39;fvg&#39;: (&#39;FVG: retesteo de un Fair Value Gap de 3 velas&#39;, &#39;evento&#39;, &#39;long_fvg&#39;, &#39;short_fvg&#39;), &#39;zone_reject&#39;: (&#39;Rechazo de una zona de liquidez&#39;, &#39;evento&#39;, &#39;long_zone_reject&#39;, &#39;short_zone_reject&#39;), &#39;grab&#39;: (&#39;Liquidity Grab de Frost (agotamiento)&#39;, &#39;evento&#39;, &#39;long_grab&#39;, &#39;short_grab&#39;), &#39;bb_reversal&#39;: (&#39;BB%B: sale de sobreventa (largo) o sobrecompra (corto)&#39;, &#39;evento&#39;, &#39;long_bb_reversal&#39;, &#39;short_bb_reversal&#39;), &#39;wt_cross&#39;: (&#39;WaveTrend: cruce en zona extrema (+-72)&#39;, &#39;evento&#39;, &#39;long_wt_cross&#39;, &#39;short_wt_cross&#39;), &#39;rf&#39;: (&#39;Range Filter (Frost): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf&#39;, &#39;bear_rf&#39;), &#39;vidya&#39;: (&#39;Banda VIDYA (F. Trail de Frost): tendencia&#39;, &#39;estado&#39;, &#39;bull_vidya&#39;, &#39;bear_vidya&#39;), &#39;wt&#39;: (&#39;WaveTrend: wt1 sobre / bajo wt2&#39;, &#39;estado&#39;, &#39;bull_wt&#39;, &#39;bear_wt&#39;), &#39;ema&#39;: (&#39;Cierre sobre / bajo la EMA 144&#39;, &#39;estado&#39;, &#39;bull_ema&#39;, &#39;bear_ema&#39;), &#39;fund&#39;: (&#39;Funding bajo / sobre su mediana de 30 dias (en contra del lado saturado)&#39;, &#39;estado&#39;, &#39;bull_fund&#39;, &#39;bear_fund&#39;), &#39;btc&#39;: (&#39;Regimen de BTC: cierre sobre / bajo su EMA 200&#39;, &#39;estado&#39;, &#39;bull_btc&#39;, &#39;bear_btc&#39;), &#39;rs&#39;: (&#39;Fuerza relativa contra BTC (retorno de 180 velas)&#39;, &#39;estado&#39;, &#39;bull_rs&#39;, &#39;bear_rs&#39;)}</span>
+            <label class="view-value-button pdoc-button" for="INDICATORS-view-value"></label><span class="default_value">{&#39;sfp&#39;: (&#39;SFP del HeatMap (barrida de swing con cierre de vuelta)&#39;, &#39;evento&#39;, &#39;long_sfp&#39;, &#39;short_sfp&#39;), &#39;camarilla&#39;: (&#39;Camarilla: rechazo de S3 (largo) o R3 (corto)&#39;, &#39;evento&#39;, &#39;long_camarilla&#39;, &#39;short_camarilla&#39;), &#39;fvg&#39;: (&#39;FVG: retesteo de un Fair Value Gap de 3 velas&#39;, &#39;evento&#39;, &#39;long_fvg&#39;, &#39;short_fvg&#39;), &#39;zone_reject&#39;: (&#39;Rechazo de una zona de liquidez&#39;, &#39;evento&#39;, &#39;long_zone_reject&#39;, &#39;short_zone_reject&#39;), &#39;grab&#39;: (&#39;Liquidity Grab de Frost (agotamiento)&#39;, &#39;evento&#39;, &#39;long_grab&#39;, &#39;short_grab&#39;), &#39;bb_reversal&#39;: (&#39;BB%B: sale de sobreventa (largo) o sobrecompra (corto)&#39;, &#39;evento&#39;, &#39;long_bb_reversal&#39;, &#39;short_bb_reversal&#39;), &#39;wt_cross&#39;: (&#39;WaveTrend: cruce en zona extrema (+-72)&#39;, &#39;evento&#39;, &#39;long_wt_cross&#39;, &#39;short_wt_cross&#39;), &#39;rf&#39;: (&#39;Range Filter (Frost, Intraday Mode): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf&#39;, &#39;bear_rf&#39;), &#39;rf_scalp&#39;: (&#39;Range Filter (Frost, Scalping Mode): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf_scalp&#39;, &#39;bear_rf_scalp&#39;), &#39;rf_swing&#39;: (&#39;Range Filter (Frost, Swing Mode): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf_swing&#39;, &#39;bear_rf_swing&#39;), &#39;vidya&#39;: (&#39;Banda VIDYA (F. Trail de Frost): tendencia&#39;, &#39;estado&#39;, &#39;bull_vidya&#39;, &#39;bear_vidya&#39;), &#39;wt&#39;: (&#39;WaveTrend: wt1 sobre / bajo wt2&#39;, &#39;estado&#39;, &#39;bull_wt&#39;, &#39;bear_wt&#39;), &#39;ema&#39;: (&#39;Cierre sobre / bajo la EMA 144&#39;, &#39;estado&#39;, &#39;bull_ema&#39;, &#39;bear_ema&#39;), &#39;fund&#39;: (&#39;Funding bajo / sobre su mediana de 30 dias (en contra del lado saturado)&#39;, &#39;estado&#39;, &#39;bull_fund&#39;, &#39;bear_fund&#39;), &#39;btc&#39;: (&#39;Regimen de BTC: cierre sobre / bajo su EMA 200&#39;, &#39;estado&#39;, &#39;bull_btc&#39;, &#39;bear_btc&#39;), &#39;rs&#39;: (&#39;Fuerza relativa contra BTC (retorno de 180 velas)&#39;, &#39;estado&#39;, &#39;bull_rs&#39;, &#39;bear_rs&#39;)}</span>
 
         
     </div>
     <a class="headerlink" href="#INDICATORS"></a>
+    
+    
+
+                </section>
+                <section id="INDICATOR_VARIANTS">
+                    <div class="attr variable">
+            <span class="name">INDICATOR_VARIANTS</span><span class="annotation">: dict[str, tuple[str, str]]</span>        =
+<input id="INDICATOR_VARIANTS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+            <label class="view-value-button pdoc-button" for="INDICATOR_VARIANTS-view-value"></label><span class="default_value">{&#39;rf&#39;: (&#39;rf&#39;, &#39;Intraday Mode&#39;), &#39;rf_scalp&#39;: (&#39;rf&#39;, &#39;Scalping Mode&#39;), &#39;rf_swing&#39;: (&#39;rf&#39;, &#39;Swing Mode&#39;)}</span>
+
+        
+    </div>
+    <a class="headerlink" href="#INDICATOR_VARIANTS"></a>
+    
+    
+
+                </section>
+                <section id="RF_MODE_COLUMNS">
+                    <div class="attr variable">
+            <span class="name">RF_MODE_COLUMNS</span>        =
+<span class="default_value">{&#39;rf_scalp&#39;: &#39;scalping&#39;, &#39;rf_swing&#39;: &#39;swing&#39;}</span>
+
+        
+    </div>
+    <a class="headerlink" href="#RF_MODE_COLUMNS"></a>
     
     
 

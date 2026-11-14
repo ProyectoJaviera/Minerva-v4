@@ -7,6 +7,13 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v4: los tres modos del Range Filter — 2026-11-14
+
+- El Range Filter de Frost se puede usar en sus tres modos de «AI Tags»: Intraday (`rf`, sensibilidad
+  3,5, el de siempre), Scalping (`rf_scalp`, 1,3) y Swing (`rf_swing`, 4,2). En «En vivo» es una sola
+  casilla con un selector de modo; `scripts/v2_tradingview_check.py --rf-mode` lista los giros de cada
+  modo para compararlos con TradingView.
+
 ## Minerva v4: el gemelo de control al azar — 2026-11-12
 
 - Nace la v4 a partir de la v3, con nombres propios (`minerva-v4`, puerto 8003, tareas `MinervaV4*`, archivos
