@@ -32,10 +32,28 @@
                     <a class="variable" href="#INDICATORS">INDICATORS</a>
             </li>
             <li>
+                    <a class="variable" href="#EMA_LENGTHS">EMA_LENGTHS</a>
+            </li>
+            <li>
+                    <a class="variable" href="#EMA_STATE_IDS">EMA_STATE_IDS</a>
+            </li>
+            <li>
+                    <a class="variable" href="#EMA_CROSS_PAIRS">EMA_CROSS_PAIRS</a>
+            </li>
+            <li>
                     <a class="variable" href="#INDICATOR_VARIANTS">INDICATOR_VARIANTS</a>
             </li>
             <li>
+                    <a class="variable" href="#INDICATOR_GROUP_LABELS">INDICATOR_GROUP_LABELS</a>
+            </li>
+            <li>
                     <a class="variable" href="#RF_MODE_COLUMNS">RF_MODE_COLUMNS</a>
+            </li>
+            <li>
+                    <a class="function" href="#indicator_options">indicator_options</a>
+            </li>
+            <li>
+                    <a class="function" href="#ema_cross_signals">ema_cross_signals</a>
             </li>
             <li>
                     <a class="variable" href="#EXITS">EXITS</a>
@@ -167,14 +185,16 @@
 <p>Todos los indicadores se tratan igual: cada uno <strong>vota</strong> alcista o bajista en cada vela.</p>
 
 <ul>
-<li><strong>De estado</strong> (votan siempre): EMA 144, estado del Range Filter (en sus tres modos de Frost:
+<li><strong>De estado</strong> (votan siempre): cierre sobre / bajo una EMA (9, 21, 50, 100, 144 o 200), estado
+del Range Filter (en sus tres modos de Frost:
 Intraday, Scalping y Swing), tendencia de la banda VIDYA,
 WaveTrend (<code>wt1</code> sobre / bajo <code>wt2</code>), funding contra su mediana de 30 dias, regimen de BTC (cierre
 sobre / bajo su EMA 200) y fuerza relativa contra BTC (retorno de 180 velas).</li>
 <li><strong>De evento</strong> (votan durante <code>window</code> velas desde su senal, incluida la de la senal): SFP,
 rechazo de Camarilla S3/R3, reversion del BB%B, cruce de WaveTrend en zona extrema, rechazo de
-zona de liquidez, Liquidity Grab y FVG. Si en la ventana hubo senales de los dos lados, vale la
-mas reciente.</li>
+zona de liquidez, Liquidity Grab, FVG y cruce de dos EMAs (largo cuando la rapida cruza hacia
+arriba a la lenta, corto hacia abajo; como <code>ta.crossover</code>/<code>ta.crossunder</code>). Si en la ventana
+hubo senales de los dos lados, vale la mas reciente.</li>
 </ul>
 
 <p><strong>Entrada:</strong> en la vela en que <strong>todos</strong> los indicadores elegidos coinciden (y en la anterior no
@@ -198,7 +218,7 @@ para cualquier marco (15m a 1w). Todo es causal: la vela <code>i</code> usa solo
                     <div class="attr variable">
             <span class="name">INDICATORS</span><span class="annotation">: dict[str, tuple[str, str, str, str]]</span>        =
 <input id="INDICATORS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="INDICATORS-view-value"></label><span class="default_value">{&#39;sfp&#39;: (&#39;SFP del HeatMap (barrida de swing con cierre de vuelta)&#39;, &#39;evento&#39;, &#39;long_sfp&#39;, &#39;short_sfp&#39;), &#39;camarilla&#39;: (&#39;Camarilla: rechazo de S3 (largo) o R3 (corto)&#39;, &#39;evento&#39;, &#39;long_camarilla&#39;, &#39;short_camarilla&#39;), &#39;fvg&#39;: (&#39;FVG: retesteo de un Fair Value Gap de 3 velas&#39;, &#39;evento&#39;, &#39;long_fvg&#39;, &#39;short_fvg&#39;), &#39;zone_reject&#39;: (&#39;Rechazo de una zona de liquidez&#39;, &#39;evento&#39;, &#39;long_zone_reject&#39;, &#39;short_zone_reject&#39;), &#39;grab&#39;: (&#39;Liquidity Grab de Frost (agotamiento)&#39;, &#39;evento&#39;, &#39;long_grab&#39;, &#39;short_grab&#39;), &#39;bb_reversal&#39;: (&#39;BB%B: sale de sobreventa (largo) o sobrecompra (corto)&#39;, &#39;evento&#39;, &#39;long_bb_reversal&#39;, &#39;short_bb_reversal&#39;), &#39;wt_cross&#39;: (&#39;WaveTrend: cruce en zona extrema (+-72)&#39;, &#39;evento&#39;, &#39;long_wt_cross&#39;, &#39;short_wt_cross&#39;), &#39;rf&#39;: (&#39;Range Filter (Frost, Intraday Mode): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf&#39;, &#39;bear_rf&#39;), &#39;rf_scalp&#39;: (&#39;Range Filter (Frost, Scalping Mode): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf_scalp&#39;, &#39;bear_rf_scalp&#39;), &#39;rf_swing&#39;: (&#39;Range Filter (Frost, Swing Mode): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf_swing&#39;, &#39;bear_rf_swing&#39;), &#39;vidya&#39;: (&#39;Banda VIDYA (F. Trail de Frost): tendencia&#39;, &#39;estado&#39;, &#39;bull_vidya&#39;, &#39;bear_vidya&#39;), &#39;wt&#39;: (&#39;WaveTrend: wt1 sobre / bajo wt2&#39;, &#39;estado&#39;, &#39;bull_wt&#39;, &#39;bear_wt&#39;), &#39;ema&#39;: (&#39;Cierre sobre / bajo la EMA 144&#39;, &#39;estado&#39;, &#39;bull_ema&#39;, &#39;bear_ema&#39;), &#39;fund&#39;: (&#39;Funding bajo / sobre su mediana de 30 dias (en contra del lado saturado)&#39;, &#39;estado&#39;, &#39;bull_fund&#39;, &#39;bear_fund&#39;), &#39;btc&#39;: (&#39;Regimen de BTC: cierre sobre / bajo su EMA 200&#39;, &#39;estado&#39;, &#39;bull_btc&#39;, &#39;bear_btc&#39;), &#39;rs&#39;: (&#39;Fuerza relativa contra BTC (retorno de 180 velas)&#39;, &#39;estado&#39;, &#39;bull_rs&#39;, &#39;bear_rs&#39;)}</span>
+            <label class="view-value-button pdoc-button" for="INDICATORS-view-value"></label><span class="default_value">{&#39;sfp&#39;: (&#39;SFP del HeatMap (barrida de swing con cierre de vuelta)&#39;, &#39;evento&#39;, &#39;long_sfp&#39;, &#39;short_sfp&#39;), &#39;camarilla&#39;: (&#39;Camarilla: rechazo de S3 (largo) o R3 (corto)&#39;, &#39;evento&#39;, &#39;long_camarilla&#39;, &#39;short_camarilla&#39;), &#39;fvg&#39;: (&#39;FVG: retesteo de un Fair Value Gap de 3 velas&#39;, &#39;evento&#39;, &#39;long_fvg&#39;, &#39;short_fvg&#39;), &#39;zone_reject&#39;: (&#39;Rechazo de una zona de liquidez&#39;, &#39;evento&#39;, &#39;long_zone_reject&#39;, &#39;short_zone_reject&#39;), &#39;grab&#39;: (&#39;Liquidity Grab de Frost (agotamiento)&#39;, &#39;evento&#39;, &#39;long_grab&#39;, &#39;short_grab&#39;), &#39;bb_reversal&#39;: (&#39;BB%B: sale de sobreventa (largo) o sobrecompra (corto)&#39;, &#39;evento&#39;, &#39;long_bb_reversal&#39;, &#39;short_bb_reversal&#39;), &#39;wt_cross&#39;: (&#39;WaveTrend: cruce en zona extrema (+-72)&#39;, &#39;evento&#39;, &#39;long_wt_cross&#39;, &#39;short_wt_cross&#39;), &#39;rf&#39;: (&#39;Range Filter (Frost, Intraday Mode): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf&#39;, &#39;bear_rf&#39;), &#39;rf_scalp&#39;: (&#39;Range Filter (Frost, Scalping Mode): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf_scalp&#39;, &#39;bear_rf_scalp&#39;), &#39;rf_swing&#39;: (&#39;Range Filter (Frost, Swing Mode): estado alcista / bajista&#39;, &#39;estado&#39;, &#39;bull_rf_swing&#39;, &#39;bear_rf_swing&#39;), &#39;vidya&#39;: (&#39;Banda VIDYA (F. Trail de Frost): tendencia&#39;, &#39;estado&#39;, &#39;bull_vidya&#39;, &#39;bear_vidya&#39;), &#39;wt&#39;: (&#39;WaveTrend: wt1 sobre / bajo wt2&#39;, &#39;estado&#39;, &#39;bull_wt&#39;, &#39;bear_wt&#39;), &#39;ema9&#39;: (&#39;Cierre sobre / bajo la EMA 9&#39;, &#39;estado&#39;, &#39;bull_ema9&#39;, &#39;bear_ema9&#39;), &#39;ema21&#39;: (&#39;Cierre sobre / bajo la EMA 21&#39;, &#39;estado&#39;, &#39;bull_ema21&#39;, &#39;bear_ema21&#39;), &#39;ema50&#39;: (&#39;Cierre sobre / bajo la EMA 50&#39;, &#39;estado&#39;, &#39;bull_ema50&#39;, &#39;bear_ema50&#39;), &#39;ema100&#39;: (&#39;Cierre sobre / bajo la EMA 100&#39;, &#39;estado&#39;, &#39;bull_ema100&#39;, &#39;bear_ema100&#39;), &#39;ema&#39;: (&#39;Cierre sobre / bajo la EMA 144&#39;, &#39;estado&#39;, &#39;bull_ema&#39;, &#39;bear_ema&#39;), &#39;ema200&#39;: (&#39;Cierre sobre / bajo la EMA 200&#39;, &#39;estado&#39;, &#39;bull_ema200&#39;, &#39;bear_ema200&#39;), &#39;fund&#39;: (&#39;Funding bajo / sobre su mediana de 30 dias (en contra del lado saturado)&#39;, &#39;estado&#39;, &#39;bull_fund&#39;, &#39;bear_fund&#39;), &#39;btc&#39;: (&#39;Regimen de BTC: cierre sobre / bajo su EMA 200&#39;, &#39;estado&#39;, &#39;bull_btc&#39;, &#39;bear_btc&#39;), &#39;rs&#39;: (&#39;Fuerza relativa contra BTC (retorno de 180 velas)&#39;, &#39;estado&#39;, &#39;bull_rs&#39;, &#39;bear_rs&#39;), &#39;emax_9_21&#39;: (&#39;Cruce de EMAs 9 / 21: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_9_21&#39;, &#39;short_emax_9_21&#39;), &#39;emax_9_50&#39;: (&#39;Cruce de EMAs 9 / 50: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_9_50&#39;, &#39;short_emax_9_50&#39;), &#39;emax_9_100&#39;: (&#39;Cruce de EMAs 9 / 100: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_9_100&#39;, &#39;short_emax_9_100&#39;), &#39;emax_9_144&#39;: (&#39;Cruce de EMAs 9 / 144: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_9_144&#39;, &#39;short_emax_9_144&#39;), &#39;emax_9_200&#39;: (&#39;Cruce de EMAs 9 / 200: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_9_200&#39;, &#39;short_emax_9_200&#39;), &#39;emax_21_50&#39;: (&#39;Cruce de EMAs 21 / 50: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_21_50&#39;, &#39;short_emax_21_50&#39;), &#39;emax_21_100&#39;: (&#39;Cruce de EMAs 21 / 100: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_21_100&#39;, &#39;short_emax_21_100&#39;), &#39;emax_21_144&#39;: (&#39;Cruce de EMAs 21 / 144: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_21_144&#39;, &#39;short_emax_21_144&#39;), &#39;emax_21_200&#39;: (&#39;Cruce de EMAs 21 / 200: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_21_200&#39;, &#39;short_emax_21_200&#39;), &#39;emax_50_100&#39;: (&#39;Cruce de EMAs 50 / 100: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_50_100&#39;, &#39;short_emax_50_100&#39;), &#39;emax_50_144&#39;: (&#39;Cruce de EMAs 50 / 144: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_50_144&#39;, &#39;short_emax_50_144&#39;), &#39;emax_50_200&#39;: (&#39;Cruce de EMAs 50 / 200: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_50_200&#39;, &#39;short_emax_50_200&#39;), &#39;emax_100_144&#39;: (&#39;Cruce de EMAs 100 / 144: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_100_144&#39;, &#39;short_emax_100_144&#39;), &#39;emax_100_200&#39;: (&#39;Cruce de EMAs 100 / 200: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_100_200&#39;, &#39;short_emax_100_200&#39;), &#39;emax_144_200&#39;: (&#39;Cruce de EMAs 144 / 200: largo si la rapida cruza hacia arriba, corto hacia abajo&#39;, &#39;evento&#39;, &#39;long_emax_144_200&#39;, &#39;short_emax_144_200&#39;)}</span>
 
         
     </div>
@@ -207,15 +227,65 @@ para cualquier marco (15m a 1w). Todo es causal: la vela <code>i</code> usa solo
     
 
                 </section>
+                <section id="EMA_LENGTHS">
+                    <div class="attr variable">
+            <span class="name">EMA_LENGTHS</span>        =
+<span class="default_value">(9, 21, 50, 100, 144, 200)</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EMA_LENGTHS"></a>
+    
+    
+
+                </section>
+                <section id="EMA_STATE_IDS">
+                    <div class="attr variable">
+            <span class="name">EMA_STATE_IDS</span>        =
+<span class="default_value">{9: &#39;ema9&#39;, 21: &#39;ema21&#39;, 50: &#39;ema50&#39;, 100: &#39;ema100&#39;, 144: &#39;ema&#39;, 200: &#39;ema200&#39;}</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EMA_STATE_IDS"></a>
+    
+    
+
+                </section>
+                <section id="EMA_CROSS_PAIRS">
+                    <div class="attr variable">
+            <span class="name">EMA_CROSS_PAIRS</span>        =
+<input id="EMA_CROSS_PAIRS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+            <label class="view-value-button pdoc-button" for="EMA_CROSS_PAIRS-view-value"></label><span class="default_value">((9, 21), (9, 50), (9, 100), (9, 144), (9, 200), (21, 50), (21, 100), (21, 144), (21, 200), (50, 100), (50, 144), (50, 200), (100, 144), (100, 200), (144, 200))</span>
+
+        
+    </div>
+    <a class="headerlink" href="#EMA_CROSS_PAIRS"></a>
+    
+    
+
+                </section>
                 <section id="INDICATOR_VARIANTS">
                     <div class="attr variable">
             <span class="name">INDICATOR_VARIANTS</span><span class="annotation">: dict[str, tuple[str, str]]</span>        =
 <input id="INDICATOR_VARIANTS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="INDICATOR_VARIANTS-view-value"></label><span class="default_value">{&#39;rf&#39;: (&#39;rf&#39;, &#39;Intraday Mode&#39;), &#39;rf_scalp&#39;: (&#39;rf&#39;, &#39;Scalping Mode&#39;), &#39;rf_swing&#39;: (&#39;rf&#39;, &#39;Swing Mode&#39;)}</span>
+            <label class="view-value-button pdoc-button" for="INDICATOR_VARIANTS-view-value"></label><span class="default_value">{&#39;rf&#39;: (&#39;rf&#39;, &#39;Intraday Mode&#39;), &#39;rf_scalp&#39;: (&#39;rf&#39;, &#39;Scalping Mode&#39;), &#39;rf_swing&#39;: (&#39;rf&#39;, &#39;Swing Mode&#39;), &#39;emax_9_21&#39;: (&#39;emax&#39;, &#39;EMA 9 / EMA 21&#39;), &#39;emax_9_50&#39;: (&#39;emax&#39;, &#39;EMA 9 / EMA 50&#39;), &#39;emax_9_100&#39;: (&#39;emax&#39;, &#39;EMA 9 / EMA 100&#39;), &#39;emax_9_144&#39;: (&#39;emax&#39;, &#39;EMA 9 / EMA 144&#39;), &#39;emax_9_200&#39;: (&#39;emax&#39;, &#39;EMA 9 / EMA 200&#39;), &#39;emax_21_50&#39;: (&#39;emax&#39;, &#39;EMA 21 / EMA 50&#39;), &#39;emax_21_100&#39;: (&#39;emax&#39;, &#39;EMA 21 / EMA 100&#39;), &#39;emax_21_144&#39;: (&#39;emax&#39;, &#39;EMA 21 / EMA 144&#39;), &#39;emax_21_200&#39;: (&#39;emax&#39;, &#39;EMA 21 / EMA 200&#39;), &#39;emax_50_100&#39;: (&#39;emax&#39;, &#39;EMA 50 / EMA 100&#39;), &#39;emax_50_144&#39;: (&#39;emax&#39;, &#39;EMA 50 / EMA 144&#39;), &#39;emax_50_200&#39;: (&#39;emax&#39;, &#39;EMA 50 / EMA 200&#39;), &#39;emax_100_144&#39;: (&#39;emax&#39;, &#39;EMA 100 / EMA 144&#39;), &#39;emax_100_200&#39;: (&#39;emax&#39;, &#39;EMA 100 / EMA 200&#39;), &#39;emax_144_200&#39;: (&#39;emax&#39;, &#39;EMA 144 / EMA 200&#39;)}</span>
 
         
     </div>
     <a class="headerlink" href="#INDICATOR_VARIANTS"></a>
+    
+    
+
+                </section>
+                <section id="INDICATOR_GROUP_LABELS">
+                    <div class="attr variable">
+            <span class="name">INDICATOR_GROUP_LABELS</span><span class="annotation">: dict[str, str]</span>        =
+<input id="INDICATOR_GROUP_LABELS-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+            <label class="view-value-button pdoc-button" for="INDICATOR_GROUP_LABELS-view-value"></label><span class="default_value">{&#39;rf&#39;: &#39;Range Filter (Frost): estado alcista / bajista&#39;, &#39;emax&#39;: &#39;Cruce de dos EMAs (largo al cruzar hacia arriba, corto hacia abajo)&#39;}</span>
+
+        
+    </div>
+    <a class="headerlink" href="#INDICATOR_GROUP_LABELS"></a>
     
     
 
@@ -230,6 +300,57 @@ para cualquier marco (15m a 1w). Todo es causal: la vela <code>i</code> usa solo
     <a class="headerlink" href="#RF_MODE_COLUMNS"></a>
     
     
+
+                </section>
+                <section id="indicator_options">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">indicator_options</span><span class="signature pdoc-code condensed">(<span class="return-annotation">) -> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#indicator_options"></a>
+    
+            <div class="docstring"><p>Los indicadores para los formularios del dashboard (Indicadores y En vivo).</p>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>Uno por id de <code><a href="#INDICATORS">INDICATORS</a></code>, en su orden: <code>id</code>, <code>label</code> y <code>kind</code>; los que son variantes
+  de un grupo (modos del Range Filter, pares de EMAs) llevan ademas <code>group</code>, <code>variant</code> y
+  <code>group_label</code> (la etiqueta de la casilla del grupo).</p>
+</blockquote>
+</div>
+
+
+                </section>
+                <section id="ema_cross_signals">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ema_cross_signals</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">fast</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">Series</span>,</span><span class="param">	<span class="n">slow</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">Series</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#ema_cross_signals"></a>
+    
+            <div class="docstring"><p>Cruces de dos medias al cierre de la vela (<code>ta.crossover</code> / <code>ta.crossunder</code>).</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>fast:</strong>  media rapida.</li>
+<li><strong>slow:</strong>  media lenta (mismo indice).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>(arriba, abajo)</code>: arrays booleanos; un NaN en la vela o en la anterior no da senal.</p>
+</blockquote>
+</div>
+
 
                 </section>
                 <section id="EXITS">

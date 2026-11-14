@@ -227,6 +227,19 @@ def test_options_group_the_range_filter_modes(tmp_path):
     assert "group" not in by_id["ema"]
 
 
+def test_options_group_the_ema_crosses_with_group_label(tmp_path):
+    out = make_client(make_settings(tmp_path)).get("/api/live/options").json()
+    crosses = [i for i in out["indicators"] if i.get("group") == "emax"]
+    assert len(crosses) == 15
+    assert crosses[0]["id"] == "emax_9_21" and crosses[0]["variant"] == "EMA 9 / EMA 21"
+    assert {i["group_label"] for i in crosses} == {
+        "Cruce de dos EMAs (largo al cruzar hacia arriba, corto hacia abajo)"}
+    assert all(i["kind"] == "evento" for i in crosses)
+    by_id = {i["id"]: i for i in out["indicators"]}
+    assert by_id["rf"]["group_label"] == "Range Filter (Frost): estado alcista / bajista"
+    assert "group" not in by_id["ema200"]
+
+
 def test_create_with_trading_options_and_options_list_them(tmp_path):
     client = make_client(make_settings(tmp_path))
     body = {**BODY, "margin_usdt": 30, "leverage": 5, "direction": "short",

@@ -115,7 +115,7 @@ al calentamiento. No mezclar con `engine.ema`, que arranca con el primer valor (
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_indicators_v2_pine.py`, `tests/unit/test_indicators_v2_structure.py`, `tests/unit/test_indicators_v2_trend_oscillators.py`, `tests/unit/test_strategies_v2.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_explorer.py`, `tests/unit/test_indicators_v2_pine.py`, `tests/unit/test_indicators_v2_structure.py`, `tests/unit/test_indicators_v2_trend_oscillators.py`, `tests/unit/test_strategies_v2.py`, `tests/unit/test_v2_tradingview_check_script.py`
 <!-- /hechos:app/indicators/_pine.py -->
 
 ### `app/indicators/levels.py`

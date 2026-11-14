@@ -10,6 +10,7 @@ import {
   useExplorerRun,
 } from "./api";
 import { Card } from "./components/Card";
+import { allIndicatorIds, IndicatorPicker } from "./components/IndicatorPicker";
 import { RunProgress } from "./RunProgress";
 import { StatTile } from "./components/StatTile";
 import { Unavailable } from "./components/Unavailable";
@@ -244,7 +245,7 @@ function Form({ opts }: { opts: ExplorerOptions }) {
               <button
                 type="button"
                 className="text-xs text-blue-700 underline dark:text-blue-400"
-                onClick={() => setIndicators(opts.indicators.map((i) => i.id))}
+                onClick={() => setIndicators(allIndicatorIds(opts.indicators))}
               >
                 todos
               </button>
@@ -252,26 +253,7 @@ function Form({ opts }: { opts: ExplorerOptions }) {
                 ninguno
               </button>
             </div>
-            <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-              {opts.indicators.map((i) => (
-                <li key={i.id} className="py-1">
-                  <label className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200">
-                    <input type="checkbox" checked={indicators.includes(i.id)} onChange={() => setIndicators(toggle(indicators, i.id))} />
-                    <span className="flex-1">{i.label}</span>
-                    <span
-                      className={
-                        "rounded px-1.5 text-xs " +
-                        (i.kind === "evento"
-                          ? "bg-blue-50 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200"
-                          : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200")
-                      }
-                    >
-                      {i.kind}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
+            <IndicatorPicker options={opts.indicators} selected={indicators} onChange={setIndicators} layout="list" />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Los de estado votan en cada vela; los de evento votan solo durante la ventana desde su senal.
             </p>

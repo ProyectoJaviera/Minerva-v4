@@ -653,7 +653,7 @@ export interface ExplorerOptions {
   detail: string | null;
   note: string;
   timeframes: { id: string; label: string }[];
-  indicators: { id: string; label: string; kind: "estado" | "evento" }[];
+  indicators: IndicatorOption[];
   exits: { id: string; label: string }[];
   default_exit: string;
   pct_limits: { sl: number; tp: number; trail: number };
@@ -871,10 +871,20 @@ export function useStudyForward() {
 
 // --- Pestana «En vivo» (v3): pruebas de paper hacia adelante con el precio en tiempo real ------
 
+// Un indicador de los formularios. `group`/`variant`/`group_label`: variantes de un mismo indicador
+// (el Range Filter en Intraday, Scalping o Swing; el cruce de dos EMAs con cada par).
+export interface IndicatorOption {
+  id: string;
+  label: string;
+  kind: "estado" | "evento";
+  group?: string;
+  variant?: string;
+  group_label?: string;
+}
+
 export interface LiveOptions {
   enabled: boolean;
-  // `group`/`variant`: modos de un mismo indicador (p. ej. el Range Filter en Intraday, Scalping o Swing).
-  indicators: { id: string; label: string; kind: "estado" | "evento"; group?: string; variant?: string }[];
+  indicators: IndicatorOption[];
   exits: { id: string; label: string }[];
   timeframes: string[];
   modes: string[];

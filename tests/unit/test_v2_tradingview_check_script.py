@@ -134,6 +134,25 @@ def test_rf_lines_list_every_flip_with_its_ema_side():
                for s in lines[1:])
 
 
+def test_ema_cross_lines_list_the_last_crosses_like_the_indicator():
+    from app.explorer.confluence import ema_cross_signals
+    from app.indicators._pine import pine_ema
+
+    df = _walk(600)
+    up, down = ema_cross_signals(pine_ema(df["close"], 9), pine_ema(df["close"], 21))
+    crosses = int(up.sum() + down.sum())
+    assert crosses > 2
+    lines = check.ema_cross_lines("BTCUSDT", df, 9, 21, 2, "1h")
+    assert lines[0].startswith("Cruces EMA 9 / EMA 21 BTCUSDT 1h: ultimos 2")
+    assert len(lines) == 3
+    assert all(("▲ LARGO" in s or "▼ CORTO" in s) and "EMA9 " in s and "EMA21 " in s
+               for s in lines[1:])
+    last = max(i for i in range(len(df)) if up[i] or down[i])
+    assert lines[-1].startswith(f"  {check._utc(int(df['open_time'].iat[last]))}  ")
+    assert check.ema_cross_lines("BTCUSDT", df.iloc[:15], 9, 21, 5, "1h")[1] == (
+        "  ninguno en el historial descargado")
+
+
 def test_bars_lines_print_the_last_candles():
     df = _walk(5)
     lines = check.bars_lines("ETHUSDT", df, 2, "4h")

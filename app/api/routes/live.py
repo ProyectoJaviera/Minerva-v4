@@ -23,12 +23,12 @@ from app.explorer.confluence import (
     DEFAULT_EXIT,
     DEFAULT_WINDOW,
     EXITS,
-    INDICATOR_VARIANTS,
     INDICATORS,
     MAX_WINDOW,
     PCT_EXIT,
     PCT_EXIT_LABEL,
     WARMUP_BY_TIMEFRAME,
+    indicator_options,
 )
 from app.live import report
 from app.live.config import (
@@ -85,14 +85,6 @@ class BotSwitchRequest(BaseModel):
     confirm: str = Field(default="", max_length=16)
 
 
-def _indicator_option(ind: str, spec: tuple[str, str, str, str]) -> dict:
-    """Un indicador para el formulario; los modos del Range Filter llevan `group` y `variant`."""
-    out = {"id": ind, "label": spec[0], "kind": spec[1]}
-    if ind in INDICATOR_VARIANTS:
-        out["group"], out["variant"] = INDICATOR_VARIANTS[ind]
-    return out
-
-
 @router.get("/options")
 async def options(settings: Settings = Depends(get_settings)) -> dict:
     """`GET /api/live/options`: lo que se puede elegir al crear una prueba.
@@ -106,7 +98,7 @@ async def options(settings: Settings = Depends(get_settings)) -> dict:
     """
     return {
         "enabled": settings.live_tests_enabled,
-        "indicators": [_indicator_option(k, v) for k, v in INDICATORS.items()],
+        "indicators": indicator_options(),
         "exits": [{"id": k, "label": v[0]} for k, v in EXITS.items()]
         + [{"id": PCT_EXIT, "label": PCT_EXIT_LABEL}],
         "timeframes": list(WARMUP_BY_TIMEFRAME), "modes": list(MODES),

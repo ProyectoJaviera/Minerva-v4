@@ -43,8 +43,7 @@ async def options(settings: Settings = Depends(get_settings)) -> dict:
         "note": service.NOTE,
         "timeframes": [{"id": t, "label": service.TIMEFRAME_LABELS[t]}
                        for t in service.TIMEFRAMES],
-        "indicators": [{"id": k, "label": v[0], "kind": v[1]}
-                       for k, v in confluence.INDICATORS.items()],
+        "indicators": confluence.indicator_options(),
         "exits": [{"id": k, "label": v[0]} for k, v in confluence.EXITS.items()]
         + [{"id": confluence.PCT_EXIT, "label": confluence.PCT_EXIT_LABEL}],
         "pct_limits": {"sl": confluence.MAX_SL_PCT, "tp": confluence.MAX_TP_PCT,

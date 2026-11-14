@@ -143,6 +143,96 @@ def test_range_filter_modes_vote_with_frost_sensitivity():
     assert flips["rf_scalp"] > flips["rf"] > flips["rf_swing"] > 0
 
 
+def _random_walk(seed: int, n: int = 1500) -> pd.DataFrame:
+    rng = random.Random(seed)
+    price, rows = 100.0, []
+    for i in range(n):
+        c = price * (1 + rng.uniform(-0.02, 0.02))
+        rows.append({"open_time": START_MS + i * 3_600_000, "open": price,
+                     "high": max(price, c) * 1.003, "low": min(price, c) * 0.997, "close": c})
+        price = c
+    return pd.DataFrame(rows)
+
+
+def test_ema_state_indicators_vote_close_against_pine_ema():
+    from app.indicators._pine import pine_ema
+
+    df = _random_walk(11)
+    feats = confluence.compute_votes(df, "1h")
+    for n in confluence.EMA_LENGTHS:
+        ind = confluence.EMA_STATE_IDS[n]
+        _, kind, bull_col, bear_col = confluence.INDICATORS[ind]
+        assert kind == "estado"
+        ema = pine_ema(df["close"], n)
+        assert feats[bull_col].tolist() == (df["close"] > ema).tolist()
+        assert feats[bear_col].tolist() == (df["close"] < ema).tolist()
+        # Mientras la EMA no tiene valor (n - 1 velas) no vota ningun lado.
+        assert not feats[bull_col].iloc[: n - 1].any() and not feats[bear_col].iloc[: n - 1].any()
+        assert ind not in confluence.INDICATOR_VARIANTS
+
+
+def test_ema_crosses_match_a_manual_crossover_for_all_15_pairs():
+    from app.indicators._pine import pine_ema
+
+    df = _random_walk(12)
+    feats = confluence.compute_votes(df, "1h")
+    assert len(confluence.EMA_CROSS_PAIRS) == 15
+    close = df["close"].tolist()
+    for fast, slow in confluence.EMA_CROSS_PAIRS:
+        assert fast < slow
+        ind = f"emax_{fast}_{slow}"
+        _, kind, long_col, short_col = confluence.INDICATORS[ind]
+        assert kind == "evento"
+        assert confluence.INDICATOR_VARIANTS[ind] == ("emax", f"EMA {fast} / EMA {slow}")
+        f = pine_ema(pd.Series(close), fast).tolist()
+        s = pine_ema(pd.Series(close), slow).tolist()
+        up, down = [False], [False]
+        for i in range(1, len(close)):
+            ok = not any(np.isnan(v) for v in (f[i], s[i], f[i - 1], s[i - 1]))
+            up.append(ok and f[i] > s[i] and f[i - 1] <= s[i - 1])
+            down.append(ok and f[i] < s[i] and f[i - 1] >= s[i - 1])
+        assert feats[long_col].tolist() == up
+        assert feats[short_col].tolist() == down
+        assert not (feats[long_col] & feats[short_col]).any()
+    # En 1500 velas de paseo al azar la 9/21 se cruza varias veces en ambos sentidos.
+    assert feats["long_emax_9_21"].sum() > 3 and feats["short_emax_9_21"].sum() > 3
+
+
+def test_ema_cross_signals_edge_cases():
+    nan = float("nan")
+    fast = pd.Series([nan, 1.0, 2.0, 2.0, 1.0, 1.0, 3.0])
+    slow = pd.Series([nan, 2.0, 2.0, 2.0, 2.0, 1.0, 1.0])
+    up, down = confluence.ema_cross_signals(fast, slow)
+    # i=1: la vela anterior es NaN -> sin senal; i=2 y 3: iguales no es cruce; i=4: baja desde
+    # igualdad -> corto; i=5: igual, nada; i=6: sube desde igualdad -> largo.
+    assert up.tolist() == [False, False, False, False, False, False, True]
+    assert down.tolist() == [False, False, False, False, True, False, False]
+
+
+def test_a_single_ema_cross_enters_only_on_each_cross():
+    df = _random_walk(13)
+    feats = confluence.compute_votes(df, "1h")
+    long, short = confluence.confluence_signals(feats, ["emax_9_21"], 5)
+    assert long.tolist() == feats["long_emax_9_21"].astype(bool).tolist()
+    assert short.tolist() == feats["short_emax_9_21"].astype(bool).tolist()
+    # Combinado con un filtro de estado, el cruce vota durante la ventana: entra si el filtro
+    # se alinea dentro de las 5 velas siguientes al cruce.
+    long2, _ = confluence.confluence_signals(feats, ["emax_9_21", "ema200"], 5)
+    assert long2.sum() >= 1
+    strategy = confluence.ConfluenceStrategy(["emax_50_200", "ema50"], "1h")
+    assert strategy.indicators == ("ema50", "emax_50_200")
+
+
+def test_indicator_options_group_the_ema_crosses_with_a_label():
+    opts = {o["id"]: o for o in confluence.indicator_options()}
+    assert set(opts) == set(confluence.INDICATORS)
+    assert opts["emax_50_200"]["group"] == "emax"
+    assert opts["emax_50_200"]["variant"] == "EMA 50 / EMA 200"
+    assert opts["emax_50_200"]["group_label"] == confluence.INDICATOR_GROUP_LABELS["emax"]
+    assert opts["rf_swing"]["group_label"].startswith("Range Filter (Frost)")
+    assert "group" not in opts["ema200"] and "group" not in opts["ema"]
+
+
 def test_strategy_validates_its_parameters():
     for kwargs in ({"indicators": []}, {"indicators": ["nope"]}, {"window": 0},
                    {"window": confluence.MAX_WINDOW + 1}, {"exit_name": "x"}, {"interval": "2h"}):

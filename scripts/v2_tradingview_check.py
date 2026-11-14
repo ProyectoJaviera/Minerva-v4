@@ -13,6 +13,12 @@ compara contra el grafico de TradingView, para BTCUSDT y ETHUSDT:
 3. Con `--rf-count N`, los ultimos N giros del Range Filter de Frost (el ▲/▼ de los «AI Tags»
    de Frost), con la EMA 144 y el ATR(14) de esa vela, que es lo que usa `range_filter_flip_ema144`.
    El modo por defecto es Intraday; `--rf-mode scalping` o `--rf-mode swing` usan los otros dos.
+4. Con `--ema-cross RAPIDA LENTA`, los ultimos `--ema-count` cruces de esas dos EMAs del cierre
+   (▲ = la rapida cruza hacia arriba, largo; ▼ = hacia abajo, corto), con el cierre y las dos
+   EMAs de la vela del cruce: es el indicador `emax_<rapida>_<lenta>` de Indicadores y En vivo.
+   En TradingView: dos indicadores «EMA» (fuente close) con esos largos; el cruce se ve al
+   cierre de la vela listada. Con `--history-bars` alto (2000 por defecto) la EMA 200 ya no
+   depende del arranque de la historia.
 
 Con `--end AAAA-MM-DD` todo se calcula como si «ahora» fuera esa fecha a las 00:00 UTC, para
 comparar semanas pasadas; con `--skip-camarilla` se omiten los niveles.
@@ -27,6 +33,7 @@ Es de solo lectura: no lee `.env`, no abre ninguna base y no escribe nada.
     python scripts/v2_tradingview_check.py --symbols BTCUSDT --days 2026-11-06 --sfp-count 5
     python scripts/v2_tradingview_check.py --interval 4h --skip-camarilla --rf-count 10
     python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --rf-mode swing
+    python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --ema-cross 9 21
     python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-count 15
 """
 
@@ -44,6 +51,7 @@ import pandas as pd
 sys.path.insert(0, ".")
 
 from app.config import Settings  # noqa: E402
+from app.explorer.confluence import EMA_LENGTHS, ema_cross_signals  # noqa: E402
 from app.indicators._pine import pine_atr, pine_ema  # noqa: E402
 from app.indicators.levels import DAY_MS, camarilla_levels  # noqa: E402
 from app.indicators.structure import sfp_signals  # noqa: E402
@@ -297,10 +305,46 @@ def rf_lines(symbol: str, bars: pd.DataFrame, count: int, interval: str,
     return lines
 
 
+def ema_cross_lines(symbol: str, bars: pd.DataFrame, fast: int, slow: int, count: int,
+                    interval: str) -> list[str]:
+    """Lineas con los ultimos `count` cruces de la EMA `fast` y la EMA `slow` del cierre.
+
+    Usa las mismas funciones que el indicador `emax_<fast>_<slow>` (`pine_ema` y
+    `ema_cross_signals`): ▲ es largo (la rapida cruza hacia arriba) y ▼ corto.
+
+    Args:
+        symbol: simbolo.
+        bars: velas con `open_time` y `close`.
+        fast: largo de la EMA rapida.
+        slow: largo de la EMA lenta (mayor que `fast`).
+        count: cuantos cruces mostrar (los mas recientes).
+        interval: etiqueta de la temporalidad, solo para el texto.
+
+    Returns:
+        Las lineas de texto.
+    """
+    ema_f, ema_s = pine_ema(bars["close"], fast), pine_ema(bars["close"], slow)
+    up, down = ema_cross_signals(ema_f, ema_s)
+    idx = [i for i in range(len(bars)) if up[i] or down[i]]
+    lines = [f"Cruces EMA {fast} / EMA {slow} {symbol} {interval}: ultimos {count} "
+             "(hora UTC de apertura de la vela del cruce)"]
+    if not idx:
+        lines.append("  ninguno en el historial descargado")
+    for i in idx[-count:]:
+        lines.append(
+            f"  {_utc(int(bars['open_time'].iat[i]))}  "
+            f"{'▲ LARGO (cruza hacia arriba)' if up[i] else '▼ CORTO (cruza hacia abajo)'}  "
+            f"cierre {float(bars['close'].iat[i]):.2f}  EMA{fast} {float(ema_f.iat[i]):.2f}  "
+            f"EMA{slow} {float(ema_s.iat[i]):.2f}"
+        )
+    return lines
+
+
 async def build_report(client: Any, symbols: list[str], days: list[date], sfp_count: int,
                        history_bars: int, now_ms: int, interval: str = "1h",
                        rf_count: int = 0, bar_count: int = 0,
-                       rf_mode: str = "intraday") -> list[str]:
+                       rf_mode: str = "intraday", ema_cross: tuple[int, int] | None = None,
+                       ema_count: int = 10) -> list[str]:
     """Descarga las velas y arma el informe completo.
 
     Args:
@@ -314,6 +358,8 @@ async def build_report(client: Any, symbols: list[str], days: list[date], sfp_co
         rf_count: giros del Range Filter a mostrar (0 = ninguno).
         bar_count: velas OHLC a listar (0 = ninguna).
         rf_mode: modo del Range Filter (`intraday`, `scalping` o `swing`).
+        ema_cross: `(rapida, lenta)` para listar sus cruces, o `None`.
+        ema_count: cruces de EMAs a mostrar.
 
     Returns:
         Las lineas del informe.
@@ -341,6 +387,8 @@ async def build_report(client: Any, symbols: list[str], days: list[date], sfp_co
             lines += sfp_lines(symbol, bars, sfp_count, interval)
         if rf_count:
             lines += rf_lines(symbol, bars, rf_count, interval, rf_mode)
+        if ema_cross and ema_count:
+            lines += ema_cross_lines(symbol, bars, ema_cross[0], ema_cross[1], ema_count, interval)
         lines.append("")
     return lines
 
@@ -363,11 +411,17 @@ def main() -> None:
                         help="giros del Range Filter a mostrar (0 = ninguno)")
     parser.add_argument("--rf-mode", choices=sorted(RANGE_FILTER_SENSITIVITY),
                         default="intraday", help="modo del Range Filter de Frost")
+    parser.add_argument("--ema-cross", nargs=2, type=int, metavar=("RAPIDA", "LENTA"),
+                        help=f"lista los cruces de dos EMAs (p. ej. 9 21; largos de {EMA_LENGTHS})")
+    parser.add_argument("--ema-count", type=int, default=10,
+                        help="cruces de EMAs a mostrar con --ema-cross")
     parser.add_argument("--bars", type=int, default=0,
                         help="velas OHLC a listar antes del corte (0 = ninguna)")
     parser.add_argument("--end", help="corte AAAA-MM-DD (00:00 UTC) para mirar semanas pasadas")
     parser.add_argument("--skip-camarilla", action="store_true")
     args = parser.parse_args()
+    if args.ema_cross and not 1 <= args.ema_cross[0] < args.ema_cross[1]:
+        parser.error("--ema-cross: la EMA rapida debe ser mas corta que la lenta (p. ej. 9 21)")
     days = [] if args.skip_camarilla else [date.fromisoformat(d) for d in args.days]
     now_ms = int(time.time() * 1000)
     if args.end:
@@ -380,7 +434,9 @@ def main() -> None:
         try:
             return await build_report(client, args.symbols, days, args.sfp_count,
                                       args.history_bars, now_ms, args.interval, args.rf_count,
-                                      args.bars, args.rf_mode)
+                                      args.bars, args.rf_mode,
+                                      tuple(args.ema_cross) if args.ema_cross else None,
+                                      args.ema_count)
         finally:
             await client.aclose()
 

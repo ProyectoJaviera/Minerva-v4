@@ -16,6 +16,7 @@ import {
 } from "./api";
 import { Card } from "./components/Card";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { IndicatorPicker } from "./components/IndicatorPicker";
 import { StatTile } from "./components/StatTile";
 import { Unavailable } from "./components/Unavailable";
 
@@ -176,32 +177,6 @@ function CreateForm({ options }: { options: LiveOptions }) {
   const [trailPct, setTrailPct] = useState("");
   const [created, setCreated] = useState<string | null>(null);
 
-  function toggle(id: string) {
-    setIndicators((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
-  }
-
-  // Indicadores con modos (Range Filter: Intraday, Scalping, Swing): una sola casilla y un selector.
-  const groups = new Map<string, LiveOptions["indicators"]>();
-  for (const i of options.indicators) {
-    if (i.group) groups.set(i.group, [...(groups.get(i.group) ?? []), i]);
-  }
-  const [variantOf, setVariantOf] = useState<Record<string, string>>(() =>
-    Object.fromEntries([...groups].map(([g, list]) => [g, list[0].id])),
-  );
-
-  function chooseVariant(group: string, id: string) {
-    const ids = (groups.get(group) ?? []).map((v) => v.id);
-    setVariantOf((cur) => ({ ...cur, [group]: id }));
-    setIndicators((cur) => (cur.some((x) => ids.includes(x)) ? [...cur.filter((x) => !ids.includes(x)), id] : cur));
-  }
-
-  function toggleGroup(group: string) {
-    const ids = (groups.get(group) ?? []).map((v) => v.id);
-    setIndicators((cur) =>
-      cur.some((x) => ids.includes(x)) ? cur.filter((x) => !ids.includes(x)) : [...cur, variantOf[group]],
-    );
-  }
-
   function num(text: string): number | null {
     const v = Number(text.replace(",", "."));
     return text.trim() === "" || !Number.isFinite(v) ? null : v;
@@ -292,48 +267,7 @@ function CreateForm({ options }: { options: LiveOptions }) {
           votando durante la ventana. Ventana chica: los eventos tienen que coincidir casi en la misma vela.
         </p>
         <p className="text-xs text-gray-600 dark:text-gray-300">Indicadores y filtros (se entra cuando coinciden)</p>
-        <div className="grid gap-1 sm:grid-cols-2">
-          {options.indicators.map((i) => {
-            if (!i.group) {
-              return (
-                <label key={i.id} className="flex items-start gap-2 text-sm text-gray-800 dark:text-gray-200">
-                  <input type="checkbox" checked={indicators.includes(i.id)} onChange={() => toggle(i.id)} className="mt-1" />
-                  <span>{i.label} <span className="text-xs text-gray-500">({i.kind})</span></span>
-                </label>
-              );
-            }
-            const list = groups.get(i.group) ?? [];
-            if (list[0]?.id !== i.id) return null;
-            const group = i.group;
-            const checked = list.some((v) => indicators.includes(v.id));
-            return (
-              <div key={group} className="flex items-start gap-2 text-sm text-gray-800 dark:text-gray-200">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleGroup(group)}
-                  className="mt-1"
-                  aria-label="Range Filter (Frost)"
-                />
-                <span>
-                  Range Filter (Frost): estado alcista / bajista <span className="text-xs text-gray-500">({i.kind})</span>
-                  <select
-                    className="ml-2 rounded border border-gray-300 bg-white px-1 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-800"
-                    value={variantOf[group]}
-                    onChange={(e) => chooseVariant(group, e.target.value)}
-                    aria-label="Modo del Range Filter"
-                  >
-                    {list.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.variant}
-                      </option>
-                    ))}
-                  </select>
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <IndicatorPicker options={options.indicators} selected={indicators} onChange={setIndicators} />
       </Section>
 
       <Section title="3. Posición">

@@ -105,6 +105,39 @@ describe("IndicatorsTab", () => {
   });
 });
 
+describe("IndicatorsTab: indicadores con variantes", () => {
+  it("agrupa los cruces de EMAs en una casilla con selector y «todos» elige una variante por grupo", async () => {
+    const label = "Cruce de dos EMAs (largo al cruzar hacia arriba, corto hacia abajo)";
+    const fetchMock = mockFetch({
+      "/api/explorer/options": {
+        status: 200,
+        body: {
+          ...OPTIONS,
+          indicators: [
+            ...OPTIONS.indicators,
+            { id: "emax_9_21", label: "Cruce 9/21", kind: "evento", group: "emax", variant: "EMA 9 / EMA 21", group_label: label },
+            { id: "emax_50_200", label: "Cruce 50/200", kind: "evento", group: "emax", variant: "EMA 50 / EMA 200", group_label: label },
+          ],
+        },
+      },
+      "/api/explorer/run": { status: 200, body: RESULT },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(withQueryClient(<IndicatorsTab />));
+    await screen.findByText("Probar en 1h");
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    fireEvent.change(screen.getByLabelText("Par de EMAs"), { target: { value: "emax_50_200" } });
+    fireEvent.click(screen.getByLabelText(label));
+    fireEvent.click(screen.getByText("Probar en 1h"));
+    await screen.findAllByText("37.5%");
+    const call = fetchMock.mock.calls.find(([url]) => String(url).startsWith("/api/explorer/run"));
+    expect(new URL(String(call?.[0]), "http://x").searchParams.getAll("indicators")).toEqual(["emax_50_200"]);
+    fireEvent.click(screen.getByText("todos"));
+    expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText("Par de EMAs") as HTMLSelectElement).value).toBe("emax_9_21");
+  });
+});
+
 describe("IndicatorsTab: salida en porcentaje", () => {
   it("manda SL, TP y trailing en % y avisa si el SL es demasiado amplio", async () => {
     const fetchMock = mockFetch({

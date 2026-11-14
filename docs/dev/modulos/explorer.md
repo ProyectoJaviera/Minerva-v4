@@ -73,7 +73,10 @@ con una salida fija en múltiplos del ATR(14).
 - `INDICATORS` (id → etiqueta, tipo y columnas), `EXITS` (en ATR) y la salida `PCT_EXIT` en % del precio
   (`check_pct_exit()`, `pct_exit_name()`, `pct_exit_label()`), `compute_votes()` (columnas de `combos.compute_features`,
   `fvg_signals` de la ronda 3 y funding, régimen de BTC y fuerza relativa para cualquier marco; con caché),
-  `event_votes()`, `confluence_signals()` (con `min_agree`: al menos N votos del mismo lado y más que el contrario) y
+  `EMA_LENGTHS` (9, 21, 50, 100, 144, 200: filtros de estado `ema9` … `ema200`, con `ema` = EMA 144) y los 15
+  cruces de evento `emax_<rápida>_<lenta>` (`ema_cross_signals()`, como `ta.crossover`/`ta.crossunder` al cierre),
+  `INDICATOR_VARIANTS` / `INDICATOR_GROUP_LABELS` (grupos `rf` y `emax`) e `indicator_options()` (la lista de las
+  rutas `/api/live/options` y `/api/explorer/options`), `event_votes()`, `confluence_signals()` (con `min_agree`: al menos N votos del mismo lado y más que el contrario) y
   `ConfluenceStrategy` (precalcula las entradas como arrays; el control
   sortea la dirección con el mismo SHA-256 del preregistro).
 
@@ -82,7 +85,7 @@ cambios de estado (prueba: el Range Filter solo da exactamente `long_rf_flip`/`s
 con ventana 1, en sus señales. El control usa las mismas velas de entrada y la misma salida.
 
 **Trampas conocidas.** El calentamiento depende del marco (`WARMUP_BY_TIMEFRAME`: 50 velas en 1w, donde hay ~200 alineadas
-desde 2023). Con salidas de trailing no hay TP fijo: el motor aplica su TP de respaldo. `btc` y `rs` votan falso si
+desde 2023): ahí la EMA 100, 144 y 200 recién votan desde la vela 100, 144 y 200 (NaN no vota). Con salidas de trailing no hay TP fijo: el motor aplica su TP de respaldo. `btc` y `rs` votan falso si
 no se pasa la serie de BTC.
 
 
@@ -91,12 +94,12 @@ no se pasa la serie de BTC.
 
 - **Referencia pdoc:** [`api/app/explorer/confluence.html`](../api/app/explorer/confluence.html)
 - **Importa (internos):** `app.candidates.common`, `app.candidates.sfp_reversal`, `app.indicators._pine`, `app.indicators.trend_filters`, `app.research.combos`, `app.research.round3`, `app.strategies.base`
-- **Lo importan:** `app.api.routes.explorer`, `app.api.routes.live`, `app.explorer.service`, `app.live.config`, `app.live.control`, `app.live.runner`, `scripts.live_tests`
+- **Lo importan:** `app.api.routes.explorer`, `app.api.routes.live`, `app.explorer.service`, `app.live.config`, `app.live.control`, `app.live.runner`, `scripts.live_tests`, `scripts.v2_tradingview_check`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_explorer.py`, `tests/unit/test_live_control.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_explorer.py`, `tests/unit/test_live_control.py`, `tests/unit/test_v2_tradingview_check_script.py`
 <!-- /hechos:app/explorer/confluence.py -->
 
 ### `app/explorer/data_status.py`

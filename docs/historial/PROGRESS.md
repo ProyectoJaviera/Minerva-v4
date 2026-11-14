@@ -2629,3 +2629,16 @@ Pedido del dueño: poder usar el Range Filter en los tres modos del selector «A
 - **Script de validación:** `scripts/v2_tradingview_check.py` acepta `--rf-mode intraday|scalping|swing`.
 - **Validación:** en BTCUSDT 1h los 36 giros (12 por modo) coinciden con las flechas de Frost en TradingView.
 - Sin cambio de comportamiento para las pruebas existentes: los modos nuevos solo se usan si se eligen.
+
+## v4: EMAs y cruces de EMAs (2026-11-14)
+
+Pedido del dueño: poder agregar EMAs (9, 21, 50, 200 y otras importantes) y operar largo o corto cuando dos de ellas se cruzan.
+
+- **Filtros de estado nuevos:** `ema9`, `ema21`, `ema50`, `ema100` y `ema200` (cierre sobre / bajo la EMA, con `pine_ema` del cierre, el mismo cálculo que la EMA 144 de `ema`, que no cambia). Mientras la EMA no tiene valor (NaN) no vota ningún lado.
+- **Cruces como evento:** un id por cada par rápida < lenta de `EMA_LENGTHS = (9, 21, 50, 100, 144, 200)`, 15 en total (`emax_9_21` … `emax_144_200`). Largo en la vela en que `ema_rápida[i] > ema_lenta[i]` y `ema_rápida[i-1] <= ema_lenta[i-1]`; corto en el espejo (`ema_cross_signals`, equivalente a `ta.crossover`/`ta.crossunder` al cierre). Se eligió **evento** y no estado para que un cruce solo entre en cada cruce y, combinado con otros, vote durante la ventana. Se agregó la 100 y la 144 a las pedidas porque son las otras medias clásicas (la 144 ya era filtro de Minerva).
+- **Grupos con etiqueta:** los 15 cruces son variantes del grupo `emax` (como los modos del Range Filter). `INDICATOR_GROUP_LABELS` da la etiqueta de cada grupo y `indicator_options()` arma la lista para `/api/live/options` y `/api/explorer/options` (con `group`, `variant` y `group_label`). Se elige como mucho un par por prueba.
+- **Frontend:** selector compartido `IndicatorPicker` en «En vivo» y en «Indicadores» (una casilla y un selector por grupo); «todos» en Indicadores marca la primera variante de cada grupo.
+- **Calentamiento:** no se cambió `WARMUP_BY_TIMEFRAME`. En 1w (50 velas) la EMA 100, 144 y 200 recién votan desde la vela 100, 144 y 200; en «En vivo» el corredor carga 800 velas, así que en todos los marcos alcanza para la EMA 200.
+- **Script de validación:** `scripts/v2_tradingview_check.py --ema-cross RAPIDA LENTA --ema-count N`.
+- **Otra sesión:** se encontraron cambios sin commit de otra implementación (cruces `xema_*` como estado); se guardaron en `git stash` («EMAs de otra sesion (descartado 2026-11-14)») y no se usaron.
+- Sin cambio de comportamiento para las pruebas existentes: los indicadores nuevos solo se usan si se eligen, y el orden relativo de los ids de siempre no cambió (los nombres de las estrategias existentes siguen iguales).

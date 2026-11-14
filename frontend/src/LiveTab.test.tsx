@@ -175,9 +175,9 @@ describe("LiveTab", () => {
         body: {
           ...OPTIONS,
           indicators: [
-            { id: "rf", label: "RF Intraday", kind: "estado", group: "rf", variant: "Intraday Mode" },
-            { id: "rf_scalp", label: "RF Scalping", kind: "estado", group: "rf", variant: "Scalping Mode" },
-            { id: "rf_swing", label: "RF Swing", kind: "estado", group: "rf", variant: "Swing Mode" },
+            { id: "rf", label: "RF Intraday", kind: "estado", group: "rf", variant: "Intraday Mode", group_label: "Range Filter (Frost): estado alcista / bajista" },
+            { id: "rf_scalp", label: "RF Scalping", kind: "estado", group: "rf", variant: "Scalping Mode", group_label: "Range Filter (Frost): estado alcista / bajista" },
+            { id: "rf_swing", label: "RF Swing", kind: "estado", group: "rf", variant: "Swing Mode", group_label: "Range Filter (Frost): estado alcista / bajista" },
             { id: "ema", label: "EMA 144", kind: "estado" },
           ],
         },
@@ -189,12 +189,45 @@ describe("LiveTab", () => {
     render(withQueryClient(<LiveTab />));
     fireEvent.change(await screen.findByLabelText("Nombre"), { target: { value: "RF swing" } });
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
-    fireEvent.click(screen.getByLabelText("Range Filter (Frost)"));
+    fireEvent.click(screen.getByLabelText("Range Filter (Frost): estado alcista / bajista"));
     fireEvent.change(screen.getByLabelText("Modo del Range Filter"), { target: { value: "rf_swing" } });
     fireEvent.click(screen.getByRole("button", { name: "Crear prueba" }));
     expect(await screen.findByText(/Prueba 8 creada/)).toBeInTheDocument();
     const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST");
     expect(JSON.parse(String((post?.[1] as RequestInit).body)).indicators).toEqual(["rf_swing"]);
+  });
+
+  it("elige el par de EMAs que se cruzan (50 / 200) y lo manda como un solo indicador", async () => {
+    const pairs = [[9, 21], [9, 50], [21, 50], [50, 200]];
+    const fetchMock = mockFetch({
+      "/api/live/options": {
+        status: 200,
+        body: {
+          ...OPTIONS,
+          indicators: [
+            { id: "ema200", label: "Cierre sobre / bajo la EMA 200", kind: "estado" },
+            ...pairs.map(([f, s]) => ({
+              id: `emax_${f}_${s}`, label: `Cruce de EMAs ${f} / ${s}`, kind: "evento",
+              group: "emax", variant: `EMA ${f} / EMA ${s}`, group_label: "Cruce de dos EMAs (largo al cruzar hacia arriba, corto hacia abajo)",
+            })),
+          ],
+        },
+      },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: [] } },
+      "POST /api/live/tests": { status: 200, body: { id: 9, name: "Cruce dorado" } },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(withQueryClient(<LiveTab />));
+    fireEvent.change(await screen.findByLabelText("Nombre"), { target: { value: "Cruce dorado" } });
+    // La EMA 200 suelta y una sola casilla para los cuatro cruces.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+    fireEvent.click(screen.getByLabelText("Cruce de dos EMAs (largo al cruzar hacia arriba, corto hacia abajo)"));
+    fireEvent.change(screen.getByLabelText("Par de EMAs"), { target: { value: "emax_50_200" } });
+    expect((screen.getByLabelText("Par de EMAs") as HTMLSelectElement).value).toBe("emax_50_200");
+    fireEvent.click(screen.getByRole("button", { name: "Crear prueba" }));
+    expect(await screen.findByText(/Prueba 9 creada/)).toBeInTheDocument();
+    const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST");
+    expect(JSON.parse(String((post?.[1] as RequestInit).body)).indicators).toEqual(["emax_50_200"]);
   });
 
   it("muestra el motivo si el servidor rechaza la prueba", async () => {

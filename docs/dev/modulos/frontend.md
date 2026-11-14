@@ -240,7 +240,7 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** ninguno
-- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/RunProgress.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/Unavailable.tsx`
+- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/RunProgress.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/IndicatorPicker.tsx`, `frontend/src/components/Unavailable.tsx`
 - **Rutas HTTP que cita:** `/api/account`, `/api/arm`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/backtest/verdicts`, `/api/control/${action}`, `/api/control/audit`, `/api/control/info`, `/api/explorer/data-status`, `/api/explorer/options`, `/api/explorer/progress`, `/api/explorer/run`, `/api/live/bot`, `/api/live/options`, `/api/live/positions`, `/api/live/tests`, `/api/live/tests/${id}`, `/api/live/tests/${id}/stop`, `/api/llm/decisions/recent`, `/api/measurement/status`, `/api/memory/lessons`, `/api/memory/status`, `/api/news/recent`, `/api/news/status`, `/api/risk`, `/api/shadow-trades/recent`, `/api/study/forward`, `/api/universe`, `/health`
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/api.ts -->
@@ -503,7 +503,7 @@ resultado. Sin monedas o sin indicadores el botón queda deshabilitado.
 <!-- hechos:frontend/src/IndicatorsTab.tsx -->
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
-- **Importa (de `frontend/src/`):** `frontend/src/RunProgress.tsx`, `frontend/src/api.ts`, `frontend/src/components/Card.tsx`, `frontend/src/components/StatTile.tsx`, `frontend/src/components/Unavailable.tsx`, `frontend/src/format.ts`
+- **Importa (de `frontend/src/`):** `frontend/src/RunProgress.tsx`, `frontend/src/api.ts`, `frontend/src/components/Card.tsx`, `frontend/src/components/IndicatorPicker.tsx`, `frontend/src/components/StatTile.tsx`, `frontend/src/components/Unavailable.tsx`, `frontend/src/format.ts`
 - **Lo importan:** `frontend/src/DashboardView.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/IndicatorsTab.test.tsx`
@@ -551,7 +551,7 @@ detalle (posiciones, operaciones y eventos), el formulario para crear una prueba
 <!-- hechos:frontend/src/LiveTab.tsx -->
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
-- **Importa (de `frontend/src/`):** `frontend/src/api.ts`, `frontend/src/components/Card.tsx`, `frontend/src/components/ConfirmDialog.tsx`, `frontend/src/components/StatTile.tsx`, `frontend/src/components/Unavailable.tsx`
+- **Importa (de `frontend/src/`):** `frontend/src/api.ts`, `frontend/src/components/Card.tsx`, `frontend/src/components/ConfirmDialog.tsx`, `frontend/src/components/IndicatorPicker.tsx`, `frontend/src/components/StatTile.tsx`, `frontend/src/components/Unavailable.tsx`
 - **Lo importan:** `frontend/src/DashboardView.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/LiveTab.test.tsx`
@@ -579,3 +579,28 @@ esa.
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/RunProgress.test.tsx`
 <!-- /hechos:frontend/src/RunProgress.tsx -->
+
+### `frontend/src/components/IndicatorPicker.tsx`
+
+**Responsabilidad.** Casillas de indicadores y filtros compartidas por «Indicadores» (`layout="list"`) y «En vivo»
+(`layout="grid"`). Los indicadores con `group` (los modos del Range Filter, los 15 pares del cruce de EMAs) se
+muestran como una sola casilla, con `group_label` como etiqueta, y un selector de variante.
+
+**Funciones y clases clave.** `IndicatorPicker` (props `options`, `selected`, `onChange`, `layout`) y
+`allIndicatorIds()` (los ids del botón «todos»: cada indicador suelto y la primera variante de cada grupo).
+
+**Invariantes — no romper.** Como mucho una variante por grupo en `selected`; cambiar la variante con el grupo
+marcado reemplaza la elegida. La casilla del grupo usa `group_label` como `aria-label` y el selector «Modo del
+Range Filter» (`rf`), «Par de EMAs» (`emax`) o «Variante de …» para otros grupos (los tests los buscan así).
+
+**Trampas conocidas.** La variante elegida mientras el grupo está desmarcado vive en el estado del componente: se
+pierde si el componente se desmonta. Un grupo se dibuja en la posición de su primera variante en `options`.
+
+<!-- hechos:frontend/src/components/IndicatorPicker.tsx -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Importa (de `frontend/src/`):** `frontend/src/api.ts`
+- **Lo importan:** `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`
+- **Rutas HTTP que cita:** ninguno
+- **Pruebas:** ninguno
+<!-- /hechos:frontend/src/components/IndicatorPicker.tsx -->

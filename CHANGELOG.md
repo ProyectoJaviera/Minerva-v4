@@ -7,6 +7,17 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v4: EMAs y cruces de EMAs — 2026-11-14
+
+- Filtros nuevos de estado «cierre sobre / bajo la EMA N» para 9, 21, 50, 100 y 200 (`ema9` … `ema200`),
+  junto a la EMA 144 de siempre (`ema`).
+- Cruce de dos EMAs como evento, con los 15 pares de 9/21/50/100/144/200 (`emax_9_21` … `emax_144_200`):
+  largo cuando la rápida cruza hacia arriba y corto hacia abajo, al cierre de la vela (como `ta.crossover`).
+  En «En vivo» y en «Indicadores» es una sola casilla con un selector de par; las dos pestañas comparten el
+  selector de indicadores (`frontend/src/components/IndicatorPicker.tsx`).
+- `scripts/v2_tradingview_check.py --ema-cross RAPIDA LENTA --ema-count N` lista los últimos cruces para
+  compararlos con TradingView.
+
 ## Minerva v4: los tres modos del Range Filter — 2026-11-14
 
 - El Range Filter de Frost se puede usar en sus tres modos de «AI Tags»: Intraday (`rf`, sensibilidad

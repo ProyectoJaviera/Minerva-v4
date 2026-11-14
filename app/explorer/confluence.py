@@ -2,14 +2,16 @@
 
 Todos los indicadores se tratan igual: cada uno **vota** alcista o bajista en cada vela.
 
-- **De estado** (votan siempre): EMA 144, estado del Range Filter (en sus tres modos de Frost:
+- **De estado** (votan siempre): cierre sobre / bajo una EMA (9, 21, 50, 100, 144 o 200), estado
+  del Range Filter (en sus tres modos de Frost:
   Intraday, Scalping y Swing), tendencia de la banda VIDYA,
   WaveTrend (`wt1` sobre / bajo `wt2`), funding contra su mediana de 30 dias, regimen de BTC (cierre
   sobre / bajo su EMA 200) y fuerza relativa contra BTC (retorno de 180 velas).
 - **De evento** (votan durante `window` velas desde su senal, incluida la de la senal): SFP,
   rechazo de Camarilla S3/R3, reversion del BB%B, cruce de WaveTrend en zona extrema, rechazo de
-  zona de liquidez, Liquidity Grab y FVG. Si en la ventana hubo senales de los dos lados, vale la
-  mas reciente.
+  zona de liquidez, Liquidity Grab, FVG y cruce de dos EMAs (largo cuando la rapida cruza hacia
+  arriba a la lenta, corto hacia abajo; como `ta.crossover`/`ta.crossunder`). Si en la ventana
+  hubo senales de los dos lados, vale la mas reciente.
 
 **Entrada:** en la vela en que **todos** los indicadores elegidos coinciden (y en la anterior no
 coincidian): largo si todos son alcistas, corto si todos son bajistas (con `min_agree` basta con que
@@ -62,12 +64,33 @@ INDICATORS: dict[str, tuple[str, str, str, str]] = {
                  "bull_rf_swing", "bear_rf_swing"),
     "vidya": ("Banda VIDYA (F. Trail de Frost): tendencia", "estado", "bull_vidya", "bear_vidya"),
     "wt": ("WaveTrend: wt1 sobre / bajo wt2", "estado", "bull_wt", "bear_wt"),
+    "ema9": ("Cierre sobre / bajo la EMA 9", "estado", "bull_ema9", "bear_ema9"),
+    "ema21": ("Cierre sobre / bajo la EMA 21", "estado", "bull_ema21", "bear_ema21"),
+    "ema50": ("Cierre sobre / bajo la EMA 50", "estado", "bull_ema50", "bear_ema50"),
+    "ema100": ("Cierre sobre / bajo la EMA 100", "estado", "bull_ema100", "bear_ema100"),
     "ema": ("Cierre sobre / bajo la EMA 144", "estado", "bull_ema", "bear_ema"),
+    "ema200": ("Cierre sobre / bajo la EMA 200", "estado", "bull_ema200", "bear_ema200"),
     "fund": ("Funding bajo / sobre su mediana de 30 dias (en contra del lado saturado)", "estado",
              "bull_fund", "bear_fund"),
     "btc": ("Regimen de BTC: cierre sobre / bajo su EMA 200", "estado", "bull_btc", "bear_btc"),
     "rs": ("Fuerza relativa contra BTC (retorno de 180 velas)", "estado", "bull_rs", "bear_rs"),
 }
+
+# Medias exponenciales del cierre (`pine_ema`, como `ta.ema` de TradingView). La de 144 es el
+# filtro `ema` de siempre (sale de `combos.compute_features`); las demas votan con el mismo
+# criterio (cierre sobre / bajo la EMA). Una EMA todavia sin valor (NaN) no vota: con el
+# calentamiento de 1w (50 velas) la EMA 100, la 144 y la 200 recien votan despues de 100, 144 y
+# 200 semanas.
+EMA_LENGTHS = (9, 21, 50, 100, 144, 200)
+EMA_STATE_IDS = {n: ("ema" if n == 144 else f"ema{n}") for n in EMA_LENGTHS}
+# Cruce de dos EMAs (evento): un id por par rapida < lenta, p. ej. `emax_9_21`. Largo en la vela
+# en que la rapida pasa a quedar sobre la lenta (`f[i] > s[i]` y `f[i-1] <= s[i-1]`, lo mismo que
+# `ta.crossover` al cierre de la vela) y corto en el espejo; sin valor de alguna EMA, no hay senal.
+EMA_CROSS_PAIRS = tuple((f, s) for k, f in enumerate(EMA_LENGTHS) for s in EMA_LENGTHS[k + 1:])
+for _fast, _slow in EMA_CROSS_PAIRS:
+    INDICATORS[f"emax_{_fast}_{_slow}"] = (
+        f"Cruce de EMAs {_fast} / {_slow}: largo si la rapida cruza hacia arriba, corto hacia "
+        "abajo", "evento", f"long_emax_{_fast}_{_slow}", f"short_emax_{_fast}_{_slow}")
 
 # Modos del Range Filter, como el selector "AI Tags" de Frost: id -> (grupo, nombre del modo).
 # "rf" es el Intraday Mode (sensibilidad 3.5, el de siempre); los otros solo cambian el
@@ -77,7 +100,48 @@ INDICATOR_VARIANTS: dict[str, tuple[str, str]] = {
     "rf_scalp": ("rf", "Scalping Mode"),
     "rf_swing": ("rf", "Swing Mode"),
 }
+INDICATOR_VARIANTS.update({f"emax_{f}_{s}": ("emax", f"EMA {f} / EMA {s}")
+                           for f, s in EMA_CROSS_PAIRS})
+# Etiqueta de cada grupo de variantes (la casilla del formulario; el selector elige la variante).
+INDICATOR_GROUP_LABELS: dict[str, str] = {
+    "rf": "Range Filter (Frost): estado alcista / bajista",
+    "emax": "Cruce de dos EMAs (largo al cruzar hacia arriba, corto hacia abajo)",
+}
 RF_MODE_COLUMNS = {"rf_scalp": "scalping", "rf_swing": "swing"}
+
+
+def indicator_options() -> list[dict]:
+    """Los indicadores para los formularios del dashboard (Indicadores y En vivo).
+
+    Returns:
+        Uno por id de `INDICATORS`, en su orden: `id`, `label` y `kind`; los que son variantes
+        de un grupo (modos del Range Filter, pares de EMAs) llevan ademas `group`, `variant` y
+        `group_label` (la etiqueta de la casilla del grupo).
+    """
+    out = []
+    for ind, (label, kind, _, _) in INDICATORS.items():
+        item = {"id": ind, "label": label, "kind": kind}
+        if ind in INDICATOR_VARIANTS:
+            item["group"], item["variant"] = INDICATOR_VARIANTS[ind]
+            item["group_label"] = INDICATOR_GROUP_LABELS[item["group"]]
+        out.append(item)
+    return out
+
+
+def ema_cross_signals(fast: pd.Series, slow: pd.Series) -> tuple[np.ndarray, np.ndarray]:
+    """Cruces de dos medias al cierre de la vela (`ta.crossover` / `ta.crossunder`).
+
+    Args:
+        fast: media rapida.
+        slow: media lenta (mismo indice).
+
+    Returns:
+        `(arriba, abajo)`: arrays booleanos; un NaN en la vela o en la anterior no da senal.
+    """
+    f_prev, s_prev = fast.shift(1), slow.shift(1)
+    up = (fast > slow) & (f_prev <= s_prev)
+    down = (fast < slow) & (f_prev >= s_prev)
+    return up.to_numpy(dtype=bool), down.to_numpy(dtype=bool)
 
 # id -> (etiqueta, SL en ATR(14), TP en multiplos del SL o None, trailing en ATR o None)
 EXITS: dict[str, tuple[str, float, float | None, float | None]] = {
@@ -204,6 +268,16 @@ def compute_votes(df: pd.DataFrame, interval: str, btc: pd.DataFrame | None = No
         _, _, bull_col, bear_col = INDICATORS[ind]
         out[bull_col] = (rf["rf_state"] == 1).to_numpy()
         out[bear_col] = (rf["rf_state"] == -1).to_numpy()
+    emas = {n: pine_ema(close_all, n) for n in EMA_LENGTHS}
+    for n, ind in EMA_STATE_IDS.items():
+        if ind == "ema":
+            continue  # la EMA 144 ya viene de compute_features (mismo calculo)
+        _, _, bull_col, bear_col = INDICATORS[ind]
+        out[bull_col] = (close_all > emas[n]).to_numpy()
+        out[bear_col] = (close_all < emas[n]).to_numpy()
+    for fast, slow in EMA_CROSS_PAIRS:
+        _, _, long_col, short_col = INDICATORS[f"emax_{fast}_{slow}"]
+        out[long_col], out[short_col] = ema_cross_signals(emas[fast], emas[slow])
     atr = out["x_atr14"]
     fvg = fvg_signals(out, atr)
     out["long_fvg"] = fvg["fvg_long"].to_numpy()
