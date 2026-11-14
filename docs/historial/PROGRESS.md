@@ -2642,3 +2642,14 @@ Pedido del dueño: poder agregar EMAs (9, 21, 50, 200 y otras importantes) y ope
 - **Script de validación:** `scripts/v2_tradingview_check.py --ema-cross RAPIDA LENTA --ema-count N`.
 - **Otra sesión:** se encontraron cambios sin commit de otra implementación (cruces `xema_*` como estado); se guardaron en `git stash` («EMAs de otra sesion (descartado 2026-11-14)») y no se usaron.
 - Sin cambio de comportamiento para las pruebas existentes: los indicadores nuevos solo se usan si se eligen, y el orden relativo de los ids de siempre no cambió (los nombres de las estrategias existentes siguen iguales).
+
+## v4: pestaña «En vivo» ordenada (2026-11-14)
+
+Pedido del dueño: con muchas pruebas (20 contando los gemelos) la pestaña se volvió muy larga y difícil de leer: cada tarjeta mostraba siempre la tabla de posiciones de la prueba y la de su gemelo, y el formulario quedaba al final.
+
+- **Tabla resumen** (`frontend/src/LiveTab.tsx`, `SummaryTable`): una fila por prueba (los gemelos no tienen fila propia) con marco, estado, operaciones, PF, resultado, % de ganadoras, abiertas, PnL no realizado (de `/api/live/positions`, cada 2 s) y «vs azar» (diferencia por operación y resultado del gemelo). Las cabeceras ordenan (primer clic: números de mayor a menor; los valores vacíos siempre al final). Un clic en la fila abre el detalle justo debajo.
+- **Filtros** (`Toolbar`): estado (Activas por defecto / Detenidas / Todas), marco, búsqueda por id, nombre o indicador y contador «N de M pruebas»; «Expandir todo» y «Colapsar todo» actúan sobre las filas visibles.
+- **Detalle** (`TestCard`): configuración, números, «Contra el azar» y, detrás de botones cerrados, las posiciones abiertas de la prueba y del gemelo y las operaciones y eventos.
+- **Nueva prueba:** botón «+ Nueva prueba» arriba; el formulario está cerrado por defecto (abierto si todavía no hay pruebas) y se cierra al crear, dejando el aviso.
+- **Vista recordada:** filtros, orden y detalles abiertos en `localStorage` (`minerva.live.view`, `frontend/src/live/view.ts`), con cada lectura y escritura en try/catch; si falla o está roto se usa la vista por defecto.
+- Sin cambios de backend ni de comportamiento de las pruebas. Detener (con DETENER), el interruptor del bot y la actualización cada 2 s siguen igual. Revisado con los datos reales de la v4 a través del servidor de desarrollo de Vite (proxy al 8003), sin tocar el contenedor.

@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useState, type FormEvent, type ReactNode } from "react";
 import {
   ApiError,
   type LiveOptions,
@@ -19,6 +19,7 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { IndicatorPicker } from "./components/IndicatorPicker";
 import { StatTile } from "./components/StatTile";
 import { Unavailable } from "./components/Unavailable";
+import { loadView, saveView, upnlByTest, visibleTests, type LiveView, type SortKey, type StatusFilter } from "./live/view";
 
 // Pestana «En vivo» (v3): pruebas de paper trading hacia adelante con el precio en tiempo real de
 // Bitunix. El dueno elige monedas, marco, indicadores, salida y modo; el corredor (dentro de la app)
@@ -150,7 +151,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function CreateForm({ options }: { options: LiveOptions }) {
+function CreateForm({ options, onCreated }: { options: LiveOptions; onCreated?: (message: string) => void }) {
   const create = useCreateLiveTest();
   const [name, setName] = useState("");
   const [symbols, setSymbols] = useState(options.default_symbols.join(" "));
@@ -215,7 +216,13 @@ function CreateForm({ options }: { options: LiveOptions }) {
         breakeven: partial && breakeven,
         max_open: num(maxOpen),
       },
-      { onSuccess: (r) => setCreated(`Prueba ${r.id} creada: «${r.name}». Empieza a operar en unos segundos.`) },
+      {
+        onSuccess: (r) => {
+          const msg = `Prueba ${r.id} creada: «${r.name}». Empieza a operar en unos segundos.`;
+          if (onCreated) onCreated(msg);
+          else setCreated(msg);
+        },
+      },
     );
   }
 
@@ -564,11 +571,11 @@ function fmtPerTrade(v: number | null): string {
 
 // v4: la prueba contra su gemelo de entradas al azar (misma configuracion, entradas sorteadas a la
 // misma frecuencia). Si no le gana al gemelo, su resultado no se distingue de la suerte.
-function ControlPanel({ t, positions, nowMs }: { t: LiveTestRow; positions: LiveOpenPosition[]; nowMs: number }) {
+function ControlPanel({ t, twinRows, nowMs }: { t: LiveTestRow; twinRows: LiveOpenPosition[]; nowMs: number }) {
+  const [showTwin, setShowTwin] = useState(false);
   const ctl = t.control;
   const vs = t.vs_control;
   if (!ctl || !vs) return null;
-  const twinRows = positions.filter((p) => p.test_id === ctl.id);
   const rate = t.rate;
   return (
     <section aria-label="Contra el azar" className="space-y-2 rounded bg-gray-50 p-2 dark:bg-gray-800/60">
@@ -591,37 +598,64 @@ function ControlPanel({ t, positions, nowMs }: { t: LiveTestRow; positions: Live
           ? ` El veredicto necesita al menos ${vs.min_trades} operaciones cerradas en cada lado.`
           : ` Prueba de Welch de una cola al 5 % sobre el resultado neto por operación (t = ${vs.t === null ? "-" : vs.t.toFixed(2)}).`}
       </p>
-      <PositionsTable rows={twinRows} nowMs={nowMs} label="Posiciones abiertas del gemelo" />
+      {twinRows.length > 0 && (
+        <ToggleButton open={showTwin} onClick={() => setShowTwin(!showTwin)}>
+          Posiciones del gemelo al azar ({twinRows.length})
+        </ToggleButton>
+      )}
+      {showTwin && <PositionsTable rows={twinRows} nowMs={nowMs} label="Posiciones abiertas del gemelo" />}
     </section>
   );
 }
 
-function TestCard({ t, onStop }: { t: LiveTestRow; onStop: (t: LiveTestRow) => void }) {
-  const [open, setOpen] = useState(false);
-  const live = useLivePositions(t.status === "active" || t.open_positions > 0);
-  const positions = live.data?.positions ?? [];
-  const nowMs = Date.now();
-  const own = positions.filter((p) => p.test_id === t.id);
-  const s = t.summary;
-  const c = t.config;
+function ToggleButton({ open, onClick, children }: { open: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <div className="space-y-3 rounded border border-gray-200 p-3 dark:border-gray-700">
+    <button
+      type="button"
+      aria-expanded={open}
+      onClick={onClick}
+      className="inline-flex items-center gap-1 rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+    >
+      <span aria-hidden="true">{open ? "▾" : "▸"}</span>
+      {children}
+    </button>
+  );
+}
+
+function configLine(t: LiveTestRow): string {
+  const c = t.config;
+  const sl = c.exit_name === "pct" && c.pct_exit ? `${c.pct_exit[0]} %` : c.exit_name;
+  const tps = c.take_profits && c.take_profits.length > 0
+    ? ` · TP ${c.take_profits.map(([d, cl]) => `${d} %→${cl} %`).join(", ")}${c.breakeven ? " · SL a entrada tras TP1" : ""}`
+    : "";
+  return `${c.timeframe} · ${MODE_LABEL[c.mode] ?? c.mode} · ${c.indicators.join(" + ")} · ${DIRECTION_LABEL[c.direction ?? "both"]} · `
+    + `${c.margin_usdt ?? "-"} USDT x${c.leverage ?? "-"} · SL ${sl}${tps} · ${c.symbols.length} monedas · desde ${fmtTime(t.created_at_ms)}`;
+}
+
+function StatusBadge({ status }: { status: LiveTestRow["status"] }) {
+  return (
+    <span className={`rounded px-2 py-0.5 text-xs font-medium ${status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"}`}>
+      {status === "active" ? "activa" : "detenida"}
+    </span>
+  );
+}
+
+// El detalle de una prueba (se abre desde la tabla resumen): configuracion, numeros, gemelo y, detras
+// de botones, las posiciones abiertas y las operaciones.
+function TestCard({ t, positions, nowMs, onStop }: {
+  t: LiveTestRow; positions: LiveOpenPosition[]; nowMs: number; onStop: (t: LiveTestRow) => void;
+}) {
+  const [showDetail, setShowDetail] = useState(false);
+  const [showOwn, setShowOwn] = useState(false);
+  const own = positions.filter((p) => p.test_id === t.id);
+  const twin = t.control ? positions.filter((p) => p.test_id === t.control?.id) : [];
+  const s = t.summary;
+  return (
+    <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">[{t.id}] {c.name}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {c.timeframe} · {MODE_LABEL[c.mode] ?? c.mode} · {c.indicators.join(" + ")} · {DIRECTION_LABEL[c.direction ?? "both"]} ·{" "}
-            {c.margin_usdt ?? "-"} USDT x{c.leverage ?? "-"} · SL {c.exit_name === "pct" && c.pct_exit ? `${c.pct_exit[0]} %` : c.exit_name}
-            {c.take_profits && c.take_profits.length > 0
-              ? ` · TP ${c.take_profits.map(([d, cl]) => `${d} %→${cl} %`).join(", ")}${c.breakeven ? " · SL a entrada tras TP1" : ""}`
-              : ""}
-            {" "}· {c.symbols.length} monedas · desde {fmtTime(t.created_at_ms)}
-          </p>
-        </div>
+        <p className="min-w-0 flex-1 text-xs text-gray-500 dark:text-gray-400">{configLine(t)}</p>
         <div className="flex items-center gap-2">
-          <span className={`rounded px-2 py-0.5 text-xs font-medium ${t.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200" : "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200"}`}>
-            {t.status === "active" ? "activa" : "detenida"}
-          </span>
+          <StatusBadge status={t.status} />
           {t.status === "active" && (
             <button onClick={() => onStop(t)} className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300">
               Detener
@@ -638,20 +672,172 @@ function TestCard({ t, onStop }: { t: LiveTestRow; onStop: (t: LiveTestRow) => v
       </div>
       {own.length > 0 && (
         <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-200">Posiciones abiertas</h4>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <ToggleButton open={showOwn} onClick={() => setShowOwn(!showOwn)}>
+              Posiciones abiertas ({own.length})
+            </ToggleButton>
             <span className="text-xs text-gray-500 dark:text-gray-400">
               PnL no realizado {fmtSigned(own.reduce((a, p) => a + (p.upnl ?? 0), 0), 3, " USDT")} · se actualiza cada 2 s
             </span>
           </div>
-          <PositionsTable rows={own} nowMs={nowMs} label="Posiciones abiertas" />
+          {showOwn && <PositionsTable rows={own} nowMs={nowMs} label="Posiciones abiertas" />}
         </div>
       )}
-      <ControlPanel t={t} positions={positions} nowMs={nowMs} />
-      <button onClick={() => setOpen(!open)} className="text-xs text-blue-700 underline dark:text-blue-300">
-        {open ? "Ocultar detalle" : "Ver detalle"}
-      </button>
-      {open && <TestDetail id={t.id} />}
+      <ControlPanel t={t} twinRows={twin} nowMs={nowMs} />
+      <ToggleButton open={showDetail} onClick={() => setShowDetail(!showDetail)}>
+        {showDetail ? "Ocultar operaciones y eventos" : "Ver operaciones y eventos"}
+      </ToggleButton>
+      {showDetail && <TestDetail id={t.id} />}
+    </div>
+  );
+}
+
+const COLUMNS: { key: SortKey; label: string; right?: boolean }[] = [
+  { key: "id", label: "Prueba" },
+  { key: "timeframe", label: "Marco" },
+  { key: "status", label: "Estado" },
+  { key: "trades", label: "Oper.", right: true },
+  { key: "pf", label: "PF", right: true },
+  { key: "net", label: "Resultado", right: true },
+  { key: "winrate", label: "Ganadoras", right: true },
+  { key: "open", label: "Abiertas", right: true },
+  { key: "upnl", label: "PnL no realizado", right: true },
+  { key: "diff", label: "vs azar (por oper.)", right: true },
+];
+
+function SummaryTable({ rows, view, setView, upnl, positions, nowMs, onStop }: {
+  rows: LiveTestRow[]; view: LiveView; setView: (v: LiveView) => void; upnl: Map<number, number>;
+  positions: LiveOpenPosition[]; nowMs: number; onStop: (t: LiveTestRow) => void;
+}) {
+  function sortBy(key: SortKey) {
+    // primer clic: los numeros de mayor a menor; el id y los textos, de menor a mayor
+    const textual = key === "id" || key === "name" || key === "timeframe" || key === "status";
+    setView({ ...view, sort: key, desc: view.sort === key ? !view.desc : !textual });
+  }
+  function toggle(id: number) {
+    setView({ ...view, open: view.open.includes(id) ? view.open.filter((x) => x !== id) : [...view.open, id] });
+  }
+  return (
+    <div className="overflow-x-auto rounded border border-gray-200 dark:border-gray-700">
+      <table aria-label="Resumen de las pruebas" className="w-full min-w-[860px] text-left text-xs tabular-nums">
+        <thead className="bg-gray-50 dark:bg-gray-800/60">
+          <tr className="text-gray-600 dark:text-gray-300">
+            {COLUMNS.map((col) => (
+              <th
+                key={col.key}
+                scope="col"
+                aria-sort={view.sort === col.key ? (view.desc ? "descending" : "ascending") : "none"}
+                className={`whitespace-nowrap px-2 py-1.5 font-medium ${col.right ? "text-right" : ""}`}
+              >
+                <button type="button" onClick={() => sortBy(col.key)} className="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-white">
+                  {col.label}
+                  <span aria-hidden="true" className="text-[10px]">
+                    {view.sort === col.key ? (view.desc ? "▼" : "▲") : ""}
+                  </span>
+                </button>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((t) => {
+            const s = t.summary;
+            const open = view.open.includes(t.id);
+            const u = upnl.get(t.id) ?? null;
+            const vs = t.vs_control;
+            return (
+              <Fragment key={t.id}>
+                <tr
+                  onClick={() => toggle(t.id)}
+                  className={`cursor-pointer border-t border-gray-100 align-top text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800/60 ${open ? "bg-gray-50 dark:bg-gray-800/60" : ""}`}
+                >
+                  <td className="max-w-[18rem] px-2 py-1.5">
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      onClick={(e) => { e.stopPropagation(); toggle(t.id); }}
+                      className="text-left font-semibold text-gray-900 hover:underline dark:text-gray-100"
+                    >
+                      <span aria-hidden="true" className="mr-1 text-gray-400">{open ? "▾" : "▸"}</span>
+                      [{t.id}] {t.config.name}
+                    </button>
+                    <div className="truncate text-gray-500 dark:text-gray-400" title={t.config.indicators.join(" + ")}>
+                      {t.config.indicators.join(" + ")}
+                    </div>
+                  </td>
+                  <td className="px-2 py-1.5">{t.config.timeframe}</td>
+                  <td className="px-2 py-1.5"><StatusBadge status={t.status} /></td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-right">{s.trades}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-right">{fmtPf(s.pf)}</td>
+                  <td className={`whitespace-nowrap px-2 py-1.5 text-right font-semibold ${pnlClass(s.trades ? s.net : null)}`}>{fmtUsdt(s.net)}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-right">{s.winrate === null ? "-" : `${Math.round(100 * s.winrate)}%`}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-right">{t.open_positions}</td>
+                  <td className={`whitespace-nowrap px-2 py-1.5 text-right ${pnlClass(u)}`}>{fmtSigned(u, 3, " USDT")}</td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-right">
+                    {vs ? (
+                      <>
+                        <div className={pnlClass(vs.diff)}>{fmtPerTrade(vs.diff)}</div>
+                        <div className="text-gray-500 dark:text-gray-400">
+                          gemelo {t.control ? fmtUsdt(t.control.summary.net) : "-"}
+                          {vs.verdict !== "pocas_operaciones" ? ` · ${VERDICT_TEXT[vs.verdict].toLowerCase()}` : ""}
+                        </div>
+                      </>
+                    ) : "-"}
+                  </td>
+                </tr>
+                {open && (
+                  <tr className="border-t border-gray-100 dark:border-gray-700">
+                    <td colSpan={COLUMNS.length} className="bg-white px-3 py-3 dark:bg-gray-900/40">
+                      <TestCard t={t} positions={positions} nowMs={nowMs} onStop={onStop} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Toolbar({ view, setView, shown, total, timeframes, onExpandAll, onCollapseAll }: {
+  view: LiveView; setView: (v: LiveView) => void; shown: number; total: number; timeframes: string[];
+  onExpandAll: () => void; onCollapseAll: () => void;
+}) {
+  const field = "rounded border border-gray-300 px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100";
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <label className="flex flex-col gap-0.5 text-xs text-gray-600 dark:text-gray-300">
+        Estado
+        <select className={field} value={view.status} onChange={(e) => setView({ ...view, status: e.target.value as StatusFilter })}>
+          <option value="active">Activas</option>
+          <option value="stopped">Detenidas</option>
+          <option value="all">Todas</option>
+        </select>
+      </label>
+      <label className="flex flex-col gap-0.5 text-xs text-gray-600 dark:text-gray-300">
+        Marco
+        <select className={field} value={view.timeframe} onChange={(e) => setView({ ...view, timeframe: e.target.value })}>
+          <option value="">Todos</option>
+          {timeframes.map((tf) => <option key={tf} value={tf}>{tf}</option>)}
+        </select>
+      </label>
+      <label className="flex min-w-[10rem] flex-1 flex-col gap-0.5 text-xs text-gray-600 dark:text-gray-300">
+        Buscar
+        <input
+          type="search"
+          className={field}
+          value={view.query}
+          placeholder="nombre o indicador"
+          onChange={(e) => setView({ ...view, query: e.target.value })}
+        />
+      </label>
+      <span className="pb-1 text-xs text-gray-500 dark:text-gray-400" aria-live="polite">{shown} de {total} pruebas</span>
+      <div className="flex gap-2 pb-0.5">
+        <button type="button" onClick={onExpandAll} className="text-xs text-blue-700 underline dark:text-blue-300">Expandir todo</button>
+        <button type="button" onClick={onCollapseAll} className="text-xs text-blue-700 underline dark:text-blue-300">Colapsar todo</button>
+      </div>
     </div>
   );
 }
@@ -663,6 +849,22 @@ export function LiveTab() {
   const turn = useLiveBotSwitch();
   const [stopping, setStopping] = useState<LiveTestRow | null>(null);
   const [askOff, setAskOff] = useState(false);
+  const [view, setViewState] = useState<LiveView>(loadView);
+  const [formOpen, setFormOpen] = useState<boolean | null>(null); // null = abierto solo si no hay pruebas
+  const [created, setCreated] = useState<string | null>(null);
+  const all = tests.data?.tests ?? [];
+  const live = useLivePositions(all.some((t) => t.status === "active" || t.open_positions > 0));
+  const positions = live.data?.positions ?? [];
+  const nowMs = Date.now();
+  const upnl = upnlByTest(positions);
+  const rows = visibleTests(all, view, upnl);
+  const showForm = formOpen ?? (tests.data !== undefined && all.length === 0);
+  const timeframes = options.data?.timeframes ?? [...new Set(all.map((t) => t.config.timeframe))];
+
+  function setView(next: LiveView) {
+    setViewState(next);
+    saveView(next);
+  }
 
   return (
     <div className="space-y-4">
@@ -679,25 +881,65 @@ export function LiveTab() {
               detail={tests.data.runner.detail}
               onAskOff={() => setAskOff(true)}
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Paper trading hacia adelante con el precio real de Bitunix; nunca órdenes reales. Si creas muchas
-              pruebas y miras solo la que ganó, es sobreajuste hecho hacia adelante.
-            </p>
-            {tests.data.tests.length === 0 ? (
-              <p className="text-sm text-gray-500">Todavía no hay pruebas. Crea la primera abajo.</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="min-w-0 flex-1 text-xs text-gray-500 dark:text-gray-400">
+                Paper trading hacia adelante con el precio real de Bitunix; nunca órdenes reales. Si creas muchas
+                pruebas y miras solo la que ganó, es sobreajuste hecho hacia adelante.
+              </p>
+              <button
+                type="button"
+                aria-expanded={showForm}
+                onClick={() => { setFormOpen(!showForm); setCreated(null); }}
+                className="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                {showForm ? "Cerrar formulario" : "+ Nueva prueba"}
+              </button>
+            </div>
+            {created && <p role="status" className="text-sm text-green-700 dark:text-green-300">{created}</p>}
+            {showForm && (
+              <section aria-label="Nueva prueba" className="rounded border border-blue-200 p-3 dark:border-blue-900">
+                <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">Nueva prueba</h3>
+                {options.isError ? (
+                  <Unavailable error={options.error} what="Opciones" />
+                ) : options.data ? (
+                  <CreateForm
+                    options={options.data}
+                    onCreated={(msg) => { setCreated(msg); setFormOpen(false); }}
+                  />
+                ) : (
+                  <p className="text-sm text-gray-500">Cargando…</p>
+                )}
+              </section>
+            )}
+            {all.length === 0 ? (
+              <p className="text-sm text-gray-500">Todavía no hay pruebas. Crea la primera con «+ Nueva prueba».</p>
             ) : (
-              tests.data.tests.map((t) => <TestCard key={t.id} t={t} onStop={setStopping} />)
+              <>
+                <Toolbar
+                  view={view}
+                  setView={setView}
+                  shown={rows.length}
+                  total={all.length}
+                  timeframes={timeframes}
+                  onExpandAll={() => setView({ ...view, open: [...new Set([...view.open, ...rows.map((t) => t.id)])] })}
+                  onCollapseAll={() => setView({ ...view, open: [] })}
+                />
+                {rows.length === 0 ? (
+                  <p className="text-sm text-gray-500">Ninguna prueba cumple los filtros.</p>
+                ) : (
+                  <SummaryTable
+                    rows={rows}
+                    view={view}
+                    setView={setView}
+                    upnl={upnl}
+                    positions={positions}
+                    nowMs={nowMs}
+                    onStop={setStopping}
+                  />
+                )}
+              </>
             )}
           </div>
-        ) : (
-          <p className="text-sm text-gray-500">Cargando…</p>
-        )}
-      </Card>
-      <Card title="Nueva prueba">
-        {options.isError ? (
-          <Unavailable error={options.error} what="Opciones" />
-        ) : options.data ? (
-          <CreateForm options={options.data} />
         ) : (
           <p className="text-sm text-gray-500">Cargando…</p>
         )}

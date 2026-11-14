@@ -50,7 +50,15 @@ const DETAIL = {
   events: [{ ts_ms: Date.UTC(2026, 10, 11, 20, 10), symbol: "BTCUSDT", kind: "OPEN", detail: "LONG a 74000" }],
 };
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
+
+// Abre el detalle de una prueba desde la tabla resumen.
+async function expand(name: RegExp | string) {
+  fireEvent.click(await screen.findByRole("button", { name: typeof name === "string" ? new RegExp(name.replace(/[[\]+]/g, (c) => `\\${c}`)) : name }));
+}
 
 describe("LiveTab", () => {
   it("muestra el corredor, cada prueba con su resumen y el detalle al pedirlo", async () => {
@@ -60,12 +68,15 @@ describe("LiveTab", () => {
       "/api/live/tests/1": { status: 200, body: DETAIL },
     }));
     render(withQueryClient(<LiveTab />));
-    expect(await screen.findByText("[1] RF + EMA 15m")).toBeInTheDocument();
+    const table = await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    expect(table).toHaveTextContent("[1] RF + EMA 15m");
     expect(screen.getByRole("status", { name: "Estado del bot" })).toHaveTextContent("Bot activo");
-    expect(screen.getByText("1.80")).toBeInTheDocument();
-    expect(screen.getByText("+0.42 USDT")).toBeInTheDocument();
-    expect(screen.getByText("67%")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Ver detalle"));
+    expect(table).toHaveTextContent("1.80");
+    expect(table).toHaveTextContent("+0.42 USDT");
+    expect(table).toHaveTextContent("67%");
+    expect(screen.queryByText("Ver operaciones y eventos")).not.toBeInTheDocument();
+    await expand("[1] RF + EMA 15m");
+    fireEvent.click(screen.getByText("Ver operaciones y eventos"));
     expect(await screen.findByText(/BTCUSDT LONG a 74000 desde/)).toBeInTheDocument();
     expect(screen.getByText("ETHUSDT")).toBeInTheDocument();
     expect(screen.getByText(/OPEN BTCUSDT LONG a 74000/)).toBeInTheDocument();
@@ -89,6 +100,10 @@ describe("LiveTab", () => {
       "/api/live/tests": { status: 200, body: { ...TESTS, tests: [withControl] } },
     }));
     render(withQueryClient(<LiveTab />));
+    const table = await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    expect(table).toHaveTextContent("+0.202 USDT");
+    expect(table).toHaveTextContent("gemelo -0.31 USDT");
+    await expand("[1] RF + EMA 15m");
     const panel = await screen.findByRole("region", { name: "Contra el azar" });
     expect(panel).toHaveTextContent("Faltan operaciones para decir algo");
     expect(panel).toHaveTextContent("-0.31 USDT");
@@ -112,6 +127,8 @@ describe("LiveTab", () => {
       "/api/live/tests": { status: 200, body: { ...TESTS, tests: [wins] } },
     }));
     render(withQueryClient(<LiveTab />));
+    expect(await screen.findByRole("table", { name: "Resumen de las pruebas" })).toHaveTextContent("le gana al azar");
+    await expand("[1] RF + EMA 15m");
     const panel = await screen.findByRole("region", { name: "Contra el azar" });
     expect(panel).toHaveTextContent("Le gana al azar");
     expect(panel).toHaveTextContent("t = 2.40");
@@ -133,6 +150,11 @@ describe("LiveTab", () => {
       "/api/live/positions": { status: 200, body: { now_ms: now, positions: [position] } },
     }));
     render(withQueryClient(<LiveTab />));
+    const summary = await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    await waitFor(() => expect(summary).toHaveTextContent("+0.579 USDT"));
+    await expand("[1] RF + EMA 15m");
+    expect(screen.queryByRole("table", { name: "Posiciones abiertas" })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: /Posiciones abiertas \(1\)/ }));
     const table = await screen.findByRole("table", { name: "Posiciones abiertas" });
     expect(table).toHaveTextContent("XRPUSDT");
     expect(table).toHaveTextContent("Corto 10x");
@@ -251,6 +273,7 @@ describe("LiveTab", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     render(withQueryClient(<LiveTab />));
+    await expand("[1] RF + EMA 15m");
     fireEvent.click(await screen.findByRole("button", { name: "Detener" }));
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("posiciones abiertas se cierran");
@@ -352,5 +375,118 @@ describe("LiveTab", () => {
       direction: "long", margin_usdt: 20, leverage: 5, exit_name: "pct", sl_pct: 2, tp_pct: null,
       take_profits: [[1.5, 40], [3, 50], [5, 10]], breakeven: true, max_open: 2,
     });
+  });
+});
+
+const row = (id: number, name: string, timeframe: string, status: "active" | "stopped", net: number, trades: number, indicators: string[]) => ({
+  ...TEST, id, status, config: { ...TEST.config, name, timeframe, indicators },
+  summary: { ...SUMMARY, net, trades, pf: trades ? 1 + net : null }, open_positions: 0,
+});
+const MANY = [
+  row(1, "Mezcla 15m", "15m", "active", -19.87, 22, ["sfp", "fvg"]),
+  row(3, "Range Filter Intraday", "4h", "active", 0, 0, ["rf"]),
+  row(5, "Range Filter Scalping", "15m", "active", -5.64, 8, ["rf_scalp"]),
+  row(7, "Vieja", "1h", "stopped", 3.2, 12, ["ema"]),
+  row(9, "Cruce dorado", "1h", "active", 1.5, 4, ["emax_50_200"]),
+];
+
+function names(): string[] {
+  const table = screen.getByRole("table", { name: "Resumen de las pruebas" });
+  return [...table.querySelectorAll("tbody button[aria-expanded]")].map((b) => b.textContent?.replace(/^[▸▾]/, "") ?? "");
+}
+
+describe("LiveTab: tabla resumen", () => {
+  function renderMany() {
+    vi.stubGlobal("fetch", mockFetch({
+      "/api/live/options": { status: 200, body: OPTIONS },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: MANY } },
+    }));
+    render(withQueryClient(<LiveTab />));
+  }
+
+  it("muestra solo las activas por defecto y filtra por estado, marco y busqueda", async () => {
+    renderMany();
+    await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    expect(names()).toEqual(["[1] Mezcla 15m", "[3] Range Filter Intraday", "[5] Range Filter Scalping", "[9] Cruce dorado"]);
+    expect(screen.getByText("4 de 5 pruebas")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "stopped" } });
+    expect(names()).toEqual(["[7] Vieja"]);
+    fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "all" } });
+    fireEvent.change(screen.getByLabelText("Marco"), { target: { value: "15m" } });
+    expect(names()).toEqual(["[1] Mezcla 15m", "[5] Range Filter Scalping"]);
+    fireEvent.change(screen.getByLabelText("Marco"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("Buscar"), { target: { value: "emax" } });
+    expect(names()).toEqual(["[9] Cruce dorado"]);
+    fireEvent.change(screen.getByLabelText("Buscar"), { target: { value: "nada" } });
+    expect(screen.getByText("Ninguna prueba cumple los filtros.")).toBeInTheDocument();
+    expect(screen.getByText("0 de 5 pruebas")).toBeInTheDocument();
+  });
+
+  it("ordena al hacer clic en la cabecera (resultado de mayor a menor y al reves)", async () => {
+    renderMany();
+    await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    fireEvent.click(screen.getByRole("button", { name: /^Resultado/ }));
+    expect(names()).toEqual(["[9] Cruce dorado", "[3] Range Filter Intraday", "[5] Range Filter Scalping", "[1] Mezcla 15m"]);
+    expect(screen.getByRole("columnheader", { name: /Resultado/ })).toHaveAttribute("aria-sort", "descending");
+    fireEvent.click(screen.getByRole("button", { name: /^Resultado/ }));
+    expect(names()).toEqual(["[1] Mezcla 15m", "[5] Range Filter Scalping", "[3] Range Filter Intraday", "[9] Cruce dorado"]);
+    // PF vacio (sin operaciones) siempre al final
+    fireEvent.click(screen.getByRole("button", { name: /^PF/ }));
+    expect(names().slice(-1)[0]).toBe("[3] Range Filter Intraday");
+  });
+
+  it("abre y cierra el detalle de cada prueba, y expande o colapsa todo", async () => {
+    renderMany();
+    await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    expect(screen.queryAllByText("Ver operaciones y eventos")).toHaveLength(0);
+    await expand("[5] Range Filter Scalping");
+    expect(screen.getAllByText("Ver operaciones y eventos")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /\[5\] Range Filter Scalping/ })).toHaveAttribute("aria-expanded", "true");
+    await expand("[5] Range Filter Scalping");
+    expect(screen.queryAllByText("Ver operaciones y eventos")).toHaveLength(0);
+    fireEvent.click(screen.getByText("Expandir todo"));
+    expect(screen.getAllByText("Ver operaciones y eventos")).toHaveLength(4);
+    fireEvent.click(screen.getByText("Colapsar todo"));
+    expect(screen.queryAllByText("Ver operaciones y eventos")).toHaveLength(0);
+  });
+
+  it("recuerda filtros, orden y detalles abiertos en este navegador", async () => {
+    renderMany();
+    await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    fireEvent.change(screen.getByLabelText("Marco"), { target: { value: "1h" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Oper\./ }));
+    await expand("[9] Cruce dorado");
+    const saved = JSON.parse(localStorage.getItem("minerva.live.view") ?? "{}");
+    expect(saved).toMatchObject({ timeframe: "1h", sort: "trades", desc: true, open: [9] });
+  });
+
+  it("arranca con la vista guardada y aguanta una guardada rota", async () => {
+    localStorage.setItem("minerva.live.view", JSON.stringify({ status: "all", sort: "net", desc: true, open: [7] }));
+    renderMany();
+    await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    expect(names()[0]).toBe("[7] Vieja");
+    expect(screen.getAllByText("Ver operaciones y eventos")).toHaveLength(1);
+    localStorage.setItem("minerva.live.view", "{no es json");
+    const { loadView, DEFAULT_VIEW } = await import("./live/view");
+    expect(loadView()).toEqual(DEFAULT_VIEW);
+  });
+
+  it("deja el formulario cerrado si hay pruebas, lo abre con «+ Nueva prueba» y lo cierra al crear", async () => {
+    const fetchMock = mockFetch({
+      "/api/live/options": { status: 200, body: OPTIONS },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: MANY } },
+      "POST /api/live/tests": { status: 200, body: { id: 11, name: "Otra" } },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(withQueryClient(<LiveTab />));
+    await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    expect(screen.queryByRole("form", { name: "Nueva prueba en vivo" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "+ Nueva prueba" }));
+    fireEvent.change(await screen.findByLabelText("Nombre"), { target: { value: "Otra" } });
+    fireEvent.click(screen.getByLabelText(/EMA 144/));
+    fireEvent.click(screen.getByRole("button", { name: "Crear prueba" }));
+    expect(await screen.findByText(/Prueba 11 creada/)).toBeInTheDocument();
+    expect(screen.queryByRole("form", { name: "Nueva prueba en vivo" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "+ Nueva prueba" })).toHaveAttribute("aria-expanded", "false");
   });
 });

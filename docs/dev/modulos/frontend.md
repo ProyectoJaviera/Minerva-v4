@@ -240,7 +240,7 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** ninguno
-- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/RunProgress.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/IndicatorPicker.tsx`, `frontend/src/components/Unavailable.tsx`
+- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/RunProgress.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/IndicatorPicker.tsx`, `frontend/src/components/Unavailable.tsx`, `frontend/src/live/view.ts`
 - **Rutas HTTP que cita:** `/api/account`, `/api/arm`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/backtest/verdicts`, `/api/control/${action}`, `/api/control/audit`, `/api/control/info`, `/api/explorer/data-status`, `/api/explorer/options`, `/api/explorer/progress`, `/api/explorer/run`, `/api/live/bot`, `/api/live/options`, `/api/live/positions`, `/api/live/tests`, `/api/live/tests/${id}`, `/api/live/tests/${id}/stop`, `/api/llm/decisions/recent`, `/api/measurement/status`, `/api/memory/lessons`, `/api/memory/status`, `/api/news/recent`, `/api/news/status`, `/api/risk`, `/api/shadow-trades/recent`, `/api/study/forward`, `/api/universe`, `/health`
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/api.ts -->
@@ -535,23 +535,28 @@ primera visita tras un reinicio del servidor tarda alrededor de un minuto en mos
 
 ### `frontend/src/LiveTab.tsx`
 
-**Responsabilidad.** La pestaña «En vivo» (v3): estado del corredor, una tarjeta por prueba con su resumen y su
-detalle (posiciones, operaciones y eventos), el formulario para crear una prueba y el diálogo para detenerla.
+**Responsabilidad.** La pestaña «En vivo» (v3; ordenada en la v4): estado del corredor, una tabla resumen con una
+fila por prueba (filtros, orden por columna y detalle plegable debajo de cada fila), el formulario para crear una
+prueba detrás de «+ Nueva prueba» y los diálogos para detenerla o apagar el bot.
 
 **Funciones y clases clave.** `LiveTab`, `BotPanel` (indicador del bot y botón para encenderlo o apagarlo),
-`CreateForm`, `TestCard` y `TestDetail`. Los datos vienen de
+`Toolbar` (filtros y contador), `SummaryTable` (tabla ordenable; abre `TestCard`), `TestCard` (números,
+`ControlPanel` del gemelo y, detrás de botones, `PositionsTable` y `TestDetail`) y `CreateForm` (`onCreated` cierra el
+formulario y deja el aviso). Los datos vienen de
 `useLiveOptions`, `useLiveTests`, `useLiveTest`, `useCreateLiveTest`, `useStopLiveTest` y `useLiveBotSwitch`
 (`api.ts`).
 
 **Invariantes — no romper.** Detener una prueba y apagar el bot pasan por `ConfirmDialog` con la palabra
 `DETENER` o `APAGAR`, que el servidor vuelve a exigir. El formulario no decide qué es válido: muestra el motivo que devuelve el servidor.
 
-**Trampas conocidas.** La lista y el detalle se refrescan cada 15 s.
+**Trampas conocidas.** La lista y el detalle se refrescan cada 15 s; las posiciones y el PnL no realizado de la
+tabla, cada 2 s (una sola consulta `useLivePositions` para toda la pestaña). El formulario arranca abierto solo
+si todavía no hay pruebas.
 
 <!-- hechos:frontend/src/LiveTab.tsx -->
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
-- **Importa (de `frontend/src/`):** `frontend/src/api.ts`, `frontend/src/components/Card.tsx`, `frontend/src/components/ConfirmDialog.tsx`, `frontend/src/components/IndicatorPicker.tsx`, `frontend/src/components/StatTile.tsx`, `frontend/src/components/Unavailable.tsx`
+- **Importa (de `frontend/src/`):** `frontend/src/api.ts`, `frontend/src/components/Card.tsx`, `frontend/src/components/ConfirmDialog.tsx`, `frontend/src/components/IndicatorPicker.tsx`, `frontend/src/components/StatTile.tsx`, `frontend/src/components/Unavailable.tsx`, `frontend/src/live/view.ts`
 - **Lo importan:** `frontend/src/DashboardView.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/LiveTab.test.tsx`
@@ -604,3 +609,25 @@ pierde si el componente se desmonta. Un grupo se dibuja en la posición de su pr
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/components/IndicatorPicker.tsx -->
+
+### `frontend/src/live/view.ts`
+
+**Responsabilidad.** La vista de la tabla resumen de «En vivo»: filtros, orden y pruebas con el detalle abierto.
+
+**Funciones y clases clave.** `LiveView`, `DEFAULT_VIEW`, `loadView()` / `saveView()` (clave `minerva.live.view`
+de `localStorage`), `upnlByTest()` (PnL no realizado por prueba) y `visibleTests()` (filtra y ordena).
+
+**Invariantes — no romper.** Cada lectura y escritura de `localStorage` va en try/catch y valida los campos: una
+vista guardada rota o un almacenamiento bloqueado dan `DEFAULT_VIEW` (solo activas, por id). Al ordenar, los
+valores vacíos (PF sin operaciones, sin gemelo) quedan siempre al final y los empates se resuelven por id.
+
+**Trampas conocidas.** Es una comodidad de este navegador: no se comparte entre equipos ni llega al servidor.
+
+<!-- hechos:frontend/src/live/view.ts -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Importa (de `frontend/src/`):** `frontend/src/api.ts`
+- **Lo importan:** `frontend/src/LiveTab.tsx`
+- **Rutas HTTP que cita:** ninguno
+- **Pruebas:** ninguno
+<!-- /hechos:frontend/src/live/view.ts -->

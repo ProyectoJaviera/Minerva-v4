@@ -7,6 +7,17 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v4: la pestaña «En vivo» ordenada — 2026-11-14
+
+- Una tabla resumen arriba, con una fila por prueba: marco, estado, operaciones, PF, resultado, % de ganadoras,
+  posiciones abiertas, PnL no realizado en vivo y comparación con el gemelo al azar. Las columnas se ordenan con
+  un clic y al hacer clic en una fila se abre su detalle debajo.
+- Filtros por estado (activas por defecto), por marco y por nombre o indicador, con contador; botones
+  «Expandir todo» y «Colapsar todo».
+- En el detalle, las tablas de posiciones de la prueba y del gemelo quedan detrás de botones cerrados. El
+  formulario se abre con «+ Nueva prueba» y se cierra al crear. La vista (filtros, orden y detalles abiertos) se
+  recuerda en el navegador.
+
 ## Minerva v4: EMAs y cruces de EMAs — 2026-11-14
 
 - Filtros nuevos de estado «cierre sobre / bajo la EMA N» para 9, 21, 50, 100 y 200 (`ema9` … `ema200`),
