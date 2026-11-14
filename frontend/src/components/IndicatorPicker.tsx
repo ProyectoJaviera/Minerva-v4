@@ -8,6 +8,8 @@ import type { IndicatorOption } from "../api";
 const SELECT_LABEL: Record<string, string> = {
   rf: "Modo del Range Filter",
   emax: "Par de EMAs",
+  cloud: "Longitud del Cloud",
+  cloud_retest: "Longitud del retesteo del Cloud",
 };
 
 function groupsOf(options: IndicatorOption[]): Map<string, IndicatorOption[]> {

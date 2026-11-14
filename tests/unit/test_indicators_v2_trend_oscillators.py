@@ -8,7 +8,14 @@ import pytest
 
 from app.indicators._pine import pine_atr
 from app.indicators.oscillators import bb_percent_b, wavetrend
-from app.indicators.trend_filters import range_filter, vidya, vidya_band
+from app.indicators.trend_filters import (
+    FROST_CLOUD_LENGTH,
+    cloud_retest_signals,
+    frost_cloud,
+    range_filter,
+    vidya,
+    vidya_band,
+)
 
 
 def _ohlc(close):
@@ -196,3 +203,46 @@ def test_wavetrend_is_nan_on_a_flat_price():
 def test_wavetrend_requires_hlc():
     with pytest.raises(ValueError):
         wavetrend(pd.DataFrame({"close": [1.0]}))
+
+
+# --- Cloud de Frost ---------------------------------------------------------------------------
+
+
+def test_frost_cloud_is_three_emas_of_high_close_and_low():
+    from app.indicators._pine import pine_ema
+
+    rng = np.random.default_rng(3)
+    close = pd.Series(100 + rng.normal(0, 1, 300).cumsum())
+    df = pd.DataFrame({"high": close + rng.uniform(0.1, 1, 300),
+                       "low": close - rng.uniform(0.1, 1, 300), "close": close})
+    assert FROST_CLOUD_LENGTH == 36
+    out = frost_cloud(df)
+    assert out["cloud_top"].equals(pine_ema(df["high"], 36).rename("cloud_top"))
+    assert out["cloud_mid"].equals(pine_ema(df["close"], 36).rename("cloud_mid"))
+    assert out["cloud_bottom"].equals(pine_ema(df["low"], 36).rename("cloud_bottom"))
+    assert out.iloc[:35].isna().all().all() and out.iloc[35:].notna().all().all()
+    valid = out.dropna()
+    assert (valid["cloud_top"] >= valid["cloud_mid"]).all()
+    assert (valid["cloud_mid"] >= valid["cloud_bottom"]).all()
+    with pytest.raises(ValueError):
+        frost_cloud(df, 0)
+    with pytest.raises(ValueError):
+        frost_cloud(df.drop(columns="high"))
+
+
+def test_cloud_retest_signals_by_hand():
+    nan = float("nan")
+    cloud = pd.DataFrame({"cloud_top": [nan, 10, 10, 10, 10, 10, 10, 10],
+                          "cloud_bottom": [nan, 8, 8, 8, 8, 8, 8, 8]})
+    df = pd.DataFrame({
+        #        0     1     2     3     4     5     6     7
+        "close": [11.0, 11.0, 10.5, 10.5, 9.0, 7.0, 7.5, 7.5],
+        "high": [11.5, 11.5, 11.0, 10.8, 10.0, 7.5, 8.0, 8.5],
+        "low": [10.5, 10.5, 9.8, 10.1, 8.5, 6.5, 7.0, 7.2],
+    })
+    long, short = cloud_retest_signals(df, cloud)
+    # 1: la anterior no tiene nube -> nada. 2: venia sobre el techo, toca 10 y cierra 10.5 -> largo.
+    # 3: no toca el techo (minimo 10.1) -> nada. 4: cierra dentro -> nada.
+    # 6: venia bajo el piso, toca 8 con el maximo y cierra 7.5 -> corto. 7: lo mismo -> corto.
+    assert long.tolist() == [False, False, True, False, False, False, False, False]
+    assert short.tolist() == [False, False, False, False, False, False, True, True]

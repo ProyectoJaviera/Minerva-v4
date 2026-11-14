@@ -233,6 +233,37 @@ def test_indicator_options_group_the_ema_crosses_with_a_label():
     assert "group" not in opts["ema200"] and "group" not in opts["ema"]
 
 
+def test_cloud_state_and_retest_vote_like_frost_cloud():
+    from app.indicators.trend_filters import cloud_retest_signals, frost_cloud
+
+    df = _random_walk(21)
+    feats = confluence.compute_votes(df, "1h")
+    for n in confluence.CLOUD_LENGTHS:
+        cloud = frost_cloud(df, n)
+        _, kind, bull_col, bear_col = confluence.INDICATORS[f"cloud{n}"]
+        assert kind == "estado"
+        assert feats[bull_col].tolist() == (df["close"] > cloud["cloud_top"]).tolist()
+        assert feats[bear_col].tolist() == (df["close"] < cloud["cloud_bottom"]).tolist()
+        # dentro de la nube no vota ningun lado
+        inside = (df["close"] <= cloud["cloud_top"]) & (df["close"] >= cloud["cloud_bottom"])
+        assert not (feats[bull_col] | feats[bear_col])[inside].any()
+        _, kind, long_col, short_col = confluence.INDICATORS[f"cloud_retest{n}"]
+        assert kind == "evento"
+        long, short = cloud_retest_signals(df, cloud)
+        assert feats[long_col].tolist() == long.tolist()
+        assert feats[short_col].tolist() == short.tolist()
+        assert long.sum() > 0 and short.sum() > 0
+        # solo y con ventana 1, el retesteo entra en cada rebote (dos rebotes seguidos del mismo
+        # lado son un solo voto continuo: entra en el primero)
+        lo, sh = confluence.confluence_signals(feats, [f"cloud_retest{n}"], 1)
+        first_long = long & ~np.concatenate(([False], long[:-1]))
+        first_short = short & ~np.concatenate(([False], short[:-1]))
+        assert lo.tolist() == first_long.tolist() and sh.tolist() == first_short.tolist()
+        assert confluence.INDICATOR_VARIANTS[f"cloud{n}"] == ("cloud", f"Longitud {n}")
+        assert confluence.INDICATOR_VARIANTS[f"cloud_retest{n}"] == (
+            "cloud_retest", f"Longitud {n}")
+
+
 def test_strategy_validates_its_parameters():
     for kwargs in ({"indicators": []}, {"indicators": ["nope"]}, {"window": 0},
                    {"window": confluence.MAX_WINDOW + 1}, {"exit_name": "x"}, {"interval": "2h"}):

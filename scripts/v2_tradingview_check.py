@@ -19,6 +19,10 @@ compara contra el grafico de TradingView, para BTCUSDT y ETHUSDT:
    En TradingView: dos indicadores «EMA» (fuente close) con esos largos; el cruce se ve al
    cierre de la vela listada. Con `--history-bars` alto (2000 por defecto) la EMA 200 ya no
    depende del arranque de la historia.
+5. Con `--cloud LONGITUD`, el Cloud de Frost (techo = EMA del maximo, media = EMA del cierre,
+   piso = EMA del minimo) de las ultimas 3 velas cerradas y los ultimos `--cloud-count`
+   retesteos (rebote en el techo = LARGO, en el piso = CORTO), como `cloud_retest<n>`. En
+   TradingView: Frost con «Cloud» encendido y la misma longitud.
 
 Con `--end AAAA-MM-DD` todo se calcula como si «ahora» fuera esa fecha a las 00:00 UTC, para
 comparar semanas pasadas; con `--skip-camarilla` se omiten los niveles.
@@ -34,6 +38,7 @@ Es de solo lectura: no lee `.env`, no abre ninguna base y no escribe nada.
     python scripts/v2_tradingview_check.py --interval 4h --skip-camarilla --rf-count 10
     python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --rf-mode swing
     python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --ema-cross 9 21
+    python scripts/v2_tradingview_check.py --skip-camarilla --sfp-count 0 --cloud 50
     python scripts/v2_tradingview_check.py --end 2025-06-15 --skip-camarilla --sfp-count 15
 """
 
@@ -55,7 +60,12 @@ from app.explorer.confluence import EMA_LENGTHS, ema_cross_signals  # noqa: E402
 from app.indicators._pine import pine_atr, pine_ema  # noqa: E402
 from app.indicators.levels import DAY_MS, camarilla_levels  # noqa: E402
 from app.indicators.structure import sfp_signals  # noqa: E402
-from app.indicators.trend_filters import RANGE_FILTER_SENSITIVITY, range_filter  # noqa: E402
+from app.indicators.trend_filters import (  # noqa: E402
+    RANGE_FILTER_SENSITIVITY,
+    cloud_retest_signals,
+    frost_cloud,
+    range_filter,
+)
 from app.market.bitunix_rest import BitunixRestClient  # noqa: E402
 
 HOUR_MS = 3_600_000
@@ -340,11 +350,53 @@ def ema_cross_lines(symbol: str, bars: pd.DataFrame, fast: int, slow: int, count
     return lines
 
 
+def cloud_lines(symbol: str, bars: pd.DataFrame, length: int, count: int,
+                interval: str) -> list[str]:
+    """Lineas con el Cloud de Frost de las ultimas 3 velas y sus ultimos `count` retesteos.
+
+    Usa las mismas funciones que los indicadores `cloud<n>` y `cloud_retest<n>` (`frost_cloud`
+    y `cloud_retest_signals`).
+
+    Args:
+        symbol: simbolo.
+        bars: velas con `open_time`, `open`, `high`, `low` y `close`.
+        length: longitud de las tres EMAs.
+        count: cuantos retesteos mostrar (los mas recientes).
+        interval: etiqueta de la temporalidad, solo para el texto.
+
+    Returns:
+        Las lineas de texto.
+    """
+    cloud = frost_cloud(bars, length)
+    long, short = cloud_retest_signals(bars, cloud)
+
+    def levels(i: int) -> str:
+        return (f"techo {cloud['cloud_top'].iat[i]:.2f}  media {cloud['cloud_mid'].iat[i]:.2f}  "
+                f"piso {cloud['cloud_bottom'].iat[i]:.2f}")
+
+    lines = [f"Cloud de Frost {length} {symbol} {interval}: ultimas 3 velas cerradas "
+             "(hora UTC de apertura)"]
+    for i in range(max(0, len(bars) - 3), len(bars)):
+        lines.append(f"  {_utc(int(bars['open_time'].iat[i]))}  cierre "
+                     f"{float(bars['close'].iat[i]):.2f}  {levels(i)}")
+    idx = [i for i in range(len(bars)) if long[i] or short[i]]
+    lines.append(f"Retesteos del Cloud {length} {symbol} {interval}: ultimos {count} "
+                 "(LARGO = rebote en el techo, CORTO = rebote en el piso)")
+    if not idx:
+        lines.append("  ninguno en el historial descargado")
+    for i in idx[-count:]:
+        o, h, lo, c = (float(bars[k].iat[i]) for k in ("open", "high", "low", "close"))
+        lines.append(f"  {_utc(int(bars['open_time'].iat[i]))}  {'LARGO' if long[i] else 'CORTO'}  "
+                     f"O {o:.2f}  H {h:.2f}  L {lo:.2f}  C {c:.2f}  {levels(i)}")
+    return lines
+
+
 async def build_report(client: Any, symbols: list[str], days: list[date], sfp_count: int,
                        history_bars: int, now_ms: int, interval: str = "1h",
                        rf_count: int = 0, bar_count: int = 0,
                        rf_mode: str = "intraday", ema_cross: tuple[int, int] | None = None,
-                       ema_count: int = 10) -> list[str]:
+                       ema_count: int = 10, cloud: int | None = None,
+                       cloud_count: int = 8) -> list[str]:
     """Descarga las velas y arma el informe completo.
 
     Args:
@@ -360,6 +412,8 @@ async def build_report(client: Any, symbols: list[str], days: list[date], sfp_co
         rf_mode: modo del Range Filter (`intraday`, `scalping` o `swing`).
         ema_cross: `(rapida, lenta)` para listar sus cruces, o `None`.
         ema_count: cruces de EMAs a mostrar.
+        cloud: longitud del Cloud de Frost a listar, o `None`.
+        cloud_count: retesteos del Cloud a mostrar.
 
     Returns:
         Las lineas del informe.
@@ -389,6 +443,8 @@ async def build_report(client: Any, symbols: list[str], days: list[date], sfp_co
             lines += rf_lines(symbol, bars, rf_count, interval, rf_mode)
         if ema_cross and ema_count:
             lines += ema_cross_lines(symbol, bars, ema_cross[0], ema_cross[1], ema_count, interval)
+        if cloud:
+            lines += cloud_lines(symbol, bars, cloud, cloud_count, interval)
         lines.append("")
     return lines
 
@@ -415,6 +471,10 @@ def main() -> None:
                         help=f"lista los cruces de dos EMAs (p. ej. 9 21; largos de {EMA_LENGTHS})")
     parser.add_argument("--ema-count", type=int, default=10,
                         help="cruces de EMAs a mostrar con --ema-cross")
+    parser.add_argument("--cloud", type=int, metavar="LONGITUD",
+                        help="lista el Cloud de Frost y sus retesteos (p. ej. 36 o 50)")
+    parser.add_argument("--cloud-count", type=int, default=8,
+                        help="retesteos del Cloud a mostrar con --cloud")
     parser.add_argument("--bars", type=int, default=0,
                         help="velas OHLC a listar antes del corte (0 = ninguna)")
     parser.add_argument("--end", help="corte AAAA-MM-DD (00:00 UTC) para mirar semanas pasadas")
@@ -422,6 +482,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.ema_cross and not 1 <= args.ema_cross[0] < args.ema_cross[1]:
         parser.error("--ema-cross: la EMA rapida debe ser mas corta que la lenta (p. ej. 9 21)")
+    if args.cloud is not None and args.cloud < 1:
+        parser.error("--cloud: la longitud debe ser 1 o mas")
     days = [] if args.skip_camarilla else [date.fromisoformat(d) for d in args.days]
     now_ms = int(time.time() * 1000)
     if args.end:
@@ -436,7 +498,7 @@ def main() -> None:
                                       args.history_bars, now_ms, args.interval, args.rf_count,
                                       args.bars, args.rf_mode,
                                       tuple(args.ema_cross) if args.ema_cross else None,
-                                      args.ema_count)
+                                      args.ema_count, args.cloud, args.cloud_count)
         finally:
             await client.aclose()
 

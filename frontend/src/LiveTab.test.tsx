@@ -252,6 +252,38 @@ describe("LiveTab", () => {
     expect(JSON.parse(String((post?.[1] as RequestInit).body)).indicators).toEqual(["emax_50_200"]);
   });
 
+  it("elige el retesteo del Cloud de Frost con longitud 50", async () => {
+    const cloud = "Cloud de Frost: cierre sobre el techo (alcista) / bajo el piso (bajista)";
+    const retest = "Retesteo del Cloud de Frost: rebote en el techo (largo) o en el piso (corto)";
+    const fetchMock = mockFetch({
+      "/api/live/options": {
+        status: 200,
+        body: {
+          ...OPTIONS,
+          indicators: [
+            { id: "cloud_retest36", label: "Retesteo 36", kind: "evento", group: "cloud_retest", variant: "Longitud 36", group_label: retest },
+            { id: "cloud_retest50", label: "Retesteo 50", kind: "evento", group: "cloud_retest", variant: "Longitud 50", group_label: retest },
+            { id: "cloud36", label: "Cloud 36", kind: "estado", group: "cloud", variant: "Longitud 36", group_label: cloud },
+            { id: "cloud50", label: "Cloud 50", kind: "estado", group: "cloud", variant: "Longitud 50", group_label: cloud },
+          ],
+        },
+      },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: [] } },
+      "POST /api/live/tests": { status: 200, body: { id: 12, name: "Cloud" } },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(withQueryClient(<LiveTab />));
+    fireEvent.change(await screen.findByLabelText("Nombre"), { target: { value: "Cloud" } });
+    // dos casillas (estado y retesteo), cada una con su selector de longitud
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+    fireEvent.click(screen.getByLabelText(retest));
+    fireEvent.change(screen.getByLabelText("Longitud del retesteo del Cloud"), { target: { value: "cloud_retest50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear prueba" }));
+    expect(await screen.findByText(/Prueba 12 creada/)).toBeInTheDocument();
+    const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST");
+    expect(JSON.parse(String((post?.[1] as RequestInit).body)).indicators).toEqual(["cloud_retest50"]);
+  });
+
   it("muestra el motivo si el servidor rechaza la prueba", async () => {
     vi.stubGlobal("fetch", mockFetch({
       "/api/live/options": { status: 200, body: OPTIONS },

@@ -75,7 +75,8 @@ con una salida fija en múltiplos del ATR(14).
   `fvg_signals` de la ronda 3 y funding, régimen de BTC y fuerza relativa para cualquier marco; con caché),
   `EMA_LENGTHS` (9, 21, 50, 100, 144, 200: filtros de estado `ema9` … `ema200`, con `ema` = EMA 144) y los 15
   cruces de evento `emax_<rápida>_<lenta>` (`ema_cross_signals()`, como `ta.crossover`/`ta.crossunder` al cierre),
-  `INDICATOR_VARIANTS` / `INDICATOR_GROUP_LABELS` (grupos `rf` y `emax`) e `indicator_options()` (la lista de las
+  `CLOUD_LENGTHS` (36 y 50: estado `cloud<n>` y retesteo `cloud_retest<n>` del Cloud de Frost),
+  `INDICATOR_VARIANTS` / `INDICATOR_GROUP_LABELS` (grupos `rf`, `emax`, `cloud` y `cloud_retest`) e `indicator_options()` (la lista de las
   rutas `/api/live/options` y `/api/explorer/options`), `event_votes()`, `confluence_signals()` (con `min_agree`: al menos N votos del mismo lado y más que el contrario) y
   `ConfluenceStrategy` (precalcula las entradas como arrays; el control
   sortea la dirección con el mismo SHA-256 del preregistro).

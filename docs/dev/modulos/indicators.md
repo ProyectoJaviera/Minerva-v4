@@ -210,18 +210,23 @@ confirmación) y zonas de liquidez deterministas emitidas al confirmarse el pivo
 
 ### `app/indicators/trend_filters.py`
 
-**Responsabilidad.** Range Filter de Frost (con sus giros de compra y venta) y la banda VIDYA ± ATR(200)·1.6 («F.
-Trail»).
+**Responsabilidad.** Range Filter de Frost (con sus giros de compra y venta), la banda VIDYA ± ATR(200)·1.6 («F.
+Trail») y el «Cloud» de Frost.
 
 **Funciones y clases clave.**
 - `range_filter(close, fast_period, fast_mult, slow_period, slow_mult)` — `rf_filter`, contadores y `rf_buy`/`rf_sell`
   (primera condición en un sentido tras una del sentido contrario); `RANGE_FILTER_SENSITIVITY` con los tres modos.
 - `vidya(close, length, momentum, smooth)` y `vidya_band(df, ...)` — bandas, estado de tendencia y trailing.
+- `frost_cloud(df, length)` — `cloud_top`/`cloud_mid`/`cloud_bottom`: EMA del máximo, del cierre y del mínimo
+  (`FROST_CLOUD_LENGTH` = 36, la de Frost); `cloud_retest_signals(df, cloud)` — rebote en el techo (largo) o en el
+  piso (corto) con la vela anterior cerrada afuera.
 
 **Invariantes — no romper.** Causalidad; los dos filtros son recursivos y arrancan desde 0, así que las primeras
 velas son calentamiento (la especificación pide descartar al menos 500).
 
-**Trampas conocidas.** Si el precio ya está fuera de la banda VIDYA cuando esta aparece, no hay cruce y la tendencia
+**Trampas conocidas.** Las alertas originales del Cloud avisan cuando el cierre **entra** en la nube; el retesteo de
+Minerva exige el rebote (cierre de vuelta afuera), así que no coinciden una a una con esas alertas. Si el precio ya
+está fuera de la banda VIDYA cuando esta aparece, no hay cruce y la tendencia
 queda «bajista» hasta el primer cruce real (comportamiento del original, con prueba).
 
 <!-- hechos:app/indicators/trend_filters.py -->

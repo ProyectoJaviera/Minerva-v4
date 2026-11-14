@@ -1,4 +1,4 @@
-"""Filtros de tendencia de la v2: Range Filter y banda VIDYA +- ATR (inspirados en Frost).
+"""Filtros de tendencia: Range Filter, banda VIDYA +- ATR y Cloud (inspirados en Frost).
 
 Inspirado en indicadores publicos de TradingView (autoria y licencia por verificar). La
 especificacion exacta, con sus diferencias deliberadas, esta en
@@ -225,3 +225,60 @@ def vidya_band(
         "vidya_trend_up": trend, "vidya_trail": trail,
         "vidya_flip_up": trend & ~prev_trend, "vidya_flip_down": ~trend & prev_trend,
     }, index=df.index)
+
+
+# Longitud por defecto del «Cloud» de Frost (entrada `Cloud`); en el grafico del dueno esta en 50.
+FROST_CLOUD_LENGTH = 36
+
+
+def frost_cloud(df: pd.DataFrame, length: int = FROST_CLOUD_LENGTH) -> pd.DataFrame:
+    """«Cloud» de Frost: tres EMAs de la misma longitud sobre el maximo, el cierre y el minimo.
+
+    La nube que dibuja Frost es el relleno entre el techo (EMA del maximo) y el piso (EMA del
+    minimo); la media (EMA del cierre) es la linea del medio. Es causal: la vela `i` usa solo
+    velas hasta `i`.
+
+    Args:
+        df: velas con `high`, `low` y `close`.
+        length: periodo de las tres EMAs (>= 1).
+
+    Returns:
+        DataFrame con el indice de `df` y las columnas `cloud_top`, `cloud_mid` y
+        `cloud_bottom` (NaN hasta juntar `length` velas).
+
+    Raises:
+        ValueError: si faltan columnas o `length` es menor que 1.
+    """
+    require_columns(df, ("high", "low", "close"))
+    require_positive(length=length)
+    return pd.DataFrame({
+        "cloud_top": pine_ema(df["high"].astype(float), length).to_numpy(),
+        "cloud_mid": pine_ema(df["close"].astype(float), length).to_numpy(),
+        "cloud_bottom": pine_ema(df["low"].astype(float), length).to_numpy(),
+    }, index=df.index)
+
+
+def cloud_retest_signals(df: pd.DataFrame, cloud: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    """Retesteos del Cloud: el precio toca la nube y cierra de vuelta afuera.
+
+    - Largo en la vela `i`: la anterior cerro sobre el techo, esta toca el techo con su minimo
+      (`low[i] <= techo[i]`) y cierra otra vez sobre el (`close[i] > techo[i]`).
+    - Corto: la anterior cerro bajo el piso, esta toca el piso con su maximo y cierra bajo el.
+
+    Args:
+        df: velas con `high`, `low` y `close`.
+        cloud: salida de `frost_cloud` (mismo indice).
+
+    Returns:
+        `(largo, corto)`: arrays booleanos; con NaN en la nube (vela o anterior) no hay senal.
+    """
+    close, high, low = (df[c].astype(float).to_numpy() for c in ("close", "high", "low"))
+    top = cloud["cloud_top"].to_numpy(dtype=float)
+    bottom = cloud["cloud_bottom"].to_numpy(dtype=float)
+    prev_close = np.concatenate(([np.nan], close[:-1]))
+    prev_top = np.concatenate(([np.nan], top[:-1]))
+    prev_bottom = np.concatenate(([np.nan], bottom[:-1]))
+    with np.errstate(invalid="ignore"):
+        long = (prev_close > prev_top) & (low <= top) & (close > top)
+        short = (prev_close < prev_bottom) & (high >= bottom) & (close < bottom)
+    return long, short

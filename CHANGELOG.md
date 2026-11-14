@@ -7,6 +7,18 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v4: el Cloud de Frost — 2026-11-14
+
+- El «Cloud» de Frost (techo = EMA del máximo, media = EMA del cierre, piso = EMA del mínimo; `frost_cloud`) con
+  longitud 36 (la de Frost) o 50, en dos formas:
+  - **Estado** (`cloud36`, `cloud50`): alcista con el cierre sobre el techo, bajista bajo el piso; dentro de la
+    nube no vota.
+  - **Retesteo** (`cloud_retest36`, `cloud_retest50`, evento): la vela anterior cerró afuera, esta toca la nube y
+    vuelve a cerrar afuera. Rebote en el techo = largo, rebote en el piso = corto.
+- En «En vivo» y en «Indicadores» cada forma es una casilla con un selector de longitud.
+  `scripts/v2_tradingview_check.py --cloud LONGITUD --cloud-count N` lista los niveles y los retesteos para
+  compararlos con TradingView.
+
 ## Minerva v4: la pestaña «En vivo» ordenada — 2026-11-14
 
 - Una tabla resumen arriba, con una fila por prueba: marco, estado, operaciones, PF, resultado, % de ganadoras,

@@ -596,7 +596,8 @@ muestran como una sola casilla, con `group_label` como etiqueta, y un selector d
 
 **Invariantes — no romper.** Como mucho una variante por grupo en `selected`; cambiar la variante con el grupo
 marcado reemplaza la elegida. La casilla del grupo usa `group_label` como `aria-label` y el selector «Modo del
-Range Filter» (`rf`), «Par de EMAs» (`emax`) o «Variante de …» para otros grupos (los tests los buscan así).
+Range Filter» (`rf`), «Par de EMAs» (`emax`), «Longitud del Cloud» (`cloud`), «Longitud del retesteo del
+Cloud» (`cloud_retest`) o «Variante de …» para otros grupos (los tests los buscan así).
 
 **Trampas conocidas.** La variante elegida mientras el grupo está desmarcado vive en el estado del componente: se
 pierde si el componente se desmonta. Un grupo se dibuja en la posición de su primera variante en `options`.

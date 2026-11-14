@@ -240,6 +240,17 @@ def test_options_group_the_ema_crosses_with_group_label(tmp_path):
     assert "group" not in by_id["ema200"]
 
 
+def test_options_group_the_frost_cloud(tmp_path):
+    out = make_client(make_settings(tmp_path)).get("/api/live/options").json()
+    by_id = {i["id"]: i for i in out["indicators"]}
+    assert [(by_id[k]["group"], by_id[k]["variant"], by_id[k]["kind"]) for k in
+            ("cloud36", "cloud50", "cloud_retest36", "cloud_retest50")] == [
+        ("cloud", "Longitud 36", "estado"), ("cloud", "Longitud 50", "estado"),
+        ("cloud_retest", "Longitud 36", "evento"), ("cloud_retest", "Longitud 50", "evento")]
+    assert by_id["cloud50"]["group_label"].startswith("Cloud de Frost")
+    assert by_id["cloud_retest50"]["group_label"].startswith("Retesteo del Cloud de Frost")
+
+
 def test_create_with_trading_options_and_options_list_them(tmp_path):
     client = make_client(make_settings(tmp_path))
     body = {**BODY, "margin_usdt": 30, "leverage": 5, "direction": "short",

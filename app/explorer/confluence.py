@@ -3,14 +3,15 @@
 Todos los indicadores se tratan igual: cada uno **vota** alcista o bajista en cada vela.
 
 - **De estado** (votan siempre): cierre sobre / bajo una EMA (9, 21, 50, 100, 144 o 200), estado
-  del Range Filter (en sus tres modos de Frost:
-  Intraday, Scalping y Swing), tendencia de la banda VIDYA,
+  del Range Filter (en sus tres modos de Frost: Intraday, Scalping y Swing), cierre sobre el
+  techo / bajo el piso del Cloud de Frost (longitud 36 o 50), tendencia de la banda VIDYA,
   WaveTrend (`wt1` sobre / bajo `wt2`), funding contra su mediana de 30 dias, regimen de BTC (cierre
   sobre / bajo su EMA 200) y fuerza relativa contra BTC (retorno de 180 velas).
 - **De evento** (votan durante `window` velas desde su senal, incluida la de la senal): SFP,
   rechazo de Camarilla S3/R3, reversion del BB%B, cruce de WaveTrend en zona extrema, rechazo de
   zona de liquidez, Liquidity Grab, FVG y cruce de dos EMAs (largo cuando la rapida cruza hacia
-  arriba a la lenta, corto hacia abajo; como `ta.crossover`/`ta.crossunder`). Si en la ventana
+  arriba a la lenta, corto hacia abajo; como `ta.crossover`/`ta.crossunder`) y retesteo del Cloud
+  de Frost (rebote en el techo o en el piso de la nube). Si en la ventana
   hubo senales de los dos lados, vale la mas reciente.
 
 **Entrada:** en la vela en que **todos** los indicadores elegidos coinciden (y en la anterior no
@@ -37,7 +38,12 @@ import pandas as pd
 from app.candidates.common import BAR_INDEX_COLUMN
 from app.candidates.sfp_reversal import random_direction
 from app.indicators._pine import pine_ema
-from app.indicators.trend_filters import RANGE_FILTER_SENSITIVITY, range_filter
+from app.indicators.trend_filters import (
+    RANGE_FILTER_SENSITIVITY,
+    cloud_retest_signals,
+    frost_cloud,
+    range_filter,
+)
 from app.research.combos import SEED, compute_features
 from app.research.round3 import BTC_EMA, FUNDING_WINDOW_DAYS, RS_BARS, fvg_signals
 from app.strategies.base import BaseStrategy, Signal
@@ -56,12 +62,20 @@ INDICATORS: dict[str, tuple[str, str, str, str]] = {
                     "long_bb_reversal", "short_bb_reversal"),
     "wt_cross": ("WaveTrend: cruce en zona extrema (+-72)", "evento",
                  "long_wt_cross", "short_wt_cross"),
+    "cloud_retest36": ("Retesteo del Cloud de Frost (36): rebote en el techo (largo) o en el piso "
+                       "(corto)", "evento", "long_cloud_retest36", "short_cloud_retest36"),
+    "cloud_retest50": ("Retesteo del Cloud de Frost (50): rebote en el techo (largo) o en el piso "
+                       "(corto)", "evento", "long_cloud_retest50", "short_cloud_retest50"),
     "rf": ("Range Filter (Frost, Intraday Mode): estado alcista / bajista", "estado",
            "bull_rf", "bear_rf"),
     "rf_scalp": ("Range Filter (Frost, Scalping Mode): estado alcista / bajista", "estado",
                  "bull_rf_scalp", "bear_rf_scalp"),
     "rf_swing": ("Range Filter (Frost, Swing Mode): estado alcista / bajista", "estado",
                  "bull_rf_swing", "bear_rf_swing"),
+    "cloud36": ("Cloud de Frost (36): cierre sobre el techo / bajo el piso", "estado",
+                "bull_cloud36", "bear_cloud36"),
+    "cloud50": ("Cloud de Frost (50): cierre sobre el techo / bajo el piso", "estado",
+                "bull_cloud50", "bear_cloud50"),
     "vidya": ("Banda VIDYA (F. Trail de Frost): tendencia", "estado", "bull_vidya", "bear_vidya"),
     "wt": ("WaveTrend: wt1 sobre / bajo wt2", "estado", "bull_wt", "bear_wt"),
     "ema9": ("Cierre sobre / bajo la EMA 9", "estado", "bull_ema9", "bear_ema9"),
@@ -102,10 +116,22 @@ INDICATOR_VARIANTS: dict[str, tuple[str, str]] = {
 }
 INDICATOR_VARIANTS.update({f"emax_{f}_{s}": ("emax", f"EMA {f} / EMA {s}")
                            for f, s in EMA_CROSS_PAIRS})
+# Cloud de Frost (`frost_cloud`): techo = EMA del maximo, media = EMA del cierre, piso = EMA del
+# minimo, con la longitud de la variante (36 es la de Frost por defecto; 50, la del dueno).
+# - Estado `cloud<n>`: alcista con el cierre sobre el techo, bajista bajo el piso; dentro de la
+#   nube (o sin valor) no vota.
+# - Evento `cloud_retest<n>` (`cloud_retest_signals`): la vela anterior cerro afuera, esta toca la
+#   nube y vuelve a cerrar afuera; rebote en el techo = largo, en el piso = corto.
+CLOUD_LENGTHS = (36, 50)
+INDICATOR_VARIANTS.update({f"cloud{n}": ("cloud", f"Longitud {n}") for n in CLOUD_LENGTHS})
+INDICATOR_VARIANTS.update({f"cloud_retest{n}": ("cloud_retest", f"Longitud {n}")
+                           for n in CLOUD_LENGTHS})
 # Etiqueta de cada grupo de variantes (la casilla del formulario; el selector elige la variante).
 INDICATOR_GROUP_LABELS: dict[str, str] = {
     "rf": "Range Filter (Frost): estado alcista / bajista",
     "emax": "Cruce de dos EMAs (largo al cruzar hacia arriba, corto hacia abajo)",
+    "cloud": "Cloud de Frost: cierre sobre el techo (alcista) / bajo el piso (bajista)",
+    "cloud_retest": "Retesteo del Cloud de Frost: rebote en el techo (largo) o en el piso (corto)",
 }
 RF_MODE_COLUMNS = {"rf_scalp": "scalping", "rf_swing": "swing"}
 
@@ -278,6 +304,12 @@ def compute_votes(df: pd.DataFrame, interval: str, btc: pd.DataFrame | None = No
     for fast, slow in EMA_CROSS_PAIRS:
         _, _, long_col, short_col = INDICATORS[f"emax_{fast}_{slow}"]
         out[long_col], out[short_col] = ema_cross_signals(emas[fast], emas[slow])
+    for n in CLOUD_LENGTHS:
+        cloud = frost_cloud(out, n)
+        out[f"bull_cloud{n}"] = (close_all > cloud["cloud_top"]).to_numpy()
+        out[f"bear_cloud{n}"] = (close_all < cloud["cloud_bottom"]).to_numpy()
+        long, short = cloud_retest_signals(out, cloud)
+        out[f"long_cloud_retest{n}"], out[f"short_cloud_retest{n}"] = long, short
     atr = out["x_atr14"]
     fvg = fvg_signals(out, atr)
     out["long_fvg"] = fvg["fvg_long"].to_numpy()

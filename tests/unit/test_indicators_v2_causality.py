@@ -20,7 +20,7 @@ import pytest
 from app.indicators.levels import camarilla_levels
 from app.indicators.oscillators import bb_percent_b, wavetrend
 from app.indicators.structure import liquidity_zones, pivot_high, pivot_low, sfp_signals
-from app.indicators.trend_filters import range_filter, vidya_band
+from app.indicators.trend_filters import cloud_retest_signals, frost_cloud, range_filter, vidya_band
 
 N = 1300
 CUTS = [7, 150, 433, 801, 1299]
@@ -60,6 +60,10 @@ INDICATORS = {
     "vidya_band": vidya_band,
     "bb_percent_b": lambda df: bb_percent_b(df["close"]),
     "wavetrend": wavetrend,
+    "frost_cloud": lambda df: frost_cloud(df, 36),
+    "cloud_retest": lambda df: pd.DataFrame(
+        dict(zip(("long", "short"), cloud_retest_signals(df, frost_cloud(df, 36)), strict=True)),
+        index=df.index),
 }
 
 

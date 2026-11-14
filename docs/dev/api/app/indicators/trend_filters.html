@@ -40,6 +40,15 @@
             <li>
                     <a class="function" href="#vidya_band">vidya_band</a>
             </li>
+            <li>
+                    <a class="variable" href="#FROST_CLOUD_LENGTH">FROST_CLOUD_LENGTH</a>
+            </li>
+            <li>
+                    <a class="function" href="#frost_cloud">frost_cloud</a>
+            </li>
+            <li>
+                    <a class="function" href="#cloud_retest_signals">cloud_retest_signals</a>
+            </li>
     </ul>
 
 
@@ -57,7 +66,7 @@
                     <h1 class="modulename">
 <a href="./../../app.html">app</a><wbr>.<a href="./../indicators.html">indicators</a><wbr>.trend_filters    </h1>
 
-                        <div class="docstring"><p>Filtros de tendencia de la v2: Range Filter y banda VIDYA +- ATR (inspirados en Frost).</p>
+                        <div class="docstring"><p>Filtros de tendencia: Range Filter, banda VIDYA +- ATR y Cloud (inspirados en Frost).</p>
 
 <p>Inspirado en indicadores publicos de TradingView (autoria y licencia por verificar). La
 especificacion exacta, con sus diferencias deliberadas, esta en
@@ -212,6 +221,91 @@ y la superior en bajista, y es NaN en la vela del cambio.</p>
 <ul>
 <li><strong>ValueError:</strong>  si falta una columna o algun periodo es menor que 1.</li>
 </ul>
+</div>
+
+
+                </section>
+                <section id="FROST_CLOUD_LENGTH">
+                    <div class="attr variable">
+            <span class="name">FROST_CLOUD_LENGTH</span>        =
+<span class="default_value">36</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FROST_CLOUD_LENGTH"></a>
+    
+    
+
+                </section>
+                <section id="frost_cloud">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">frost_cloud</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">df</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>, </span><span class="param"><span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">36</span></span><span class="return-annotation">) -> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#frost_cloud"></a>
+    
+            <div class="docstring"><p>«Cloud» de Frost: tres EMAs de la misma longitud sobre el maximo, el cierre y el minimo.</p>
+
+<p>La nube que dibuja Frost es el relleno entre el techo (EMA del maximo) y el piso (EMA del
+minimo); la media (EMA del cierre) es la linea del medio. Es causal: la vela <code>i</code> usa solo
+velas hasta <code>i</code>.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>df:</strong>  velas con <code>high</code>, <code>low</code> y <code>close</code>.</li>
+<li><strong>length:</strong>  periodo de las tres EMAs (&gt;= 1).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p>DataFrame con el indice de <code>df</code> y las columnas <code>cloud_top</code>, <code>cloud_mid</code> y
+  <code>cloud_bottom</code> (NaN hasta juntar <code>length</code> velas).</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  si faltan columnas o <code>length</code> es menor que 1.</li>
+</ul>
+</div>
+
+
+                </section>
+                <section id="cloud_retest_signals">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">cloud_retest_signals</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">df</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>,</span><span class="param">	<span class="n">cloud</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#cloud_retest_signals"></a>
+    
+            <div class="docstring"><p>Retesteos del Cloud: el precio toca la nube y cierra de vuelta afuera.</p>
+
+<ul>
+<li>Largo en la vela <code>i</code>: la anterior cerro sobre el techo, esta toca el techo con su minimo
+(<code>low[i] &lt;= techo[i]</code>) y cierra otra vez sobre el (<code>close[i] &gt; techo[i]</code>).</li>
+<li>Corto: la anterior cerro bajo el piso, esta toca el piso con su maximo y cierra bajo el.</li>
+</ul>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>df:</strong>  velas con <code>high</code>, <code>low</code> y <code>close</code>.</li>
+<li><strong>cloud:</strong>  salida de <code><a href="#frost_cloud">frost_cloud</a></code> (mismo indice).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>(largo, corto)</code>: arrays booleanos; con NaN en la nube (vela o anterior) no hay senal.</p>
+</blockquote>
 </div>
 
 

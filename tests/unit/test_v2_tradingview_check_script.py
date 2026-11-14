@@ -153,6 +153,23 @@ def test_ema_cross_lines_list_the_last_crosses_like_the_indicator():
         "  ninguno en el historial descargado")
 
 
+def test_cloud_lines_list_the_last_levels_and_retests():
+    from app.indicators.trend_filters import cloud_retest_signals, frost_cloud
+
+    df = _walk(600)
+    long, short = cloud_retest_signals(df, frost_cloud(df, 36))
+    retests = int(long.sum() + short.sum())
+    assert retests > 2
+    lines = check.cloud_lines("BTCUSDT", df, 36, 2, "1h")
+    assert lines[0].startswith("Cloud de Frost 36 BTCUSDT 1h: ultimas 3 velas")
+    assert all("techo" in s and "media" in s and "piso" in s for s in lines[1:4])
+    assert lines[4].startswith("Retesteos del Cloud 36 BTCUSDT 1h: ultimos 2")
+    assert len(lines) == 7
+    assert all(("LARGO" in s or "CORTO" in s) and " O " in s and " C " in s for s in lines[5:])
+    assert check.cloud_lines("BTCUSDT", df.iloc[:20], 36, 5, "1h")[-1] == (
+        "  ninguno en el historial descargado")
+
+
 def test_bars_lines_print_the_last_candles():
     df = _walk(5)
     lines = check.bars_lines("ETHUSDT", df, 2, "4h")

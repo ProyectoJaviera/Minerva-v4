@@ -2653,3 +2653,16 @@ Pedido del dueño: con muchas pruebas (20 contando los gemelos) la pestaña se v
 - **Nueva prueba:** botón «+ Nueva prueba» arriba; el formulario está cerrado por defecto (abierto si todavía no hay pruebas) y se cierra al crear, dejando el aviso.
 - **Vista recordada:** filtros, orden y detalles abiertos en `localStorage` (`minerva.live.view`, `frontend/src/live/view.ts`), con cada lectura y escritura en try/catch; si falla o está roto se usa la vista por defecto.
 - Sin cambios de backend ni de comportamiento de las pruebas. Detener (con DETENER), el interruptor del bot y la actualización cada 2 s siguen igual. Revisado con los datos reales de la v4 a través del servidor de desarrollo de Vite (proxy al 8003), sin tocar el contenedor.
+
+## v4: el Cloud de Frost (2026-11-14)
+
+Pedido del dueño: integrar el «Cloud» de Frost. Él lo lee así: si una vela lo retestea desde abajo es entrada en corto, y si lo retestea desde arriba, en largo.
+
+- **Cálculo** (verificado en el código de referencia de Frost, fuera del repositorio; reimplementado, no copiado): tres EMAs de la misma longitud sobre el máximo (techo), el cierre (media) y el mínimo (piso). La nube dibujada es el relleno entre techo y piso. La longitud por defecto de Frost es 36; el dueño usa 50. `frost_cloud` y `cloud_retest_signals` en `app/indicators/trend_filters.py`, causales y con test de causalidad.
+- **Estado** `cloud36` / `cloud50` (grupo `cloud`): alcista si el cierre está sobre el techo, bajista si está bajo el piso; dentro de la nube o sin valor no vota.
+- **Evento** `cloud_retest36` / `cloud_retest50` (grupo `cloud_retest`): largo si la vela anterior cerró sobre el techo, esta toca el techo con su mínimo y cierra otra vez sobre él; corto en el espejo, contra el piso.
+- **Por qué no se usan las alertas originales:** las alertas de Frost («Top Cloud Retest» = el cierre cruza el techo hacia abajo; «Bottom Cloud Retest» = el cierre cruza el piso hacia arriba) avisan cuando el precio **entra** en la nube, no cuando rebota. Entrar en la nube no dice hacia dónde sigue, así que la entrada exige el rebote confirmado al cierre de la vela, como lo lee el dueño.
+- **Observación con datos reales (BTCUSDT 1h, 2026-11-10 a 12):** en rango lateral el retesteo dispara seguido y en los dos sentidos (5 cortos en 10 horas el 10-nov; un corto y un largo el mismo día 11-nov). Con una caída fuerte el precio se aleja de la nube y deja de haber retesteos (ninguno desde el 12-nov 02:00). Por eso la versión de estado o una combinación con otro filtro de tendencia puede filtrar mejor; se deja medir al gemelo al azar.
+- **Selector:** «Longitud del Cloud» y «Longitud del retesteo del Cloud» en `IndicatorPicker`.
+- **Script:** `scripts/v2_tradingview_check.py --cloud LONGITUD --cloud-count N`.
+- Sin cambio de comportamiento para las pruebas existentes: los indicadores nuevos solo se usan si se eligen.
