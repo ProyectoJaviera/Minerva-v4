@@ -2610,3 +2610,12 @@ Pedido del dueño: ver las posiciones abiertas de cada prueba «En vivo» como e
 - `GET /api/live/positions` (solo lectura) devuelve cada posición abierta con el precio actual y su antigüedad, el tamaño al precio actual, el PnL no realizado bruto de la parte abierta y el ROE sobre su margen (como un exchange), el neto si se cerrara ahora (con comisiones, deslizamiento, funding y TP parciales ya hechos) y las distancias al SL, al próximo TP y a la liquidación (`app/live/report.py`, `position_view`).
 - La tarjeta de cada prueba muestra la tabla «Posiciones abiertas» (también las del gemelo dentro de «Contra el azar»), refrescada cada 2 s; un precio sin ticks en más de 30 s se marca como viejo.
 - Sin cambio de comportamiento de las pruebas: solo se muestra. Smoke test con precios reales de Bitunix: las dos posiciones de la prueba de humo mostraron precio vivo, PnL y distancias coherentes.
+
+## v4: guía ilustrada de los indicadores (2026-11-14)
+
+Pedido del dueño: entender uno por uno los 14 indicadores y filtros de la confluencia viéndolos en TradingView, y guardar la explicación en un PDF dentro de la documentación. Resultado: `docs/v4/GUIA_INDICADORES.pdf` (16 páginas, BTC 1h del 2 al 14 de noviembre de 2026; los números 13 y 14 sobre ETH).
+
+- Coinciden con las marcas originales de TradingView: SFP (HeatMap), BB%B («Reversal Bar» de Frost), cruce de WaveTrend («Reversal RSI»), Range Filter («AI Tags», modo Intraday) y banda VIDYA («F. Trail» con distancia «High»; con «Normal» Frost usa 0,61 ATR y da otra banda).
+- **Hallazgo:** el Liquidity Grab de Frost coincidió en 2 de 5 señales. En su código Pine, `ta.lowest`/`ta.highest` se evalúan dentro de un `if`, así que miran las últimas 30 evaluaciones y no las últimas 30 velas: Frost marca grabs que no cumplen su propia regla. Minerva aplica la regla como está pensada (sin cambio de comportamiento).
+- Los estados sin dibujo en TradingView (WaveTrend wt1/wt2, EMA 144, funding, régimen de BTC y fuerza relativa) se ilustraron con gráficos propios hechos con los datos públicos de Bitunix y el cálculo de Minerva.
+- Sin cambios de código.

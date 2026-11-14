@@ -68,6 +68,7 @@ tiempo real de Bitunix.
 | [v3/PRUEBAS_EN_VIVO.md](v3/PRUEBAS_EN_VIVO.md) | Las pruebas de paper hacia adelante configurables (pestaña «En vivo») |
 | [v3/MUDANZA_NETBOOK_V3.md](v3/MUDANZA_NETBOOK_V3.md) | La mudanza al netbook: la v3 reemplaza a la v1 y queda un solo Minerva |
 | [v4/CONTROL_AL_AZAR.md](v4/CONTROL_AL_AZAR.md) | v4: el gemelo de control al azar de cada prueba en vivo (¿le gana a la suerte?) |
+| [v4/GUIA_INDICADORES.pdf](v4/GUIA_INDICADORES.pdf) | v4: guía ilustrada (PDF) de los 14 indicadores y filtros de «Indicadores» y «En vivo», con ejemplos en TradingView comparados con Minerva |
 
 ## Conceptos
 
