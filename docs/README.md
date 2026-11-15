@@ -69,6 +69,7 @@ tiempo real de Bitunix.
 | [v3/MUDANZA_NETBOOK_V3.md](v3/MUDANZA_NETBOOK_V3.md) | La mudanza al netbook: la v3 reemplaza a la v1 y queda un solo Minerva |
 | [v4/CONTROL_AL_AZAR.md](v4/CONTROL_AL_AZAR.md) | v4: el gemelo de control al azar de cada prueba en vivo (¿le gana a la suerte?) |
 | [v4/GUIA_INDICADORES.pdf](v4/GUIA_INDICADORES.pdf) | v4: guía ilustrada (PDF) de los 14 indicadores y filtros de «Indicadores» y «En vivo», con ejemplos en TradingView comparados con Minerva |
+| [v4/SALA_DE_TRADING.md](v4/SALA_DE_TRADING.md) | v4: la Sala de trading manual en paper (paneles flotantes, órdenes, reglas de llenado y cuenta separada) |
 
 ## Conceptos
 

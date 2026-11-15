@@ -2688,3 +2688,38 @@ Pedido del dueño: detectar largo o corto cuando la vela rompe un nivel del Fibo
 - **Observación con datos reales (BTCUSDT 1h):** cerca de un nivel el precio lo cruza varias veces seguidas (el 38,2 % el 11-nov a las 16, 22 y 00 h y el 12-nov a la 01 h), así que conviene probarlo con un filtro o un SL que aguante el ruido. En la caída del 12-nov las rupturas del 81,2 %, 100 %, 125 % y 150 % dieron cortos en orden.
 - **Script:** `scripts/v2_tradingview_check.py --fib` lista también las últimas rupturas de cada nivel.
 - Sin cambio de comportamiento para las pruebas existentes: los indicadores nuevos solo se usan si se eligen.
+
+## v4: la Sala de trading manual (2026-11-15)
+
+Pedido del dueño: una sala de trading como la de Bitunix dentro de Minerva, para operar a mano en paper, usando toda la pantalla. Se hicieron tres prototipos HTML (A y B fijos, C con paneles flotantes) y el dueño eligió la C.
+
+- **Backend (`app/manual/`):** `ManualStore` agrega tablas `manual_*` al archivo de pruebas en vivo (esquema aditivo; no toca `live_*` ni la base del bot). `ManualDesk` vive dentro del corredor (`LiveRunner(desk=...)`) y recibe los mismos ticks del canal `trade`. Opera con el motor paper de las pruebas (`app.live.paper`: comisión taker, deslizamiento, liquidación, funding).
+- **Reglas propias de la cuenta manual** (detalle en `docs/v4/SALA_DE_TRADING.md`):
+  - La orden límite se llena al precio límite, sin deslizamiento, y se cobra la comisión taker: Minerva no modela la de maker y es la estimación conservadora.
+  - Sin SL, el stop interno queda en el 100 % del margen, así que actúa la liquidación.
+  - Un SL que perdería el 90 % del margen o más se rechaza.
+  - El tope de riesgo de las pruebas (50 %) no aplica a la sala.
+- **Decisión: pérdida por liquidación limitada al margen.** La prueba destapó que, si el precio salta más allá de la liquidación, el motor paper cierra al precio del tick y la pérdida supera el margen. En la cuenta manual se limita al margen más la comisión de entrada, como en un margen aislado real. El motor de las pruebas «En vivo» no se cambió (sería un cambio de comportamiento de la medición hacia adelante).
+- **Corredor:** `symbols()` suma las monedas de la sala (con posición u orden, o miradas en los últimos 90 s) y se resuscribe en el segundo siguiente si cambian. Con el bot apagado la sala no opera (409) y sus posiciones no se cierran: se vuelven a vigilar al encenderlo.
+- **API (`/api/sala/*`):** estado, datos de mercado y acciones, con login, mismo origen y solo JSON. «Cerrar todo» pide `CERRAR` y el reinicio pide `REINICIAR`.
+  - Velas: REST `kline`, 200 por pedido, caché de 15 s.
+  - Libro de órdenes: REST de profundidad (`limit=50`, verificado), caché de 1 s.
+  - Ticker: REST `tickers`, caché de 3 s. Campos verificados en vivo el 2026-11-15: `lastPrice`, `markPrice`, `open`, `high`, `low`, `baseVol` y `quoteVol`.
+- **Canal `depth_book` del WebSocket:** está documentado, pero su formato no se probó en vivo. Se usa el REST, que sí está verificado.
+- **Frontend (`frontend/src/sala/`):** paneles flotantes (`FloatingDesk`, disposición en fracciones en `localStorage` con try/catch) y gráfico con Lightweight Charts 4.2.3 (Apache 2.0, gratis; queda visible su logo de atribución). La pestaña se carga perezosamente. El dashboard pasa de una columna central (`max-w-5xl`) al ancho completo.
+- **Prueba de humo con precios reales y base temporal:**
+  - El precio llegó por WebSocket; las velas, el libro y el ticker llegaron por REST.
+  - La orden a mercado se llenó con el siguiente tick y quedó pendiente una orden límite.
+  - Se cerró el 50 % y después el resto, y el saldo final cuadró con el resultado neto.
+- Sin cambio de comportamiento de las pruebas «En vivo» ni de la medición.
+
+### Sala de trading: TP parciales, trailing y modo oscuro (2026-11-15)
+
+Pedido del dueño tras probar la sala: letras blancas en modo oscuro, TP parciales y trailing stop.
+
+- **Modo oscuro:** los paneles y la barra de mercado heredan el color de texto del tema (`text-gray-900` / `dark:text-gray-100`). Antes, los valores sin color propio (cantidades del libro, precios de Monedas, la cuenta, etc.) quedaban casi negros sobre fondo oscuro.
+- **TP parciales:** `ManualDesk.place(take_profits=[(distancia %, % que cierra)], breakeven=...)`, hasta 3 niveles ordenados por distancia, sin pasar del 100 %. Usa los mismos TP parciales del motor paper (`open_position(take_profits=...)`).
+- **Trailing:** `trail_pct` en % del precio de entrada, que se convierte en una distancia fija en precio (`PaperPosition.trailing`, como en las pruebas). Se rechaza si queda más lejos que la liquidación. Una posición con trailing y sin SL fijo ya no se marca «sin SL».
+- **API:** `POST /api/sala/orders` acepta `take_profits`, `breakeven` y `trail_pct`.
+- **Frontend:** el formulario tiene «Toma de ganancias» (un solo TP / TP parciales / sin TP) y «Trailing %». La posición muestra los niveles (los tocados tachados) y «Trailing» con el stop actual; el gráfico dibuja los TP pendientes y el stop como «Trailing».
+- Sin cambios en el motor paper ni en las pruebas «En vivo».

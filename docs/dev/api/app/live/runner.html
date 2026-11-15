@@ -152,6 +152,9 @@
                                 <a class="variable" href="#LiveRunner.rates">rates</a>
                         </li>
                         <li>
+                                <a class="variable" href="#LiveRunner.desk">desk</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#LiveRunner.symbols">symbols</a>
                         </li>
                         <li>
@@ -491,6 +494,7 @@ corredor a mano, sin red.</p>
 (<code>None</code> = guardar todo).</li>
 <li><strong>controls:</strong>  crea y opera el gemelo al azar de cada prueba (v4).</li>
 <li><strong>rng:</strong>  generador de numeros al azar del gemelo (para las pruebas).</li>
+<li><strong>desk:</strong>  la sala de trading manual (v4), que recibe los mismos ticks, o <code>None</code>.</li>
 </ul>
 </div>
 
@@ -498,7 +502,7 @@ corredor a mano, sin red.</p>
                             <div id="LiveRunner.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">LiveRunner</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">settings</span><span class="p">:</span> <span class="n"><a href="../config.html#Settings">app.config.Settings</a></span>,</span><span class="param">	<span class="n">store</span><span class="p">:</span> <span class="n"><a href="store.html#LiveStore">app.live.store.LiveStore</a></span>,</span><span class="param">	<span class="n">ticks</span><span class="p">:</span> <span class="n"><a href="store.html#TickStore">app.live.store.TickStore</a></span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">rest</span><span class="p">:</span> <span class="n"><a href="#RestSource">RestSource</a></span>,</span><span class="param">	<span class="n">clock</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">built</span><span class="o">-</span><span class="ow">in</span> <span class="n">function</span> <span class="n">time</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">on_symbols</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">Awaitable</span><span class="p">[</span><span class="kc">None</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">max_evals_per_cycle</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>,</span><span class="param">	<span class="n">inline_eval</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">ticks_retention_days</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">controls</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>,</span><span class="param">	<span class="n">rng</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
+        <span class="name">LiveRunner</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">settings</span><span class="p">:</span> <span class="n"><a href="../config.html#Settings">app.config.Settings</a></span>,</span><span class="param">	<span class="n">store</span><span class="p">:</span> <span class="n"><a href="store.html#LiveStore">app.live.store.LiveStore</a></span>,</span><span class="param">	<span class="n">ticks</span><span class="p">:</span> <span class="n"><a href="store.html#TickStore">app.live.store.TickStore</a></span> <span class="o">|</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">rest</span><span class="p">:</span> <span class="n"><a href="#RestSource">RestSource</a></span>,</span><span class="param">	<span class="n">clock</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">built</span><span class="o">-</span><span class="ow">in</span> <span class="n">function</span> <span class="n">time</span><span class="o">&gt;</span>,</span><span class="param">	<span class="n">on_symbols</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">Awaitable</span><span class="p">[</span><span class="kc">None</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">max_evals_per_cycle</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>,</span><span class="param">	<span class="n">inline_eval</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">ticks_retention_days</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">controls</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>,</span><span class="param">	<span class="n">rng</span><span class="p">:</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">desk</span><span class="p">:</span> <span class="n"><a href="../manual/desk.html#ManualDesk">app.manual.desk.ManualDesk</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
         
     </div>
@@ -734,6 +738,17 @@ corredor a mano, sin red.</p>
         
     </div>
     <a class="headerlink" href="#LiveRunner.rates"></a>
+    
+    
+
+                            </div>
+                            <div id="LiveRunner.desk" class="classattr">
+                                <div class="attr variable">
+            <span class="name">desk</span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.desk"></a>
     
     
 

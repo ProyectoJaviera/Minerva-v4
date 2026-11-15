@@ -7,6 +7,20 @@ de su autor. El detalle commit por commit está en `git log`, y la bitácora com
 
 Las fechas son las de los commits (2026). **Nada de lo que hay aquí envía órdenes reales**: todo es paper trading.
 
+## Minerva v4: la Sala de trading manual — 2026-11-15
+
+- Pestaña nueva **«Sala de trading»**: trading manual en paper con el precio real de Bitunix, en siete paneles
+  flotantes. Los paneles se arrastran, cambian de tamaño, se ocultan y vuelven desde el menú «Paneles», y la
+  disposición queda guardada en el navegador. Son: gráfico con Lightweight Charts, libro de órdenes, operaciones del
+  mercado, monedas, crear operación, cuenta paper manual y posiciones/órdenes/historial
+  ([`docs/v4/SALA_DE_TRADING.md`](docs/v4/SALA_DE_TRADING.md)).
+- Cuenta manual separada (1 000 USDT, con reinicio) con el mismo motor paper que las pruebas «En vivo»: comisión,
+  deslizamiento, liquidación en margen aislado y funding, tick a tick. Admite órdenes a mercado y límite, TP/SL en %,
+  cerrar todo o el 50 %, y mover el SL a la entrada. No cambia ninguna prueba ni la medición.
+- El dashboard usa ahora todo el ancho de la pantalla.
+- La sala admite **TP parciales** (hasta 3 niveles, con SL a la entrada tras el TP1) y **trailing stop** en %, y se
+  ven en la posición y en el gráfico. En modo oscuro todo el texto de la sala es claro.
+
 ## Minerva v4: ruptura de un nivel Fibonacci — 2026-11-14
 
 - Evento «Ruptura de un nivel Fibonacci de Frost» (`fibx0`, `fibx382`, `fibx500`, `fibx618`, `fibx812`, `fibx1000`,

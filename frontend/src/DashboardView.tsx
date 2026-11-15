@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { AccountTab } from "./AccountTab";
 import { ArmTab } from "./ArmTab";
 import { IndicatorsTab } from "./IndicatorsTab";
@@ -14,6 +14,9 @@ import { type TabDef, Tabs, tabId, tabPanelId } from "./components/Tabs";
 // Fase 5: el dashboard pasa a tener pestanas. "Resumen" es todo lo que ya existia; las demas son
 // la cuenta paper, el brazo ejecutado, el estado de riesgo con los controles y el universo con los
 // veredictos de backtest. Cada pestana pide sus datos solo cuando se abre.
+// La Sala de trading trae la libreria del grafico: se carga solo al abrir su pestana.
+const SalaTab = lazy(() => import("./sala/SalaTab").then((m) => ({ default: m.SalaTab })));
+
 const TABS: TabDef[] = [
   { id: "summary", label: "Resumen" },
   { id: "account", label: "Cuenta paper" },
@@ -26,6 +29,8 @@ const TABS: TabDef[] = [
   { id: "study", label: "Estudio" },
   // v3: pruebas de paper hacia adelante con el precio en tiempo real.
   { id: "live", label: "En vivo" },
+  // v4: trading manual en paper con el precio real, en paneles flotantes.
+  { id: "sala", label: "Sala de trading" },
 ];
 
 function ActiveTab({ id }: { id: string }) {
@@ -44,6 +49,12 @@ function ActiveTab({ id }: { id: string }) {
       return <StudyTab />;
     case "live":
       return <LiveTab />;
+    case "sala":
+      return (
+        <Suspense fallback={<p className="text-sm text-gray-500">Cargando la sala…</p>}>
+          <SalaTab />
+        </Suspense>
+      );
     default:
       return <SummaryTab />;
   }
@@ -59,7 +70,8 @@ export function DashboardView({ username }: { username: string }) {
   const kill = health.data?.control?.kill_switch_active === true;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-4">
+    // v4: el dashboard usa todo el ancho de la pantalla (antes, solo una columna central).
+    <div className="w-full space-y-4 px-3 py-4 sm:px-4 2xl:px-6">
       <div className="flex items-center justify-between">
         <span className="text-sm text-gray-500 dark:text-gray-400">Sesion: {username}</span>
         <button

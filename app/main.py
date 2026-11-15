@@ -33,6 +33,7 @@ from app.api.routes import (
     news,
     positions,
     risk,
+    sala,
     shadow_trades,
     study,
     trades,
@@ -269,6 +270,7 @@ app.include_router(study.router)
 # v3: pruebas en vivo. Sus dos escrituras (crear y detener una prueba) solo tocan el archivo de
 # pruebas, nunca la medicion ni la cuenta paper; login + mismo origen + JSON (ver live.py).
 app.include_router(live.router)
+app.include_router(sala.router)
 # Controles del dashboard (pausar, reanudar, kill switch): las unicas escrituras de control de la
 # API; login + mismo origen + JSON + palabra de confirmacion + auditoria (ver control.py).
 app.include_router(control.router)

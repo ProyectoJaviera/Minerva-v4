@@ -15,6 +15,8 @@ from app.config import Settings
 from app.core.logging import get_logger
 from app.live.runner import LiveRunner
 from app.live.store import LiveStore, TickStore
+from app.manual.desk import ManualDesk
+from app.manual.store import ManualStore
 from app.market.bitunix_rest import BitunixRestClient
 from app.market.bitunix_ws import BitunixPublicWSClient
 
@@ -34,12 +36,16 @@ class LiveTestsService:
         self.ticks = TickStore(settings.live_ticks_db) if settings.live_record_ticks else None
         self.rest = BitunixRestClient(base_url=settings.bitunix_rest_base_url,
                                       rate_limit_per_sec=settings.bitunix_rate_limit_per_sec)
+        # v4: la sala de trading manual escucha los mismos ticks (tablas `manual_*` del archivo).
+        self.manual_store = ManualStore(settings.live_tests_db)
+        self.desk = ManualDesk(settings, self.manual_store)
         self.ws: BitunixPublicWSClient | None = None
         self._ws_task: asyncio.Task | None = None
         self.runner = LiveRunner(settings, self.store, self.ticks, self.rest,
                                  on_symbols=self.sync_ws,
                                  max_evals_per_cycle=settings.live_max_evals_per_second,
-                                 ticks_retention_days=settings.live_ticks_retention_days or None)
+                                 ticks_retention_days=settings.live_ticks_retention_days or None,
+                                 desk=self.desk)
         self._stop = asyncio.Event()
         self.last_error: str | None = None
 
@@ -114,6 +120,7 @@ class LiveTestsService:
         finally:
             await self.rest.aclose()
             self.store.close()
+            self.manual_store.close()
             if self.ticks is not None:
                 self.ticks.close()
 

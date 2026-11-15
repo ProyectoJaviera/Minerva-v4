@@ -562,13 +562,17 @@ def test_the_api_has_the_number_of_routes_the_documents_state():
 
     # INFORME_FINAL.md es la foto del cierre de la Fase 6 (22 rutas); la v2 agrego las tres de la
     # seccion «Indicadores» y la de «Estudio»; la v3, las seis de «En vivo» y el avance de
-    # Indicadores; la v4, las posiciones en vivo (solo lectura).
-    assert len(real) == 34, "ARQUITECTURA.md dice 34 rutas: actualiza los docs"
-    # login, logout, las acciones de control (una sola ruta con tres acciones) y, de la v3, crear y
-    # detener una prueba en vivo (solo tocan el archivo de pruebas).
+    # Indicadores; la v4, las posiciones en vivo (solo lectura) y las ocho de la Sala de trading.
+    assert len(real) == 42, "ARQUITECTURA.md dice 42 rutas: actualiza los docs"
+    # login, logout, las acciones de control (una sola ruta con tres acciones), de la v3 crear y
+    # detener una prueba en vivo y el interruptor del bot, y de la v4 las seis de la Sala de trading
+    # (solo tocan el archivo de pruebas: tablas `live_*` y `manual_*`).
     assert writes == {
         ("POST", "/api/auth/login"), ("POST", "/api/auth/logout"), ("POST", "/api/control/{}"),
         ("POST", "/api/live/tests"), ("POST", "/api/live/tests/{}/stop"), ("POST", "/api/live/bot"),
+        ("POST", "/api/sala/orders"), ("POST", "/api/sala/orders/{}/cancel"),
+        ("POST", "/api/sala/positions/{}/close"), ("POST", "/api/sala/positions/{}/breakeven"),
+        ("POST", "/api/sala/close-all"), ("POST", "/api/sala/reset"),
     }
 
 

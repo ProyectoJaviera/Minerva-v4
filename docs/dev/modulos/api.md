@@ -97,7 +97,7 @@ tolerarlo.
 
 - **Referencia pdoc:** [`api/app/api/deps.html`](../api/app/api/deps.html)
 - **Importa (internos):** `app.config`, `app.core.heartbeat`, `app.core.scheduler`, `app.news.collector`, `app.persistence.database`, `app.telegram.push`, `app.trading.paper_execution`, `app.trading.shadow_live_labeler`
-- **Lo importan:** 19 módulos (api 19)
+- **Lo importan:** 20 módulos (api 20)
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -201,7 +201,7 @@ por una contraseña de tamaño inválido.
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_auth.py`, `tests/unit/test_live_api.py`, `tests/unit/test_phase4_api_routes.py`, `tests/unit/test_phase5_control_api.py`, `tests/unit/test_phase5_read_api.py`, `tests/unit/test_readonly_api_routes.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_auth.py`, `tests/unit/test_live_api.py`, `tests/unit/test_phase4_api_routes.py`, `tests/unit/test_phase5_control_api.py`, `tests/unit/test_phase5_read_api.py`, `tests/unit/test_readonly_api_routes.py`, `tests/unit/test_sala_api.py`
 <!-- /hechos:app/api/routes/auth.py -->
 
 ### `app/api/routes/backtest.py`
@@ -251,7 +251,7 @@ rastro en `control_audit`.
 
 - **Referencia pdoc:** [`api/app/api/routes/control.html`](../api/app/api/routes/control.html)
 - **Importa (internos):** `app.api.deps`, `app.api.security`, `app.config`, `app.core.logging`, `app.persistence.database`, `app.persistence.repositories.control_audit_repo`, `app.trading.control_actions`
-- **Lo importan:** `app.api.routes.live`, `app.main`
+- **Lo importan:** `app.api.routes.live`, `app.api.routes.sala`, `app.main`
 - **Configuración que lee:** `DASHBOARD_CONTROLS_ENABLED`
 - **Tablas que lee:** `control_audit`
 - **Tablas que escribe:** ninguno
@@ -534,12 +534,12 @@ nada de resultados.
 
 - **Referencia pdoc:** [`api/app/api/security.html`](../api/app/api/security.html)
 - **Importa (internos):** `app.api.deps`, `app.config`
-- **Lo importan:** 17 módulos (api 15, main 1, scripts 1)
+- **Lo importan:** 18 módulos (api 16, main 1, scripts 1)
 - **Configuración que lee:** `JWT_SECRET`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/e2e/world.py`, `tests/unit/test_auth.py`, `tests/unit/test_hash_password_script.py`, `tests/unit/test_live_api.py`, `tests/unit/test_phase4_api_routes.py`, `tests/unit/test_phase5_control_api.py`, `tests/unit/test_phase5_read_api.py`, `tests/unit/test_readonly_api_routes.py`
+- **Pruebas que lo importan o citan:** `tests/e2e/world.py`, `tests/unit/test_auth.py`, `tests/unit/test_hash_password_script.py`, `tests/unit/test_live_api.py`, `tests/unit/test_phase4_api_routes.py`, `tests/unit/test_phase5_control_api.py`, `tests/unit/test_phase5_read_api.py`, `tests/unit/test_readonly_api_routes.py`, `tests/unit/test_sala_api.py`
 <!-- /hechos:app/api/security.py -->
 
 ### `app/api/serializers.py`
@@ -663,3 +663,32 @@ guardan, pero solo operan donde `LIVE_TESTS_ENABLED` está encendido.
 - **Tablas que crea o altera:** ninguno
 - **Pruebas que lo importan o citan:** `tests/unit/test_live_api.py`
 <!-- /hechos:app/api/routes/live.py -->
+
+### `app/api/routes/sala.py`
+
+**Responsabilidad.** La API de la pestaña «Sala de trading»: estado de la cuenta manual, datos de mercado (velas,
+libro de órdenes, ticker y funding) y las acciones de trading manual en paper.
+
+**Funciones y clases clave.** `state` (`GET /api/sala/state`, que además marca las monedas miradas), `market`
+(`GET /api/sala/market`, con caché de 15 s para velas, 1 s para el libro y 3 s para el ticker), `place_order`,
+`cancel_order`, `close_position`, `breakeven`, `close_all` (pide `CERRAR`) y `reset` (pide `REINICIAR`).
+
+**Invariantes — no romper.** Todas las rutas piden login; las escrituras, además, mismo origen y solo JSON. Sin
+corredor (`LIVE_TESTS_ENABLED=false`) o con el bot apagado, las escrituras responden 409 y el estado se lee en solo
+lectura. El libro sale del REST de profundidad (`limit=50`, verificado); nada sale hacia Bitunix salvo GET públicos.
+
+**Trampas conocidas.** La caché es por proceso y se vacía al pasar de 200 entradas. El canal `depth_book` del
+WebSocket está documentado pero no se probó en vivo, por eso se usa el REST.
+
+<!-- hechos:app/api/routes/sala.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/app/api/routes/sala.html`](../api/app/api/routes/sala.html)
+- **Importa (internos):** `app.api.deps`, `app.api.routes.control`, `app.api.security`, `app.config`, `app.manual.desk`, `app.manual.store`
+- **Lo importan:** `app.main`
+- **Configuración que lee:** `BACKTEST_SLIPPAGE_BPS`, `LIVE_TESTS_DB`, `TAKER_FEE_PCT`
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** `tests/unit/test_sala_api.py`
+<!-- /hechos:app/api/routes/sala.py -->

@@ -240,8 +240,8 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** ninguno
-- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/RunProgress.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/IndicatorPicker.tsx`, `frontend/src/components/Unavailable.tsx`, `frontend/src/live/view.ts`
-- **Rutas HTTP que cita:** `/api/account`, `/api/arm`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/backtest/verdicts`, `/api/control/${action}`, `/api/control/audit`, `/api/control/info`, `/api/explorer/data-status`, `/api/explorer/options`, `/api/explorer/progress`, `/api/explorer/run`, `/api/live/bot`, `/api/live/options`, `/api/live/positions`, `/api/live/tests`, `/api/live/tests/${id}`, `/api/live/tests/${id}/stop`, `/api/llm/decisions/recent`, `/api/measurement/status`, `/api/memory/lessons`, `/api/memory/status`, `/api/news/recent`, `/api/news/status`, `/api/risk`, `/api/shadow-trades/recent`, `/api/study/forward`, `/api/universe`, `/health`
+- **Lo importan:** `frontend/src/AccountTab.tsx`, `frontend/src/App.tsx`, `frontend/src/ArmTab.tsx`, `frontend/src/DashboardView.tsx`, `frontend/src/IndicatorsTab.tsx`, `frontend/src/LiveTab.tsx`, `frontend/src/LoginView.tsx`, `frontend/src/NewsMemoryCard.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/RunProgress.tsx`, `frontend/src/StudyTab.tsx`, `frontend/src/SummaryTab.tsx`, `frontend/src/UniverseTab.tsx`, `frontend/src/components/IndicatorPicker.tsx`, `frontend/src/components/Unavailable.tsx`, `frontend/src/live/view.ts`, `frontend/src/sala/ChartPanel.tsx`, `frontend/src/sala/SalaTab.tsx`, `frontend/src/sala/indicators.ts`
+- **Rutas HTTP que cita:** `/api/account`, `/api/arm`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/backtest/verdicts`, `/api/control/${action}`, `/api/control/audit`, `/api/control/info`, `/api/explorer/data-status`, `/api/explorer/options`, `/api/explorer/progress`, `/api/explorer/run`, `/api/live/bot`, `/api/live/options`, `/api/live/positions`, `/api/live/tests`, `/api/live/tests/${id}`, `/api/live/tests/${id}/stop`, `/api/llm/decisions/recent`, `/api/measurement/status`, `/api/memory/lessons`, `/api/memory/status`, `/api/news/recent`, `/api/news/status`, `/api/risk`, `/api/sala/close-all`, `/api/sala/market`, `/api/sala/orders`, `/api/sala/orders/${id}/cancel`, `/api/sala/positions/${id}/breakeven`, `/api/sala/positions/${id}/close`, `/api/sala/reset`, `/api/sala/state`, `/api/shadow-trades/recent`, `/api/study/forward`, `/api/universe`, `/health`
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/api.ts -->
 
@@ -320,7 +320,7 @@ las etiquetas de `TABS` y la documentación de uso las contrasta con el código.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Importa (de `frontend/src/`):** ninguno
-- **Lo importan:** `frontend/src/LiveTab.tsx`, `frontend/src/RiskTab.tsx`
+- **Lo importan:** `frontend/src/LiveTab.tsx`, `frontend/src/RiskTab.tsx`, `frontend/src/sala/SalaTab.tsx`
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** `frontend/src/components/ConfirmDialog.test.tsx`
 <!-- /hechos:frontend/src/components/ConfirmDialog.tsx -->
@@ -481,7 +481,7 @@ todavía no manda el campo.
 - **Importa (de `frontend/src/`):** ninguno
 - **Lo importan:** ninguno
 - **Rutas HTTP que cita:** ninguno
-- **Pruebas:** `frontend/src/AccountTab.test.tsx`, `frontend/src/App.test.tsx`, `frontend/src/ArmTab.test.tsx`, `frontend/src/DashboardView.test.tsx`, `frontend/src/IndicatorsTab.test.tsx`, `frontend/src/LiveTab.test.tsx`, `frontend/src/NewsMemoryCard.test.tsx`, `frontend/src/RiskTab.test.tsx`, `frontend/src/RunProgress.test.tsx`, `frontend/src/StudyTab.test.tsx`, `frontend/src/UniverseTab.test.tsx`
+- **Pruebas:** `frontend/src/AccountTab.test.tsx`, `frontend/src/App.test.tsx`, `frontend/src/ArmTab.test.tsx`, `frontend/src/DashboardView.test.tsx`, `frontend/src/IndicatorsTab.test.tsx`, `frontend/src/LiveTab.test.tsx`, `frontend/src/NewsMemoryCard.test.tsx`, `frontend/src/RiskTab.test.tsx`, `frontend/src/RunProgress.test.tsx`, `frontend/src/StudyTab.test.tsx`, `frontend/src/UniverseTab.test.tsx`, `frontend/src/sala/SalaTab.test.tsx`
 <!-- /hechos:frontend/src/testUtils.tsx -->
 
 ### `frontend/src/IndicatorsTab.tsx`
@@ -633,3 +633,114 @@ valores vacíos (PF sin operaciones, sin gemelo) quedan siempre al final y los e
 - **Rutas HTTP que cita:** ninguno
 - **Pruebas:** ninguno
 <!-- /hechos:frontend/src/live/view.ts -->
+
+### `frontend/src/sala/ChartPanel.tsx`
+
+**Responsabilidad.** El gráfico de velas de la Sala con Lightweight Charts 4.2.3 (TradingView, Apache 2.0): velas,
+EMA 9/21, Cloud 50, niveles Fibonacci y las posiciones y órdenes del par como líneas de precio.
+
+**Funciones y clases clave.** `ChartPanel` y el tipo `ChartOverlays`.
+
+**Invariantes — no romper.** El logo de atribución de TradingView queda visible (exigencia de la licencia). Los
+indicadores salen de `sala/indicators.ts`, con los mismos cálculos que el backend.
+
+**Trampas conocidas.** El gráfico se crea una sola vez; el tema claro/oscuro se sigue con un `MutationObserver` sobre
+la clase `dark`. La vela en curso se mueve con el precio del estado (cada segundo); las velas completas se recargan
+cada 15 s. En los tests se reemplaza la librería (jsdom no tiene canvas).
+
+<!-- hechos:frontend/src/sala/ChartPanel.tsx -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Importa (de `frontend/src/`):** `frontend/src/api.ts`, `frontend/src/sala/indicators.ts`
+- **Lo importan:** `frontend/src/sala/SalaTab.tsx`
+- **Rutas HTTP que cita:** ninguno
+- **Pruebas:** ninguno
+<!-- /hechos:frontend/src/sala/ChartPanel.tsx -->
+
+### `frontend/src/sala/FloatingDesk.tsx`
+
+**Responsabilidad.** El escritorio de paneles flotantes y el menú «Paneles»: arrastrar desde la barra, cambiar el
+tamaño desde bordes y esquinas, pasar al frente, ocultar con la × y volver a mostrar desde el menú.
+
+**Funciones y clases clave.** `FloatingDesk`, `PanelsMenu` y `persistLayout`.
+
+**Invariantes — no romper.** La disposición se guarda en fracciones del escritorio (se adapta a la ventana), con
+mínimo 200 × 120 px por panel y grilla de 8 px. Los controles de la barra (botones, casillas) no inician un arrastre.
+
+**Trampas conocidas.** En pantallas de 760 px o menos los paneles se apilan en una columna y no se arrastran. El
+escritorio mide su tamaño con `ResizeObserver` (en jsdom usa 1200 × 700).
+
+<!-- hechos:frontend/src/sala/FloatingDesk.tsx -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Importa (de `frontend/src/`):** `frontend/src/sala/layout.ts`
+- **Lo importan:** `frontend/src/sala/SalaTab.tsx`
+- **Rutas HTTP que cita:** ninguno
+- **Pruebas:** ninguno
+<!-- /hechos:frontend/src/sala/FloatingDesk.tsx -->
+
+### `frontend/src/sala/SalaTab.tsx`
+
+**Responsabilidad.** La pestaña «Sala de trading»: barra de mercado (par, último precio, cambio, marca, máximo,
+mínimo y funding) y los siete paneles: gráfico, libro de órdenes, operaciones del mercado, monedas, crear operación,
+cuenta paper manual y posiciones/órdenes/historial.
+
+**Funciones y clases clave.** `SalaTab`, `OrderForm`, `AccountPanel`, `PositionsPanel` y `SALA_SYMBOLS`.
+
+**Invariantes — no romper.** Paper: ninguna orden sale de Minerva. «Cerrar todo» pide `CERRAR` y reiniciar la cuenta
+pide `REINICIAR` (el servidor también los exige). El formulario muestra el motivo que devuelve el servidor.
+
+**Trampas conocidas.** Se carga perezosamente desde `DashboardView` (trae la librería del gráfico). El estado se
+consulta cada segundo, el libro cada 2 s y las velas cada 15 s.
+
+<!-- hechos:frontend/src/sala/SalaTab.tsx -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Importa (de `frontend/src/`):** `frontend/src/api.ts`, `frontend/src/components/ConfirmDialog.tsx`, `frontend/src/sala/ChartPanel.tsx`, `frontend/src/sala/FloatingDesk.tsx`, `frontend/src/sala/layout.ts`
+- **Lo importan:** ninguno
+- **Rutas HTTP que cita:** ninguno
+- **Pruebas:** `frontend/src/sala/SalaTab.test.tsx`
+<!-- /hechos:frontend/src/sala/SalaTab.tsx -->
+
+### `frontend/src/sala/indicators.ts`
+
+**Responsabilidad.** Los indicadores del gráfico de la Sala.
+
+**Funciones y clases clave.** `ema` (EMA de Pine con arranque por media simple), `frostCloud` (EMA de máximos y
+mínimos), `frostFibonacci` (zigzag de 23 velas y niveles `v1 + (v2 − v1) · r`) y `FIB_RATIOS`.
+
+**Invariantes — no romper.** Mismos cálculos que `pine_ema`, `frost_cloud` y `frost_fibonacci` del backend (hay un test
+con el mismo caso a mano).
+
+**Trampas conocidas.** Se recalculan en el navegador con las 200 velas cargadas: la EMA 200 o el Fibonacci de marcos
+largos pueden diferir levemente de los del backend, que usan más historia.
+
+<!-- hechos:frontend/src/sala/indicators.ts -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Importa (de `frontend/src/`):** `frontend/src/api.ts`
+- **Lo importan:** `frontend/src/sala/ChartPanel.tsx`
+- **Rutas HTTP que cita:** ninguno
+- **Pruebas:** `frontend/src/sala/SalaTab.test.tsx`
+<!-- /hechos:frontend/src/sala/indicators.ts -->
+
+### `frontend/src/sala/layout.ts`
+
+**Responsabilidad.** La disposición de los paneles de la Sala: títulos, disposición por defecto (pantalla completa)
+y lectura y guardado en `localStorage`.
+
+**Funciones y clases clave.** `PANEL_TITLES`, `PANEL_IDS`, `DEFAULT_LAYOUT`, `loadLayout`, `saveLayout` y `LAYOUT_KEY`.
+
+**Invariantes — no romper.** Toda lectura y escritura de `localStorage` va en try/catch y valida cada panel: un JSON
+roto o un panel incompleto usa la disposición por defecto.
+
+**Trampas conocidas.** Es una comodidad de este navegador: no se comparte entre equipos ni llega al servidor.
+
+<!-- hechos:frontend/src/sala/layout.ts -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Importa (de `frontend/src/`):** ninguno
+- **Lo importan:** `frontend/src/sala/FloatingDesk.tsx`, `frontend/src/sala/SalaTab.tsx`
+- **Rutas HTTP que cita:** ninguno
+- **Pruebas:** `frontend/src/sala/SalaTab.test.tsx`
+<!-- /hechos:frontend/src/sala/layout.ts -->

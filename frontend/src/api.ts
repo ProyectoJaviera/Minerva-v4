@@ -1165,3 +1165,189 @@ export function useExplorerProgress(enabled: boolean) {
     refetchInterval: enabled ? 1000 : false,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Sala de trading manual (v4): cuenta paper que opera el dueno a mano con el precio real.
+// ---------------------------------------------------------------------------
+
+export interface SalaPosition {
+  id: number;
+  symbol: string;
+  side: "LONG" | "SHORT";
+  entry_time_ms: number;
+  entry_price: number;
+  qty: number;
+  qty_initial: number;
+  margin_usdt: number;
+  leverage: number;
+  stop: number;
+  tp: number | null;
+  liq: number;
+  fee_entry_usdt: number;
+  price: number | null;
+  price_ts_ms: number | null;
+  notional: number | null;
+  upnl: number | null;
+  roe_pct: number | null;
+  net_if_closed: number | null;
+  realized: number;
+  size_pct: number;
+  to_sl_pct: number | null;
+  to_tp_pct: number | null;
+  to_liq_pct: number | null;
+  no_sl: boolean;
+  kind?: string;
+  // TP parciales `[precio, fraccion de la cantidad inicial, hecho]` y trailing (distancia en precio)
+  tp_levels?: [number, number, boolean][];
+  breakeven?: boolean;
+  trailing?: number | null;
+  trail_pct?: number | null;
+}
+
+export interface SalaOrder {
+  id: number;
+  symbol: string;
+  side: "LONG" | "SHORT";
+  kind: "market" | "limit";
+  price: number | null;
+  margin_usdt: number;
+  leverage: number;
+  tp_pct: number | null;
+  sl_pct: number | null;
+  created_ms: number;
+  last_price?: number | null;
+}
+
+export interface SalaTrade {
+  id: number;
+  symbol: string;
+  side: "LONG" | "SHORT";
+  entry_price: number;
+  exit_price: number;
+  exit_time_ms: number;
+  leverage: number;
+  pnl_net_usdt: number;
+  close_reason: string;
+}
+
+export interface SalaState {
+  now_ms?: number;
+  runner: { enabled: boolean; bot_on: boolean; alive: boolean };
+  account: {
+    balance: number;
+    equity: number;
+    available: number | null;
+    used_margin: number | null;
+    upnl: number | null;
+    realized_today: number | null;
+    start_balance: number;
+    reset_at_ms: number;
+  };
+  positions: SalaPosition[];
+  orders: SalaOrder[];
+  trades: SalaTrade[];
+  recent: { ts_ms: number; price: number; qty: number; side: string }[];
+  prices: Record<string, { price: number; ts_ms: number | null }>;
+  events: { ts_ms: number; kind: string; text: string }[];
+  fees: { taker_pct: number; slippage_bps: number };
+}
+
+export interface SalaCandle {
+  t: number;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  v: number;
+}
+
+export interface SalaMarket {
+  symbol: string;
+  interval: string;
+  candles?: SalaCandle[] | null;
+  depth?: { bids: [number, number][]; asks: [number, number][] } | null;
+  ticker?: Record<string, string | number | null> | null;
+  funding: number | null;
+  errors: Record<string, string>;
+}
+
+export interface SalaOrderBody {
+  symbol: string;
+  side: "LONG" | "SHORT";
+  kind: "market" | "limit";
+  margin_usdt: number;
+  leverage: number;
+  price?: number | null;
+  tp_pct?: number | null;
+  sl_pct?: number | null;
+  // TP parciales `[distancia %, % de la cantidad inicial que cierra]`, hasta 3
+  take_profits?: [number, number][];
+  breakeven?: boolean;
+  trail_pct?: number | null;
+}
+
+// `watch`: las otras monedas de la lista, para tener su precio en vivo.
+export function useSalaState(symbol: string, watch: string[] = []) {
+  const w = watch.join(",");
+  return useQuery({
+    queryKey: ["sala-state", symbol, w],
+    queryFn: () =>
+      apiFetch<SalaState>(`/api/sala/state?symbol=${encodeURIComponent(symbol)}&watch=${encodeURIComponent(w)}`),
+    refetchInterval: 1000,
+  });
+}
+
+// Velas cada 15 s (el ultimo precio sale del estado, cada segundo); libro y ticker cada 2 s.
+export function useSalaCandles(symbol: string, interval: string) {
+  return useQuery({
+    queryKey: ["sala-candles", symbol, interval],
+    queryFn: () =>
+      apiFetch<SalaMarket>(
+        `/api/sala/market?symbol=${encodeURIComponent(symbol)}&interval=${interval}&parts=candles`,
+      ),
+    refetchInterval: 15_000,
+  });
+}
+
+export function useSalaBook(symbol: string) {
+  return useQuery({
+    queryKey: ["sala-book", symbol],
+    queryFn: () =>
+      apiFetch<SalaMarket>(`/api/sala/market?symbol=${encodeURIComponent(symbol)}&parts=depth,ticker`),
+    refetchInterval: 2000,
+  });
+}
+
+function useSalaMutation<B, R>(fn: (body: B) => Promise<R>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sala-state"] }),
+  });
+}
+
+export function useSalaPlaceOrder() {
+  return useSalaMutation((body: SalaOrderBody) => apiPost<{ order: SalaOrder }>("/api/sala/orders", body));
+}
+
+export function useSalaCancelOrder() {
+  return useSalaMutation((id: number) => apiPost<{ cancelled: number }>(`/api/sala/orders/${id}/cancel`, {}));
+}
+
+export function useSalaClosePosition() {
+  return useSalaMutation(({ id, fraction }: { id: number; fraction: number }) =>
+    apiPost<{ closed: number }>(`/api/sala/positions/${id}/close`, { fraction }),
+  );
+}
+
+export function useSalaBreakeven() {
+  return useSalaMutation((id: number) => apiPost<{ breakeven: number }>(`/api/sala/positions/${id}/breakeven`, {}));
+}
+
+export function useSalaCloseAll() {
+  return useSalaMutation(() => apiPost<{ closed: number }>("/api/sala/close-all", { confirm: "CERRAR" }));
+}
+
+export function useSalaReset() {
+  return useSalaMutation(() => apiPost<{ balance: number }>("/api/sala/reset", { confirm: "REINICIAR" }));
+}

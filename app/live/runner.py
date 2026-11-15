@@ -41,6 +41,7 @@ from app.live.book import MAX_CLOSED, CandleBook
 from app.live.config import TestConfig
 from app.live.paper import OpenRefusal, PaperPosition, close_position, on_tick, open_position
 from app.live.store import LiveStore, StoredTest, TickStore
+from app.manual.desk import ManualDesk
 from app.persistence.models import Side
 from app.research import combos
 from app.strategies.base import Signal
@@ -138,6 +139,7 @@ class LiveRunner:
             (`None` = guardar todo).
         controls: crea y opera el gemelo al azar de cada prueba (v4).
         rng: generador de numeros al azar del gemelo (para las pruebas).
+        desk: la sala de trading manual (v4), que recibe los mismos ticks, o `None`.
     """
 
     def __init__(self, settings: Settings, store: LiveStore, ticks: TickStore | None,
@@ -145,7 +147,7 @@ class LiveRunner:
                  on_symbols: Callable[[list[str]], Awaitable[None]] | None = None,
                  max_evals_per_cycle: int = 4, inline_eval: bool = False,
                  ticks_retention_days: float | None = None, controls: bool = True,
-                 rng: random.Random | None = None) -> None:
+                 rng: random.Random | None = None, desk: ManualDesk | None = None) -> None:
         self.settings = settings
         self.store = store
         self.ticks = ticks
@@ -180,6 +182,8 @@ class LiveRunner:
         self._twin_of: dict[int, int] = {}
         self._twin_due: list[tuple[int, int, str, Side]] = []
         self._prices_dirty: set[str] = set()
+        self.desk = desk
+        self._sent_symbols: list[str] | None = None
 
     # --- utilidades ---
 
@@ -197,7 +201,16 @@ class LiveRunner:
         out |= {symbol for _, symbol in self.positions}
         if any(BTC_INDICATORS & set(t.config.indicators) for t in self.tests.values()):
             out.add(BTC)
+        if self.desk is not None:
+            out |= self.desk.symbols()
         return sorted(out)
+
+    async def _sync_symbols(self, symbols: list[str] | None = None) -> None:
+        """Pasa la lista de monedas al WebSocket si cambio desde la ultima vez."""
+        symbols = self.symbols() if symbols is None else symbols
+        if self.on_symbols is not None and symbols != self._sent_symbols:
+            self._sent_symbols = symbols
+            await self.on_symbols(symbols)
 
     def _needed_books(self) -> set[tuple[str, str]]:
         need = set()
@@ -267,8 +280,7 @@ class LiveRunner:
             cfg = active[test_id].config
             self.store.log("START", f"prueba '{cfg.name}' activa: {cfg.to_json()}",
                            test_id=test_id, now_ms=self._now_ms())
-        if self.on_symbols is not None:
-            await self.on_symbols(self.symbols())
+        await self._sync_symbols()
 
     def _close_test(self, test_id: int) -> None:
         for key in [k for k in self.pending if k[0] == test_id]:
@@ -322,6 +334,9 @@ class LiveRunner:
         self._stale_logged.discard(symbol)
         if self.ticks is not None:
             self._tick_buffer.append((symbol, ts_ms, price, qty, side))
+        if self.desk is not None:
+            self.desk.on_tick(symbol, ts_ms, price, qty, side,
+                              funding_rate=self.funding.get(symbol))
 
         # 1. Posiciones abiertas de esta moneda.
         for (test_id, sym), pos in list(self.positions.items()):
@@ -652,6 +667,8 @@ class LiveRunner:
             await self.reload_tests()
             self.store.beat(f"{len(self.tests)} pruebas, {len(self.positions)} posiciones, "
                             f"{self.ticks_seen} ticks", now_ms=now_ms)
+        elif self.desk is not None:
+            await self._sync_symbols()  # la sala manual pidio (o dejo de mirar) una moneda
 
         for (symbol, tf), book in self.books.items():
             if book.roll(now_ms):
@@ -758,8 +775,7 @@ class LiveRunner:
         self.books.clear()
         self.last_tick_ms.clear()
         self.store.log("PAUSE", "bot apagado: deja de escuchar el mercado", now_ms=now_ms)
-        if self.on_symbols is not None:
-            await self.on_symbols([])
+        await self._sync_symbols([])
 
     def shutdown(self) -> None:
         """Guarda lo pendiente antes de salir (ticks en memoria y posiciones abiertas).

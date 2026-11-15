@@ -95,7 +95,7 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 - **Referencia pdoc:** [`api/app/live/paper.html`](../api/app/live/paper.html)
 - **Importa (internos):** `app.backtesting.liquidation`, `app.config`, `app.execution.pnl`, `app.persistence.models`, `app.strategies.base`, `app.trading.sl_calc`, `app.trading.slippage`
-- **Lo importan:** `app.live.report`, `app.live.runner`, `app.live.store`
+- **Lo importan:** `app.live.report`, `app.live.runner`, `app.live.store`, `app.manual.desk`, `app.manual.store`
 - **Configuración que lee:** `BACKTEST_SLIPPAGE_BPS`, `DEFAULT_MARGIN_USDT`, `LEVERAGE`, `MAX_SL_MARGIN_LOSS_PCT`, `TAKER_FEE_PCT`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -118,13 +118,13 @@ las posiciones (motivo `MANUAL`), vacía las velas y deja de mirar ticks; al enc
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/app/live/runner.html`](../api/app/live/runner.html)
-- **Importa (internos):** `app.config`, `app.core.logging`, `app.explorer.confluence`, `app.live.book`, `app.live.config`, `app.live.control`, `app.live.paper`, `app.live.store`, `app.persistence.models`, `app.research.combos`, `app.strategies.base`
+- **Importa (internos):** `app.config`, `app.core.logging`, `app.explorer.confluence`, `app.live.book`, `app.live.config`, `app.live.control`, `app.live.paper`, `app.live.store`, `app.manual.desk`, `app.persistence.models`, `app.research.combos`, `app.strategies.base`
 - **Lo importan:** `app.live.service`, `scripts.live_tests`
 - **Configuración que lee:** `LEVERAGE`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_manual_desk.py`
 <!-- /hechos:app/live/runner.py -->
 
 ### `app/live/store.py`
@@ -148,7 +148,7 @@ las posiciones (motivo `MANUAL`), vacía las velas y deja de mirar ticks; al enc
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`, `tests/unit/test_live_control.py`, `tests/unit/test_live_positions.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_api.py`, `tests/unit/test_live_control.py`, `tests/unit/test_live_positions.py`, `tests/unit/test_manual_desk.py`
 <!-- /hechos:app/live/store.py -->
 
 ### `app/live/report.py`
@@ -167,7 +167,7 @@ y entrar), `overview()` (corredor y todas las pruebas) y `detail()` (una prueba)
 
 - **Referencia pdoc:** [`api/app/live/report.html`](../api/app/live/report.html)
 - **Importa (internos):** `app.live.control`, `app.live.paper`, `app.live.store`
-- **Lo importan:** `app.api.routes.live`, `scripts.live_tests`
+- **Lo importan:** `app.api.routes.live`, `app.manual.desk`, `scripts.live_tests`
 - **Configuración que lee:** `LEVERAGE`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -192,7 +192,7 @@ cliente REST y su propio WebSocket del canal `trade`.
 **Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
 
 - **Referencia pdoc:** [`api/app/live/service.html`](../api/app/live/service.html)
-- **Importa (internos):** `app.config`, `app.core.logging`, `app.live.runner`, `app.live.store`, `app.market.bitunix_rest`, `app.market.bitunix_ws`
+- **Importa (internos):** `app.config`, `app.core.logging`, `app.live.runner`, `app.live.store`, `app.manual.desk`, `app.manual.store`, `app.market.bitunix_rest`, `app.market.bitunix_ws`
 - **Lo importan:** `app.main`
 - **Configuración que lee:** `BITUNIX_RATE_LIMIT_PER_SEC`, `BITUNIX_REST_BASE_URL`, `BITUNIX_WS_PUBLIC_URL`, `LIVE_MAX_EVALS_PER_SECOND`, `LIVE_RECORD_TICKS`, `LIVE_TESTS_DB`, `LIVE_TESTS_ENABLED`, `LIVE_TICKS_DB`, `LIVE_TICKS_RETENTION_DAYS`
 - **Tablas que lee:** ninguno
