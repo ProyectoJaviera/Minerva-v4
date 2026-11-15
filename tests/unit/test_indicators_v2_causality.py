@@ -17,7 +17,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.indicators.levels import camarilla_levels, fib_bounce_signals, frost_fibonacci
+from app.indicators.levels import (
+    camarilla_levels,
+    fib_bounce_signals,
+    fib_break_signals,
+    frost_fibonacci,
+)
 from app.indicators.oscillators import bb_percent_b, wavetrend
 from app.indicators.structure import liquidity_zones, pivot_high, pivot_low, sfp_signals
 from app.indicators.trend_filters import cloud_retest_signals, frost_cloud, range_filter, vidya_band
@@ -63,6 +68,9 @@ INDICATORS = {
     "frost_fibonacci": frost_fibonacci,
     "fib_bounce": lambda df: pd.DataFrame(
         dict(zip(("long", "short"), fib_bounce_signals(df, frost_fibonacci(df), 0.618),
+                 strict=True)), index=df.index),
+    "fib_break": lambda df: pd.DataFrame(
+        dict(zip(("long", "short"), fib_break_signals(df, frost_fibonacci(df), 0.5),
                  strict=True)), index=df.index),
     "frost_cloud": lambda df: frost_cloud(df, 36),
     "cloud_retest": lambda df: pd.DataFrame(

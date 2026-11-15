@@ -58,6 +58,9 @@
             <li>
                     <a class="function" href="#fib_bounce_signals">fib_bounce_signals</a>
             </li>
+            <li>
+                    <a class="function" href="#fib_break_signals">fib_break_signals</a>
+            </li>
     </ul>
 
 
@@ -312,6 +315,52 @@ maximo <code>v1</code> y cierra sobre el.</p>
 
 <ul>
 <li><strong>df:</strong>  velas con <code>high</code>, <code>low</code> y <code>close</code> (mismo orden que <code>fib</code>).</li>
+<li><strong>fib:</strong>  salida de <code><a href="#frost_fibonacci">frost_fibonacci</a></code>.</li>
+<li><strong>ratio:</strong>  uno de <code><a href="#FROST_FIB_RATIOS">FROST_FIB_RATIOS</a></code>.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>(largo, corto)</code>: arrays booleanos; sin tres pivotes no hay senal.</p>
+</blockquote>
+
+<h6 id="raises">Raises:</h6>
+
+<ul>
+<li><strong>ValueError:</strong>  si <code>ratio</code> no es uno de <code><a href="#FROST_FIB_RATIOS">FROST_FIB_RATIOS</a></code>.</li>
+</ul>
+</div>
+
+
+                </section>
+                <section id="fib_break_signals">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">fib_break_signals</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">df</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>,</span><span class="param">	<span class="n">fib</span><span class="p">:</span> <span class="n">pandas</span><span class="o">.</span><span class="n">DataFrame</span>,</span><span class="param">	<span class="n">ratio</span><span class="p">:</span> <span class="nb">float</span></span><span class="return-annotation">) -> <span class="nb">tuple</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#fib_break_signals"></a>
+    
+            <div class="docstring"><p>Rupturas de un nivel Fibonacci de Frost: el cierre cruza el nivel.</p>
+
+<p>Se usa el nivel de la vela anterior (el que estaba dibujado cuando abrio la vela), igual para
+las dos velas que se comparan:</p>
+
+<ul>
+<li>Largo en la vela <code>i</code>: <code>close[i-1] &lt;= nivel &lt; close[i]</code> (cierra por encima viniendo de abajo).</li>
+<li>Corto: <code>close[i-1] &gt;= nivel &gt; close[i]</code> (cierra por debajo viniendo de arriba).</li>
+</ul>
+
+<p>No mira la direccion de la ultima pierna ni si se rompio el 100 %: es la ruptura del nivel en
+cualquiera de los dos sentidos. Un pinchazo que no cierra del otro lado no es ruptura.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>df:</strong>  velas con <code>close</code> (mismo orden que <code>fib</code>).</li>
 <li><strong>fib:</strong>  salida de <code><a href="#frost_fibonacci">frost_fibonacci</a></code>.</li>
 <li><strong>ratio:</strong>  uno de <code><a href="#FROST_FIB_RATIOS">FROST_FIB_RATIOS</a></code>.</li>
 </ul>

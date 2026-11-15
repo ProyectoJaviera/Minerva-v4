@@ -238,3 +238,41 @@ def fib_bounce_signals(df: pd.DataFrame, fib: pd.DataFrame,
         else:
             short[i] = high[i] >= level[j] > close[i] and highest <= v2[j]
     return long, short
+
+
+def fib_break_signals(df: pd.DataFrame, fib: pd.DataFrame,
+                      ratio: float) -> tuple[np.ndarray, np.ndarray]:
+    """Rupturas de un nivel Fibonacci de Frost: el cierre cruza el nivel.
+
+    Se usa el nivel de la vela anterior (el que estaba dibujado cuando abrio la vela), igual para
+    las dos velas que se comparan:
+
+    - Largo en la vela `i`: `close[i-1] <= nivel < close[i]` (cierra por encima viniendo de abajo).
+    - Corto: `close[i-1] >= nivel > close[i]` (cierra por debajo viniendo de arriba).
+
+    No mira la direccion de la ultima pierna ni si se rompio el 100 %: es la ruptura del nivel en
+    cualquiera de los dos sentidos. Un pinchazo que no cierra del otro lado no es ruptura.
+
+    Args:
+        df: velas con `close` (mismo orden que `fib`).
+        fib: salida de `frost_fibonacci`.
+        ratio: uno de `FROST_FIB_RATIOS`.
+
+    Returns:
+        `(largo, corto)`: arrays booleanos; sin tres pivotes no hay senal.
+
+    Raises:
+        ValueError: si `ratio` no es uno de `FROST_FIB_RATIOS`.
+    """
+    if ratio not in FROST_FIB_RATIOS:
+        raise ValueError(f"nivel Fibonacci desconocido: {ratio}")
+    level = fib[FIB_LEVEL_COLUMNS[FROST_FIB_RATIOS.index(ratio)]].to_numpy(dtype=float)
+    close = df["close"].to_numpy(dtype=float)
+    n = len(df)
+    long = np.zeros(n, dtype=bool)
+    short = np.zeros(n, dtype=bool)
+    prev_level, prev_close, cur = level[:-1], close[:-1], close[1:]  # vela anterior a cada i >= 1
+    with np.errstate(invalid="ignore"):
+        long[1:] = (prev_close <= prev_level) & (cur > prev_level)
+        short[1:] = (prev_close >= prev_level) & (cur < prev_level)
+    return long, short

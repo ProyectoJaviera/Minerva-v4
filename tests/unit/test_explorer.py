@@ -284,6 +284,23 @@ def test_fibonacci_bounces_vote_like_frost_fibonacci():
         "0 %", "38,2 %", "50 %", "61,8 %", "81,2 %"]
 
 
+def test_fibonacci_breaks_vote_like_fib_break_signals():
+    from app.indicators.levels import fib_break_signals, frost_fibonacci
+
+    df = _random_walk(32)
+    feats = confluence.compute_votes(df, "1h")
+    fib = frost_fibonacci(df)
+    assert list(confluence.FIB_BREAK_LEVELS.values()) == [0.0, 0.382, 0.5, 0.618, 0.812, 1.0,
+                                                          1.25, 1.5]
+    for ind, ratio in confluence.FIB_BREAK_LEVELS.items():
+        _, kind, long_col, short_col = confluence.INDICATORS[ind]
+        assert kind == "evento" and confluence.INDICATOR_VARIANTS[ind][0] == "fib_break"
+        long, short = fib_break_signals(df, fib, ratio)
+        assert feats[long_col].tolist() == long.tolist()
+        assert feats[short_col].tolist() == short.tolist()
+    assert feats["long_fibx500"].sum() > 0 and feats["short_fibx500"].sum() > 0
+
+
 def test_strategy_validates_its_parameters():
     for kwargs in ({"indicators": []}, {"indicators": ["nope"]}, {"window": 0},
                    {"window": confluence.MAX_WINDOW + 1}, {"exit_name": "x"}, {"interval": "2h"}):

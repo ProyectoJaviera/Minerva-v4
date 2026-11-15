@@ -179,6 +179,9 @@ def test_fib_lines_print_pivots_levels_and_bounces():
     assert [s.split(" = ")[0].strip() for s in lines[4:12]] == [
         "0 %", "38.2 %", "50 %", "61.8 %", "81.2 %", "100 %", "125 %", "150 %"]
     assert sum(s.startswith("Rebotes en el ") for s in lines) == 5
+    breaks = [s for s in lines if s.startswith("Rupturas del ")]
+    assert len(breaks) == 8 and breaks[-1].startswith("Rupturas del 150 % BTCUSDT 1h")
+    assert any("cierre anterior" in s and "nivel" in s for s in lines)
     short = check.fib_lines("BTCUSDT", df.iloc[:10], 2, "1h")
     assert short[-1] == "  todavia sin tres pivotes en el historial descargado"
 

@@ -76,8 +76,10 @@ con una salida fija en múltiplos del ATR(14).
   `EMA_LENGTHS` (9, 21, 50, 100, 144, 200: filtros de estado `ema9` … `ema200`, con `ema` = EMA 144) y los 15
   cruces de evento `emax_<rápida>_<lenta>` (`ema_cross_signals()`, como `ta.crossover`/`ta.crossunder` al cierre),
   `CLOUD_LENGTHS` (36 y 50: estado `cloud<n>` y retesteo `cloud_retest<n>` del Cloud de Frost),
-  `FIB_LEVELS` (rebotes `fib0` … `fib812` en los niveles Fibonacci de Frost),
-  `INDICATOR_VARIANTS` / `INDICATOR_GROUP_LABELS` (grupos `rf`, `emax`, `cloud`, `cloud_retest` y `fib`) e `indicator_options()` (la lista de las
+  `FIB_LEVELS` (rebotes `fib0` … `fib812` en los niveles Fibonacci de Frost), `FIB_BREAK_LEVELS` (rupturas
+  `fibx0` … `fibx1500`),
+  `INDICATOR_VARIANTS` / `INDICATOR_GROUP_LABELS` (grupos `rf`, `emax`, `cloud`, `cloud_retest`, `fib` y
+  `fib_break`) e `indicator_options()` (la lista de las
   rutas `/api/live/options` y `/api/explorer/options`), `event_votes()`, `confluence_signals()` (con `min_agree`: al menos N votos del mismo lado y más que el contrario) y
   `ConfluenceStrategy` (precalcula las entradas como arrays; el control
   sortea la dirección con el mismo SHA-256 del preregistro).

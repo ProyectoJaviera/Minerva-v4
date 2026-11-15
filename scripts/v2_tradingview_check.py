@@ -26,7 +26,8 @@ compara contra el grafico de TradingView, para BTCUSDT y ETHUSDT:
 6. Con `--fib`, el Fibonacci de Frost (zigzag de 23 velas) de la ultima vela cerrada: los
    pivotes v2 y v1 (hora UTC y precio) y los niveles 0 / 38,2 / 50 / 61,8 / 81,2 / 100 / 125 /
    150 %, mas las ultimas `--fib-count` senales de rebote de cada nivel de entrada (como
-   `fib<n>`). En TradingView: Frost con «Show Fibonacci Targets» y «Show Fibonacci Levels».
+   `fib<n>`) y las ultimas rupturas de cada nivel (el cierre lo cruza; como `fibx<n>`).
+   En TradingView: Frost con «Show Fibonacci Targets» y «Show Fibonacci Levels».
 
 Con `--end AAAA-MM-DD` todo se calcula como si «ahora» fuera esa fecha a las 00:00 UTC, para
 comparar semanas pasadas; con `--skip-camarilla` se omiten los niveles.
@@ -69,6 +70,7 @@ from app.indicators.levels import (  # noqa: E402
     FROST_FIB_RATIOS,
     camarilla_levels,
     fib_bounce_signals,
+    fib_break_signals,
     frost_fibonacci,
 )
 from app.indicators.structure import sfp_signals  # noqa: E402
@@ -446,6 +448,18 @@ def fib_lines(symbol: str, bars: pd.DataFrame, count: int, interval: str) -> lis
             lines.append(f"  {_utc(int(bars['open_time'].iat[i]))}  {side}  "
                          f"nivel {float(fib[col].iat[i - 1]):.2f}  "
                          f"O {o:.2f}  H {h:.2f}  L {lo:.2f}  C {c:.2f}")
+    close = bars["close"].to_numpy(dtype=float)
+    for ratio, col in zip(FROST_FIB_RATIOS, FIB_LEVEL_COLUMNS, strict=True):
+        long, short = fib_break_signals(bars, fib, ratio)
+        idx = [i for i in range(len(bars)) if long[i] or short[i]][-count:]
+        lines.append(f"Rupturas del {ratio * 100:g} % {symbol} {interval}: ultimas {count}")
+        if not idx:
+            lines.append("  ninguna en el historial descargado")
+        for i in idx:
+            side = "LARGO" if long[i] else "CORTO"
+            lines.append(f"  {_utc(int(bars['open_time'].iat[i]))}  {side}  "
+                         f"cierre anterior {close[i - 1]:.2f}  cierre {close[i]:.2f}  "
+                         f"nivel {float(fib[col].iat[i - 1]):.2f}")
     return lines
 
 

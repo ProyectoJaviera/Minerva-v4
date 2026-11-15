@@ -12,7 +12,7 @@ Todos los indicadores se tratan igual: cada uno **vota** alcista o bajista en ca
   zona de liquidez, Liquidity Grab, FVG y cruce de dos EMAs (largo cuando la rapida cruza hacia
   arriba a la lenta, corto hacia abajo; como `ta.crossover`/`ta.crossunder`), retesteo del Cloud
   de Frost (rebote en el techo o en el piso de la nube) y rebote en un nivel Fibonacci de Frost
-  (0 / 38,2 / 50 / 61,8 / 81,2 %). Si en la ventana
+  (0 / 38,2 / 50 / 61,8 / 81,2 %) o su ruptura (el cierre cruza el nivel). Si en la ventana
   hubo senales de los dos lados, vale la mas reciente.
 
 **Entrada:** en la vela en que **todos** los indicadores elegidos coinciden (y en la anterior no
@@ -39,7 +39,7 @@ import pandas as pd
 from app.candidates.common import BAR_INDEX_COLUMN
 from app.candidates.sfp_reversal import random_direction
 from app.indicators._pine import pine_ema
-from app.indicators.levels import fib_bounce_signals, frost_fibonacci
+from app.indicators.levels import fib_bounce_signals, fib_break_signals, frost_fibonacci
 from app.indicators.trend_filters import (
     RANGE_FILTER_SENSITIVITY,
     cloud_retest_signals,
@@ -68,6 +68,12 @@ INDICATORS: dict[str, tuple[str, str, str, str]] = {
                         "evento", f"long_fib{_code}", f"short_fib{_code}")
        for _code, _label in (("0", "0 % (ultimo pivote)"), ("382", "38,2 %"), ("500", "50 %"),
                              ("618", "61,8 %"), ("812", "81,2 %"))},
+    **{f"fibx{_code}": (f"Fibonacci de Frost: ruptura del {_label} (largo al cerrar por encima, "
+                         "corto al cerrar por debajo)", "evento", f"long_fibx{_code}",
+                         f"short_fibx{_code}")
+       for _code, _label in (("0", "0 %"), ("382", "38,2 %"), ("500", "50 %"), ("618", "61,8 %"),
+                             ("812", "81,2 %"), ("1000", "100 %"), ("1250", "125 %"),
+                             ("1500", "150 %"))},
     "cloud_retest36": ("Retesteo del Cloud de Frost (36): rebote en el techo (largo) o en el piso "
                        "(corto)", "evento", "long_cloud_retest36", "short_cloud_retest36"),
     "cloud_retest50": ("Retesteo del Cloud de Frost (50): rebote en el techo (largo) o en el piso "
@@ -136,6 +142,12 @@ CLOUD_LENGTHS = (36, 50)
 FIB_LEVELS = {"fib0": 0.0, "fib382": 0.382, "fib500": 0.5, "fib618": 0.618, "fib812": 0.812}
 INDICATOR_VARIANTS.update({ind: ("fib", f"{r * 100:g} %".replace(".", ","))
                            for ind, r in FIB_LEVELS.items()})
+# Evento `fibx<n>` (`fib_break_signals`): el cierre cruza el nivel (largo hacia arriba, corto hacia
+# abajo), en cualquier pierna y tambien despues de romper el 100 %; incluye los objetivos de Frost.
+FIB_BREAK_LEVELS = {"fibx0": 0.0, "fibx382": 0.382, "fibx500": 0.5, "fibx618": 0.618,
+                    "fibx812": 0.812, "fibx1000": 1.0, "fibx1250": 1.25, "fibx1500": 1.5}
+INDICATOR_VARIANTS.update({ind: ("fib_break", f"{r * 100:g} %".replace(".", ","))
+                           for ind, r in FIB_BREAK_LEVELS.items()})
 INDICATOR_VARIANTS.update({f"cloud{n}": ("cloud", f"Longitud {n}") for n in CLOUD_LENGTHS})
 INDICATOR_VARIANTS.update({f"cloud_retest{n}": ("cloud_retest", f"Longitud {n}")
                            for n in CLOUD_LENGTHS})
@@ -146,6 +158,7 @@ INDICATOR_GROUP_LABELS: dict[str, str] = {
     "cloud": "Cloud de Frost: cierre sobre el techo (alcista) / bajo el piso (bajista)",
     "cloud_retest": "Retesteo del Cloud de Frost: rebote en el techo (largo) o en el piso (corto)",
     "fib": "Rebote en un nivel Fibonacci de Frost (a favor de la ultima pierna)",
+    "fib_break": "Ruptura de un nivel Fibonacci de Frost (cierre que cruza el nivel)",
 }
 RF_MODE_COLUMNS = {"rf_scalp": "scalping", "rf_swing": "swing"}
 
@@ -327,6 +340,9 @@ def compute_votes(df: pd.DataFrame, interval: str, btc: pd.DataFrame | None = No
     fib = frost_fibonacci(out)
     for ind, ratio in FIB_LEVELS.items():
         long, short = fib_bounce_signals(out, fib, ratio)
+        out[f"long_{ind}"], out[f"short_{ind}"] = long, short
+    for ind, ratio in FIB_BREAK_LEVELS.items():
+        long, short = fib_break_signals(out, fib, ratio)
         out[f"long_{ind}"], out[f"short_{ind}"] = long, short
     atr = out["x_atr14"]
     fvg = fvg_signals(out, atr)

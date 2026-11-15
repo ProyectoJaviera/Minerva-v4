@@ -310,6 +310,31 @@ describe("LiveTab", () => {
     expect(JSON.parse(String((post?.[1] as RequestInit).body)).indicators).toEqual(["fib618"]);
   });
 
+  it("elige la ruptura del 100 % de Fibonacci", async () => {
+    const label = "Ruptura de un nivel Fibonacci de Frost (cierre que cruza el nivel)";
+    const levels = [["fibx0", "0 %"], ["fibx618", "61,8 %"], ["fibx1000", "100 %"], ["fibx1500", "150 %"]];
+    const fetchMock = mockFetch({
+      "/api/live/options": {
+        status: 200,
+        body: {
+          ...OPTIONS,
+          indicators: levels.map(([id, variant]) => ({ id, label: id, kind: "evento", group: "fib_break", variant, group_label: label })),
+        },
+      },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: [] } },
+      "POST /api/live/tests": { status: 200, body: { id: 14, name: "Ruptura" } },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(withQueryClient(<LiveTab />));
+    fireEvent.change(await screen.findByLabelText("Nombre"), { target: { value: "Ruptura" } });
+    fireEvent.click(screen.getByLabelText(label));
+    fireEvent.change(screen.getByLabelText("Nivel de la ruptura"), { target: { value: "fibx1000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear prueba" }));
+    expect(await screen.findByText(/Prueba 14 creada/)).toBeInTheDocument();
+    const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST");
+    expect(JSON.parse(String((post?.[1] as RequestInit).body)).indicators).toEqual(["fibx1000"]);
+  });
+
   it("muestra el motivo si el servidor rechaza la prueba", async () => {
     vi.stubGlobal("fetch", mockFetch({
       "/api/live/options": { status: 200, body: OPTIONS },

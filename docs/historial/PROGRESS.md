@@ -2678,3 +2678,13 @@ Pedido del dueño: agregar el indicador de Fibonacci de Frost, con el nivel 0 in
 - **Observación:** en 1D los rebotes se repiten varios días seguidos en el mismo nivel (por ejemplo, el 50 % el 22, 23 y 28 de octubre). Como evento, eso vota durante la ventana y entra una sola vez. En 1h, desde que el precio rompió el 100 % el 12-nov, ya no hay rebotes válidos hasta que se forme una pierna nueva.
 - **Script:** `scripts/v2_tradingview_check.py --fib --fib-count N`.
 - Sin cambio de comportamiento para las pruebas existentes: los indicadores nuevos solo se usan si se eligen.
+
+## v4: ruptura de un nivel Fibonacci (2026-11-14)
+
+Pedido del dueño: detectar largo o corto cuando la vela rompe un nivel del Fibonacci, para hacer pruebas operando solo con Fibonacci.
+
+- **Evento** `fibx<n>` (grupo `fib_break`, `fib_break_signals` en `app/indicators/levels.py`), con los mismos niveles que dibuja Frost más el 0 %: 0, 38,2, 50, 61,8, 81,2, 100, 125 y 150 %. Se usa el nivel de la vela anterior `L` para las dos comparaciones: largo si `close[i-1] <= L < close[i]`, corto si `close[i-1] >= L > close[i]`. Un pinchazo que no cierra del otro lado no cuenta.
+- **Diferencias con el rebote** (`fib<n>`): no mira la dirección de la última pierna y sigue valiendo después de romper el 100 %. Así 100, 125 y 150 % sirven para seguir una caída o una subida que ya rompió la pierna.
+- **Observación con datos reales (BTCUSDT 1h):** cerca de un nivel el precio lo cruza varias veces seguidas (el 38,2 % el 11-nov a las 16, 22 y 00 h y el 12-nov a la 01 h), así que conviene probarlo con un filtro o un SL que aguante el ruido. En la caída del 12-nov las rupturas del 81,2 %, 100 %, 125 % y 150 % dieron cortos en orden.
+- **Script:** `scripts/v2_tradingview_check.py --fib` lista también las últimas rupturas de cada nivel.
+- Sin cambio de comportamiento para las pruebas existentes: los indicadores nuevos solo se usan si se eligen.

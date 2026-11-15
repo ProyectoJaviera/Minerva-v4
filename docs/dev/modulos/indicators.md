@@ -129,7 +129,9 @@ mínimo y el cierre del día desde las propias velas de la serie; y el Fibonacci
 - `camarilla_from_hlc(high, low, close)` — la fórmula: `C ± (H − L) · 1.1 / d`, con `d` = 12, 6, 4, 2.
 - `frost_fibonacci(df, period)` — pivotes `fib_v1`/`fib_v2` (y sus posiciones), `fib_leg` y los niveles
   `fib_000` … `fib_1500` (`v1 + (v2 − v1) · r`, `FROST_FIB_RATIOS`); `fib_bounce_signals(df, fib, ratio)` — rebote en
-  un nivel a favor de la última pierna, con los niveles de la vela anterior y sin romper el 100 %.
+  un nivel a favor de la última pierna, con los niveles de la vela anterior y sin romper el 100 %;
+  `fib_break_signals(df, fib, ratio)` — el cierre cruza el nivel de la vela anterior (largo hacia arriba, corto hacia
+  abajo), sin condición de pierna.
 
 **Invariantes — no romper.**
 - Las velas del día `D` usan solo el día `D − 1` completo; con `require_complete` un día con velas faltantes (o con un

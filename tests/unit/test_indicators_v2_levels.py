@@ -193,3 +193,22 @@ def test_fib_bounce_short_is_the_mirror():
     # 1: no llega; 2: toca y cierra bajo -> corto; 3: perfora el 100 % (14); 4: ya roto.
     assert short.tolist() == [False, False, True, False, False]
     assert not long.any()
+
+
+def test_fib_break_crosses_by_hand_in_both_directions():
+    from app.indicators.levels import fib_break_signals
+
+    fib = _fib_frame(1, 14.0, 8.0, 7)  # el 50 % es 11
+    fib.loc[0, "fib_500"] = float("nan")
+    df = pd.DataFrame({"close": [10.0, 10.5, 11.0, 11.5, 11.2, 10.0, 12.0]})
+    long, short = fib_break_signals(df, fib, 0.5)
+    # 1: nivel anterior NaN -> nada; 2: llega justo a 11 (no lo cruza); 3: desde 11 cierra 11.5 ->
+    # largo; 4: sigue arriba; 5: cierra 10 -> corto; 6: vuelve a cerrar arriba -> largo.
+    assert long.tolist() == [False, False, False, True, False, False, True]
+    assert short.tolist() == [False, False, False, False, False, True, False]
+    # sin condicion de pierna: con una pierna de bajada el cruce cuenta igual, tambien en el 150 %
+    fib_down = _fib_frame(-1, 8.0, 14.0, 3)  # el 150 % es 17
+    l2, s2 = fib_break_signals(pd.DataFrame({"close": [16.0, 17.5, 16.5]}), fib_down, 1.5)
+    assert l2.tolist() == [False, True, False] and s2.tolist() == [False, False, True]
+    with pytest.raises(ValueError):
+        fib_break_signals(df, fib, 0.3)

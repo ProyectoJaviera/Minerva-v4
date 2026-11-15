@@ -261,6 +261,16 @@ def test_options_group_the_fibonacci_levels(tmp_path):
         "Rebote en un nivel Fibonacci de Frost (a favor de la ultima pierna)")
 
 
+def test_options_group_the_fibonacci_breaks(tmp_path):
+    out = make_client(make_settings(tmp_path)).get("/api/live/options").json()
+    brk = [i for i in out["indicators"] if i.get("group") == "fib_break"]
+    assert [i["variant"] for i in brk] == ["0 %", "38,2 %", "50 %", "61,8 %", "81,2 %", "100 %",
+                                           "125 %", "150 %"]
+    assert brk[5]["id"] == "fibx1000" and brk[5]["kind"] == "evento"
+    assert brk[0]["group_label"] == (
+        "Ruptura de un nivel Fibonacci de Frost (cierre que cruza el nivel)")
+
+
 def test_create_with_trading_options_and_options_list_them(tmp_path):
     client = make_client(make_settings(tmp_path))
     body = {**BODY, "margin_usdt": 30, "leverage": 5, "direction": "short",
