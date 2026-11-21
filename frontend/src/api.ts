@@ -918,6 +918,10 @@ export interface LiveConfig {
   take_profits?: [number, number][];
   breakeven?: boolean;
   max_open?: number | null;
+  // v4: "test" (En vivo, con gemelo al azar) o "bot" (Bots de senales, con reglas de salida)
+  kind?: "test" | "bot";
+  exit_indicators?: string[];
+  exit_min_agree?: number | null;
 }
 
 export interface LiveSummary {
@@ -1041,6 +1045,9 @@ export interface LiveCreateBody {
   take_profits?: [number, number][];
   breakeven?: boolean;
   max_open?: number | null;
+  kind?: "test" | "bot";
+  exit_indicators?: string[];
+  exit_min_agree?: number | null;
 }
 
 export function useLiveOptions() {

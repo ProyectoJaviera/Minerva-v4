@@ -573,3 +573,54 @@ describe("LiveTab: tabla resumen", () => {
     expect(screen.getByRole("button", { name: "+ Nueva prueba" })).toHaveAttribute("aria-expanded", "false");
   });
 });
+
+describe("LiveTab: bots de señales (v4)", () => {
+  const BOT = {
+    ...TEST, id: 30,
+    config: {
+      ...TEST.config, name: "WT EX largo", indicators: ["rf"], mode: "close", kind: "bot",
+      direction: "long", exit_indicators: ["ema"], exit_min_agree: null,
+    },
+  };
+
+  it("muestra solo los bots, sin «Largos y cortos», y manda las reglas de salida", async () => {
+    const fetchMock = mockFetch({
+      "/api/live/options": { status: 200, body: OPTIONS },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: [TEST, BOT] } },
+      "POST /api/live/tests": { status: 200, body: { id: 31, name: "Mi bot" } },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(withQueryClient(<LiveTab kind="bot" />));
+    const table = await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    expect(table).toHaveTextContent("[30] WT EX largo");
+    expect(table).not.toHaveTextContent("RF + EMA 15m");
+    fireEvent.click(screen.getByRole("button", { name: "+ Nuevo bot" }));
+    fireEvent.change(await screen.findByLabelText("Nombre"), { target: { value: "Mi bot" } });
+    const direction = screen.getByLabelText("Dirección") as HTMLSelectElement;
+    expect([...direction.options].map((o) => o.value)).toEqual(["long", "short"]);
+    fireEvent.change(direction, { target: { value: "short" } });
+    const rf = screen.getAllByLabelText(/Range Filter/);
+    expect(rf).toHaveLength(2); // un selector para entrar y otro para salir
+    fireEvent.click(rf[0]);
+    fireEvent.click(screen.getAllByLabelText(/EMA 144/)[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Crear bot" }));
+    expect(await screen.findByText(/Bot 31 creado/)).toBeInTheDocument();
+    const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST");
+    const body = JSON.parse(String((post?.[1] as RequestInit).body));
+    expect(body).toMatchObject({
+      name: "Mi bot", kind: "bot", direction: "short", indicators: ["rf"], exit_indicators: ["ema"],
+      exit_min_agree: null,
+    });
+  });
+
+  it("En vivo no muestra los bots", async () => {
+    vi.stubGlobal("fetch", mockFetch({
+      "/api/live/options": { status: 200, body: OPTIONS },
+      "/api/live/tests": { status: 200, body: { ...TESTS, tests: [TEST, BOT] } },
+    }));
+    render(withQueryClient(<LiveTab />));
+    const table = await screen.findByRole("table", { name: "Resumen de las pruebas" });
+    expect(table).toHaveTextContent("RF + EMA 15m");
+    expect(table).not.toHaveTextContent("WT EX largo");
+  });
+});

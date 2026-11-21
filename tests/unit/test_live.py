@@ -13,7 +13,7 @@ from app.live.book import CandleBook
 from app.live.config import TestConfig, validate
 from app.live.paper import OpenRefusal, PaperPosition, close_position, on_tick, open_position
 from app.live.report import summarize
-from app.live.runner import LiveRunner, parse_trade_message
+from app.live.runner import LiveRunner, parse_funding_batch, parse_trade_message
 from app.live.store import LiveStore, TickStore
 from app.persistence.models import Side
 from app.strategies.base import Signal
@@ -253,7 +253,7 @@ class FakeRest:
         return bars
 
     async def get_funding_rate_batch(self):
-        return [{"symbol": "BTCUSDT", "fundingRate": "0.0001"}, {"symbol": "ETHUSDT"}]
+        return [{"symbol": "BTCUSDT", "fundingRate": "0.01"}, {"symbol": "ETHUSDT"}]
 
     async def get_funding_rate_history(self, symbol, start_time=None, end_time=None, limit=100):
         return [{"fundingTime": self.end_ms - 8 * 3_600_000, "fundingRate": "0.0001"}]
@@ -309,7 +309,7 @@ async def test_the_runner_loads_books_subscribes_and_records_ticks(tmp_path):
     assert subscribed[-1] == ["BTCUSDT", "ETHUSDT"]  # BTC entra por el filtro `btc`
     assert set(runner.books) == {("ETHUSDT", "15m"), ("BTCUSDT", "15m")}
     assert len(runner.books[("ETHUSDT", "15m")].closed) == 800
-    assert runner.funding == {"BTCUSDT": 0.0001}
+    assert runner.funding == {"BTCUSDT": pytest.approx(0.0001)}  # 0,01 % del batch
     await runner.on_message({"ch": "trade", "symbol": "ETHUSDT", "ts": clock.ms,
                              "data": [{"p": "100", "v": "1", "s": "buy"}]})
     clock.ms += 1000
@@ -629,3 +629,172 @@ async def test_the_runner_prunes_ticks_older_than_the_retention(tmp_path):
     await runner.housekeeping()
 
     assert ticks.count() == 1
+
+
+def test_funding_batch_comes_in_percent_and_is_stored_as_a_fraction():
+    rows = [{"symbol": "XMRUSDT", "fundingRate": "0.01"},          # 0,01 % -> 0,0001
+            {"symbol": "TRXUSDT", "fundingRate": "-0.037029"},     # negativo: pagan los cortos
+            {"symbol": "ETHUSDT"}, {"symbol": "BADUSDT", "fundingRate": "x"},
+            {"fundingRate": "0.01"}, "basura"]
+    out = parse_funding_batch(rows)
+    assert out == {"XMRUSDT": pytest.approx(0.0001), "TRXUSDT": pytest.approx(-0.00037029)}
+
+
+# --- bots de senales (v4) ---------------------------------------------------------------------
+
+
+def bot(**kw) -> TestConfig:
+    base = dict(name="b", symbols=["BTCUSDT"], timeframe="15m", indicators=["wt_cross"],
+                kind="bot", direction="long", exit_indicators=["wt_cross"], mode="close",
+                exit_name="pct", pct_exit=(1.0, None, None))
+    base.update(kw)
+    return validate(**base)
+
+
+def test_a_bot_roundtrips_and_old_configs_default_to_tests():
+    b = bot(exit_indicators=["wt_cross", "rf"], exit_min_agree=1)
+    assert b.is_bot and b.exit_indicators == ("wt_cross", "rf")  # orden del catalogo
+    assert TestConfig.from_json(b.to_json()) == b
+    assert set(b.all_indicators) == {"wt_cross", "rf"}
+    old = '{"name": "x", "symbols": ["BTCUSDT"], "timeframe": "1h", "indicators": ["rf"]}'
+    legacy = TestConfig.from_json(old)
+    assert legacy.kind == "test" and legacy.exit_indicators == () and not legacy.is_bot
+
+
+@pytest.mark.parametrize("kw", [
+    {"direction": "both"}, {"kind": "robot"}, {"exit_indicators": ["nope"]},
+    {"exit_min_agree": 2}, {"exit_indicators": [], "exit_min_agree": 1},
+])
+def test_bot_validation_rejects_bad_rules(kw):
+    with pytest.raises(ValueError):
+        bot(**kw)
+
+
+def test_exit_rules_are_only_for_bots():
+    with pytest.raises(ValueError):
+        cfg(exit_indicators=["wt_cross"])
+    assert bot(exit_indicators=[]).exit_indicators == ()  # un bot puede salir solo por SL/TP
+
+
+def test_bots_get_no_random_twin(tmp_path):
+    with LiveStore(tmp_path / "live.db") as store:
+        store.add_test(bot(), now_ms=T0)
+        store.add_test(cfg(), now_ms=T0)
+        created = store.ensure_controls(now_ms=T0)
+        assert len(created) == 1
+        twins = [t for t in store.tests() if t.control_of is not None]
+        assert [t.control_of for t in twins] == [2]
+
+
+def test_without_fallback_tp_a_position_waits_for_its_exit_signal():
+    pos = open_position(Side.LONG, 100.0, T0, sl=99.0, tp=None, trailing=None,
+                        settings=make_settings(), signal_time_ms=T0, decision_price=100.0,
+                        fallback_tp=False)
+    assert pos.tp is None and pos.stop == 99.0
+    assert on_tick(pos, 150.0, T0 + 1, make_settings()) is None  # no hay TP de respaldo
+    trade = close_position(pos, 101.0, T0 + 2, "SIGNAL", make_settings())
+    assert trade.close_reason == "SIGNAL" and trade.pnl_gross_usdt > 0
+
+
+def bot_runner(tmp_path, exits: dict, entries: dict, **kw):
+    runner, store, ticks, clock, ids, subs = make_runner(tmp_path, bot(**kw), signals=entries)
+    runner.compute_exit = lambda cfg_, frame, btc: exits.get("now", Signal.HOLD)  # type: ignore
+
+    class NoTpStub(StubStrategy):
+        def take_profit_price(self, frame, side, entry):
+            return None  # salida en % sin TP: solo SL y la regla de salida
+
+    def fake_evaluate(cfg_, symbol, include_forming):
+        sig = entries.get((cfg_.name, symbol, include_forming), Signal.HOLD)
+        return sig, NoTpStub(), None
+    runner.evaluate = fake_evaluate  # type: ignore[method-assign]
+    return runner, store, clock, ids
+
+
+async def open_bot_long(runner, clock, key):
+    await runner.housekeeping()
+    runner.on_tick("BTCUSDT", clock.ms, 100.0, 1.0, "buy")
+    clock.ms = T0 + M15 + 500
+    runner.on_tick("BTCUSDT", clock.ms, 100.0, 1.0, "buy")  # cierra la vela de T0
+    await runner.housekeeping()
+    runner.on_tick("BTCUSDT", clock.ms + 300, 100.0, 1.0, "buy")
+    assert runner.positions[key].side == "LONG" and runner.positions[key].tp is None
+
+
+@pytest.mark.asyncio
+async def test_a_bot_closes_its_long_on_the_opposite_exit_signal_at_the_next_tick(tmp_path):
+    exits: dict = {}
+    entries = {("b", "BTCUSDT", False): Signal.LONG}
+    runner, store, clock, ids = bot_runner(tmp_path, exits, entries)
+    key = (ids[0], "BTCUSDT")
+    await open_bot_long(runner, clock, key)
+
+    # Vela siguiente: la salida da LARGO (mismo lado): no cierra.
+    exits["now"] = Signal.LONG
+    clock.ms = T0 + 2 * M15 + 500
+    runner.on_tick("BTCUSDT", clock.ms, 100.5, 1.0, "buy")
+    await runner.housekeeping()
+    assert key not in runner.pending_exit and key in runner.positions
+
+    # Otra vela: la salida da CORTO (la X roja): queda pendiente y cierra en el tick siguiente.
+    exits["now"] = Signal.SHORT
+    clock.ms = T0 + 3 * M15 + 500
+    runner.on_tick("BTCUSDT", clock.ms, 101.0, 1.0, "sell")
+    await runner.housekeeping()
+    assert runner.pending_exit[key].decision_price == 101.0 and key in runner.positions
+    runner.on_tick("BTCUSDT", clock.ms + 200, 101.2, 1.0, "sell")
+    assert key not in runner.positions and key not in runner.pending_exit
+    (sym, trade), = store.trades(ids[0])
+    assert (sym, trade.close_reason, trade.exit_price) == ("BTCUSDT", "SIGNAL", 101.2)
+    kinds = [e[3] for e in store.events(ids[0])]
+    assert kinds[:2] == ["CLOSE", "EXIT_SIGNAL"]
+
+
+@pytest.mark.asyncio
+async def test_a_stop_before_the_exit_tick_wins_and_the_exit_is_dropped(tmp_path):
+    exits: dict = {}
+    runner, store, clock, ids = bot_runner(tmp_path, exits, {("b", "BTCUSDT", False): Signal.LONG})
+    key = (ids[0], "BTCUSDT")
+    await open_bot_long(runner, clock, key)
+    exits["now"] = Signal.SHORT
+    clock.ms = T0 + 2 * M15 + 500
+    runner.on_tick("BTCUSDT", clock.ms, 99.5, 1.0, "sell")
+    await runner.housekeeping()
+    assert key in runner.pending_exit
+    runner.on_tick("BTCUSDT", clock.ms + 100, 98.0, 1.0, "sell")  # salta el SL (99)
+    assert key not in runner.positions and key not in runner.pending_exit
+    (_sym, trade), = store.trades(ids[0])
+    assert trade.close_reason == "SL"
+
+
+@pytest.mark.asyncio
+async def test_a_bot_skips_an_entry_when_its_exit_rule_fires_on_the_same_candle(tmp_path):
+    exits = {"now": Signal.SHORT}
+    runner, store, clock, ids = bot_runner(tmp_path, exits, {("b", "BTCUSDT", False): Signal.LONG})
+    await runner.housekeeping()
+    runner.on_tick("BTCUSDT", clock.ms, 100.0, 1.0, "buy")
+    clock.ms = T0 + M15 + 500
+    runner.on_tick("BTCUSDT", clock.ms, 100.0, 1.0, "buy")
+    await runner.housekeeping()
+    assert (ids[0], "BTCUSDT") not in runner.pending
+    assert any(e[3] == "SKIP" and "salida" in e[4] for e in store.events(ids[0]))
+
+
+@pytest.mark.asyncio
+async def test_a_bot_without_exit_rules_never_queues_exits_and_keeps_the_fallback_tp(tmp_path):
+    runner, store, clock, ids = bot_runner(tmp_path, {"now": Signal.SHORT},
+                                           {("b", "BTCUSDT", False): Signal.LONG},
+                                           exit_indicators=[])
+    key = (ids[0], "BTCUSDT")
+    await runner.housekeeping()
+    runner.on_tick("BTCUSDT", clock.ms, 100.0, 1.0, "buy")
+    clock.ms = T0 + M15 + 500
+    runner.on_tick("BTCUSDT", clock.ms, 100.0, 1.0, "buy")
+    await runner.housekeeping()
+    runner.on_tick("BTCUSDT", clock.ms + 300, 100.0, 1.0, "buy")
+    assert runner.positions[key].tp == pytest.approx(110.0)  # TP de respaldo del motor
+    clock.ms = T0 + 2 * M15 + 500
+    runner.on_tick("BTCUSDT", clock.ms, 100.0, 1.0, "buy")
+    await runner.housekeeping()
+    assert not runner.pending_exit and not runner._due_exit
+    assert all(t.control_of is None for t in store.tests())  # sin gemelo

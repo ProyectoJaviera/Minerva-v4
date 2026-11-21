@@ -252,4 +252,5 @@ def _config_dict(cfg) -> dict:
             "window": cfg.window, "min_agree": cfg.min_agree, "eval_seconds": cfg.eval_seconds,
             "margin_usdt": cfg.margin_usdt, "leverage": cfg.leverage, "direction": cfg.direction,
             "take_profits": [list(tp) for tp in cfg.take_profits], "breakeven": cfg.breakeven,
-            "max_open": cfg.max_open}
+            "max_open": cfg.max_open, "kind": cfg.kind,
+            "exit_indicators": list(cfg.exit_indicators), "exit_min_agree": cfg.exit_min_agree}

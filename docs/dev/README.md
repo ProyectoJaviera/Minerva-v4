@@ -104,7 +104,7 @@ flowchart LR
     execution["execution<br/>5 archivos"]
     explorer["explorer<br/>4 archivos"]
     indicators["indicators<br/>7 archivos"]
-    live["live<br/>9 archivos"]
+    live["live<br/>10 archivos"]
     llm["llm<br/>9 archivos"]
     manual["manual<br/>3 archivos"]
     market["market<br/>11 archivos"]
@@ -131,7 +131,7 @@ flowchart LR
     core -->|5| trading
     execution -->|5| trading
     explorer -->|3| indicators
-    live -->|3| explorer
+    live -->|4| explorer
     live -->|3| manual
     llm -->|3| memory
     manual -->|3| live
@@ -156,7 +156,7 @@ El diagrama muestra solo las flechas con 3 o más imports; no dibuja las que lle
 
 | Paquete | Archivos | Líneas | Importa de (imports) | Lo importan |
 |---|---:|---:|---|---|
-| `api` | 24 | 3205 | persistence 36, trading 16, config 15, core 8, news 7, explorer 5, llm 4, live 3, market 3, memory 3, research 3, manual 2, telegram 2 | main, scripts, telegram |
+| `api` | 24 | 3212 | persistence 36, trading 16, config 15, core 8, news 7, explorer 5, llm 4, live 3, market 3, memory 3, research 3, manual 2, telegram 2 | main, scripts, telegram |
 | `backtesting` | 7 | 2143 | persistence 9, strategies 3, trading 3, config 2, core 2, market 2, execution 1 | explorer, live, replay, research, scripts, trading |
 | `candidates` | 5 | 610 | indicators 5, strategies 4 | explorer, live, research, scripts |
 | `config` | 1 | 443 | ninguno | api, backtesting, core, execution, explorer, live, llm, main, manual, market, memory, news, replay, research, scripts, telegram, trading |
@@ -164,7 +164,7 @@ El diagrama muestra solo las flechas con 3 o más imports; no dibuja las que lle
 | `execution` | 5 | 666 | persistence 7, trading 5, config 1, core 1, market 1 | backtesting, core, live, main, replay, trading |
 | `explorer` | 4 | 1274 | indicators 3, backtesting 2, candidates 2, persistence 2, research 2, config 1, market 1, strategies 1 | api, live, scripts |
 | `indicators` | 7 | 1369 | ninguno | candidates, explorer, live, replay, research, scripts, strategies |
-| `live` | 9 | 2712 | config 3, explorer 3, manual 3, persistence 3, backtesting 2, core 2, market 2, strategies 2, trading 2, candidates 1, execution 1, indicators 1, replay 1, research 1 | api, main, manual, scripts |
+| `live` | 10 | 2986 | explorer 4, config 3, manual 3, persistence 3, backtesting 2, core 2, market 2, strategies 2, trading 2, candidates 1, execution 1, indicators 1, replay 1, research 1 | api, main, manual, scripts |
 | `llm` | 9 | 1478 | persistence 16, config 5, memory 3, core 1, market 1, news 1 | api, scripts, telegram, trading |
 | `main` | 2 | 297 | api 20, market 4, trading 4, core 3, telegram 3, config 1, execution 1, live 1, memory 1, news 1, persistence 1 | ninguno |
 | `manual` | 3 | 774 | live 3, config 1, persistence 1 | api, live |
@@ -174,7 +174,7 @@ El diagrama muestra solo las flechas con 3 o más imports; no dibuja las que lle
 | `persistence` | 22 | 5016 | ninguno | api, backtesting, core, execution, explorer, live, llm, main, manual, market, memory, news, replay, research, scripts, telegram, trading |
 | `replay` | 6 | 1278 | backtesting 3, persistence 2, trading 2, config 1, execution 1, indicators 1, strategies 1 | live, scripts |
 | `research` | 6 | 1353 | candidates 6, indicators 6, strategies 4, backtesting 2, persistence 2, config 1, market 1 | api, explorer, live, scripts |
-| `scripts` | 45 | 11667 | config 31, persistence 31, trading 26, market 20, backtesting 10, research 9, core 8, strategies 7, llm 6, replay 6, live 5, indicators 4, explorer 3, news 3, memory 2, api 1, candidates 1 | ninguno |
+| `scripts` | 46 | 11799 | config 32, persistence 31, trading 26, market 21, backtesting 10, live 9, research 9, core 8, strategies 7, llm 6, replay 6, indicators 4, explorer 3, news 3, memory 2, api 1, candidates 1 | ninguno |
 | `strategies` | 9 | 807 | indicators 4 | backtesting, candidates, explorer, live, replay, research, scripts, trading |
 | `telegram` | 8 | 1903 | persistence 12, trading 7, core 5, config 4, market 2, api 1, llm 1 | api, main |
 | `trading` | 23 | 7441 | persistence 57, config 9, market 8, core 6, execution 5, llm 5, backtesting 4, strategies 4 | api, backtesting, core, execution, live, main, memory, replay, scripts, telegram |

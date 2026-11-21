@@ -49,7 +49,7 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 - **Referencia pdoc:** [`api/app/live/book.html`](../api/app/live/book.html)
 - **Importa (internos):** `app.backtesting.funding`, `app.replay.candles`
-- **Lo importan:** `app.live.runner`
+- **Lo importan:** `app.live.runner`, `scripts.bot_signals_check`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -72,12 +72,12 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 - **Referencia pdoc:** [`api/app/live/config.html`](../api/app/live/config.html)
 - **Importa (internos):** `app.explorer.confluence`
-- **Lo importan:** `app.api.routes.live`, `app.live.control`, `app.live.runner`, `app.live.store`, `scripts.live_tests`
+- **Lo importan:** `app.api.routes.live`, `app.live.control`, `app.live.runner`, `app.live.signals`, `app.live.store`, `scripts.bot_signals_check`, `scripts.live_tests`
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
 - **Tablas que crea o altera:** ninguno
-- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`
+- **Pruebas que lo importan o citan:** `tests/unit/test_live.py`, `tests/unit/test_live_signals.py`
 <!-- /hechos:app/live/config.py -->
 
 ### `app/live/paper.py`
@@ -109,7 +109,7 @@ tick. Diseño en [`docs/v3/PRUEBAS_EN_VIVO.md`](../../v3/PRUEBAS_EN_VIVO.md). No
 
 **Funciones y clases clave.** `LiveRunner` (`on_message`, `on_tick`, `housekeeping`, `evaluate`, `reload_tests`, `shutdown`) y `parse_trade_message()`.
 
-**Invariantes — no romper.** Una entrada se llena en un tick POSTERIOR a la decisión. Sin ticks recientes (`STALE_SECONDS`) no se abren entradas. Como mucho una entrada por vela y por moneda. Solo endpoints públicos; nunca envía órdenes.
+**Invariantes — no romper.** Una entrada se llena en un tick POSTERIOR a la decisión. Sin ticks recientes (`STALE_SECONDS`) no se abren entradas. Como mucho una entrada por vela y por moneda. Solo endpoints públicos; nunca envía órdenes. Bots de señales (v4): la salida por señal se decide al cierre de la vela y también se llena en un tick posterior (motivo `SIGNAL`); un SL o TP anterior gana. El funding vigente del endpoint batch viene en % y se pasa a fracción (`parse_funding_batch`).
 
 **Trampas conocidas.** Vacía las cachés de indicadores de `combos` y `confluence` cada minuto para no acumular memoria. Un fallo al evaluar una prueba se anota y no detiene a las demás. Con el interruptor apagado, `_pause()` cierra
 las posiciones (motivo `MANUAL`), vacía las velas y deja de mirar ticks; al encenderlo recarga todo.
@@ -119,7 +119,7 @@ las posiciones (motivo `MANUAL`), vacía las velas y deja de mirar ticks; al enc
 
 - **Referencia pdoc:** [`api/app/live/runner.html`](../api/app/live/runner.html)
 - **Importa (internos):** `app.config`, `app.core.logging`, `app.explorer.confluence`, `app.live.book`, `app.live.config`, `app.live.control`, `app.live.paper`, `app.live.store`, `app.manual.desk`, `app.persistence.models`, `app.research.combos`, `app.strategies.base`
-- **Lo importan:** `app.live.service`, `scripts.live_tests`
+- **Lo importan:** `app.live.service`, `scripts.bot_signals_check`, `scripts.live_tests`
 - **Configuración que lee:** `LEVERAGE`
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno
@@ -227,3 +227,26 @@ llamar a `_index`. Es una sola tirada de la suerte: con muchas pruebas, alguna l
 - **Tablas que crea o altera:** ninguno
 - **Pruebas que lo importan o citan:** `tests/unit/test_live_control.py`
 <!-- /hechos:app/live/control.py -->
+
+### `app/live/signals.py`
+
+**Responsabilidad.** Las aperturas y cierres que daría un bot de señales sobre velas ya cerradas, para compararlo con TradingView (v4).
+
+**Funciones y clases clave.** `bot_signals()` y `BotSignal` (`OPEN`, `CLOSE` o `SKIP`).
+
+**Invariantes — no romper.** Las mismas reglas que el corredor: sin posición abre cuando la entrada da la dirección del bot (y la omite si la salida da la contraria en esa vela); con posición cierra cuando la salida da la señal contraria. Solo desde la vela de calentamiento.
+
+**Trampas conocidas.** No simula SL, TP, trailing ni el llenado en el tick siguiente: si una operación real cerró antes por su SL, la lista puede desfasarse del bot.
+
+<!-- hechos:app/live/signals.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/app/live/signals.html`](../api/app/live/signals.html)
+- **Importa (internos):** `app.explorer.confluence`, `app.live.config`
+- **Lo importan:** `scripts.bot_signals_check`
+- **Configuración que lee:** ninguno
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** `tests/unit/test_live_signals.py`
+<!-- /hechos:app/live/signals.py -->

@@ -94,6 +94,15 @@
                         <li>
                                 <a class="variable" href="#CreateTestRequest.max_open">max_open</a>
                         </li>
+                        <li>
+                                <a class="variable" href="#CreateTestRequest.kind">kind</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CreateTestRequest.exit_indicators">exit_indicators</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CreateTestRequest.exit_min_agree">exit_min_agree</a>
+                        </li>
                 </ul>
 
             </li>
@@ -164,6 +173,9 @@ interruptor del bot) solo tocan ese archivo, nunca la medicion ni la cuenta pape
 las mismas defensas que los controles: login, mismo origen y solo JSON. Detener pide ademas la
 palabra <code>DETENER</code>. El interruptor (<code>POST /api/live/bot</code>) enciende o apaga el corredor; apagar pide
 <code>APAGAR</code>.</p>
+
+<p>v4: la pestana «Bots de senales» usa los mismos endpoints con <code>kind = "bot"</code>: un bot de senales
+tiene reglas de salida (<code>exit_indicators</code>), opera una sola direccion y no tiene gemelo al azar.</p>
 </div>
 
                 
@@ -432,6 +444,42 @@ palabra <code>DETENER</code>. El interruptor (<code>POST /api/live/bot</code>) e
         
     </div>
     <a class="headerlink" href="#CreateTestRequest.max_open"></a>
+    
+    
+
+                            </div>
+                            <div id="CreateTestRequest.kind" class="classattr">
+                                <div class="attr variable">
+            <span class="name">kind</span><span class="annotation">: str</span>        =
+<span class="default_value">&#39;test&#39;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CreateTestRequest.kind"></a>
+    
+    
+
+                            </div>
+                            <div id="CreateTestRequest.exit_indicators" class="classattr">
+                                <div class="attr variable">
+            <span class="name">exit_indicators</span><span class="annotation">: list[str]</span>        =
+<span class="default_value">PydanticUndefined</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CreateTestRequest.exit_indicators"></a>
+    
+    
+
+                            </div>
+                            <div id="CreateTestRequest.exit_min_agree" class="classattr">
+                                <div class="attr variable">
+            <span class="name">exit_min_agree</span><span class="annotation">: int | None</span>        =
+<span class="default_value">None</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CreateTestRequest.exit_min_agree"></a>
     
     
 

@@ -56,6 +56,9 @@
                     <a class="variable" href="#MAX_TP_LEVELS">MAX_TP_LEVELS</a>
             </li>
             <li>
+                    <a class="variable" href="#KINDS">KINDS</a>
+            </li>
+            <li>
                     <a class="class" href="#TestConfig">TestConfig</a>
                             <ul class="memberlist">
                         <li>
@@ -110,6 +113,21 @@
                                 <a class="variable" href="#TestConfig.max_open">max_open</a>
                         </li>
                         <li>
+                                <a class="variable" href="#TestConfig.kind">kind</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.exit_indicators">exit_indicators</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.exit_min_agree">exit_min_agree</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.is_bot">is_bot</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#TestConfig.all_indicators">all_indicators</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#TestConfig.to_json">to_json</a>
                         </li>
                         <li>
@@ -150,6 +168,12 @@ entra en la operacion siguiente del mercado.</li>
 <li><code>intrabar</code>: reevalua cada <code>eval_seconds</code> con la vela todavia abierta y entra apenas todos los
 indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y por moneda).</li>
 </ul>
+
+<p>v4, bots de senales (<code>kind = "bot"</code>, pestana «Bots de senales»): ademas de las reglas de entrada
+tienen reglas de <strong>salida</strong> (<code>exit_indicators</code>): al cierre de cada vela, si esos indicadores dan la
+senal contraria a la posicion abierta (corto para un largo, largo para un corto), la posicion se
+cierra entera en el tick siguiente (motivo <code>SIGNAL</code>). Operan una sola direccion, no tienen gemelo al
+azar y, con reglas de salida, no usan el TP de respaldo del motor (el SL sigue siendo obligatorio).</p>
 </div>
 
                 
@@ -264,6 +288,18 @@ indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y 
     
 
                 </section>
+                <section id="KINDS">
+                    <div class="attr variable">
+            <span class="name">KINDS</span>        =
+<span class="default_value">(&#39;test&#39;, &#39;bot&#39;)</span>
+
+        
+    </div>
+    <a class="headerlink" href="#KINDS"></a>
+    
+    
+
+                </section>
                 <section id="TestConfig">
                     <div class="attr class">
                     <div class="decorator decorator-dataclass">@dataclass(frozen=True)</div>
@@ -297,6 +333,9 @@ indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y 
 cierra), ...)</code>, hasta 3, de menor a mayor distancia; reemplazan al TP de la salida.</li>
 <li><strong>breakeven:</strong>  tras el primer TP parcial el SL pasa al precio de entrada.</li>
 <li><strong>max_open:</strong>  maximo de posiciones abiertas a la vez en la prueba (<code>None</code> = sin tope).</li>
+<li><strong>kind:</strong>  <code>test</code> (prueba de En vivo, con gemelo al azar) o <code>bot</code> (bot de senales, v4).</li>
+<li><strong>exit_indicators:</strong>  ids de <code>INDICATORS</code> cuya senal contraria cierra la posicion (solo bots).</li>
+<li><strong>exit_min_agree:</strong>  cuantos indicadores de salida deben coincidir (<code>None</code> = todos).</li>
 </ul>
 </div>
 
@@ -304,7 +343,7 @@ cierra), ...)</code>, hasta 3, de menor a mayor distancia; reemplazan al TP de l
                             <div id="TestConfig.__init__" class="classattr">
                                 <div class="attr function">
             
-        <span class="name">TestConfig</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">symbols</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>,</span><span class="param">	<span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">indicators</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>,</span><span class="param">	<span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'close'</span>,</span><span class="param">	<span class="n">exit_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'s2_tp2r'</span>,</span><span class="param">	<span class="n">pct_exit</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">window</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">eval_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">direction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'both'</span>,</span><span class="param">	<span class="n">take_profits</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>,</span><span class="param">	<span class="n">breakeven</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">max_open</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
+        <span class="name">TestConfig</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">symbols</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>,</span><span class="param">	<span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">indicators</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>,</span><span class="param">	<span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'close'</span>,</span><span class="param">	<span class="n">exit_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'s2_tp2r'</span>,</span><span class="param">	<span class="n">pct_exit</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">window</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">eval_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">direction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'both'</span>,</span><span class="param">	<span class="n">take_profits</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>,</span><span class="param">	<span class="n">breakeven</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">max_open</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'test'</span>,</span><span class="param">	<span class="n">exit_indicators</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">()</span>,</span><span class="param">	<span class="n">exit_min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span>)</span>
 
         
     </div>
@@ -501,6 +540,68 @@ cierra), ...)</code>, hasta 3, de menor a mayor distancia; reemplazan al TP de l
     
 
                             </div>
+                            <div id="TestConfig.kind" class="classattr">
+                                <div class="attr variable">
+            <span class="name">kind</span><span class="annotation">: str</span>        =
+<span class="default_value">&#39;test&#39;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.kind"></a>
+    
+    
+
+                            </div>
+                            <div id="TestConfig.exit_indicators" class="classattr">
+                                <div class="attr variable">
+            <span class="name">exit_indicators</span><span class="annotation">: tuple[str, ...]</span>        =
+<span class="default_value">()</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.exit_indicators"></a>
+    
+    
+
+                            </div>
+                            <div id="TestConfig.exit_min_agree" class="classattr">
+                                <div class="attr variable">
+            <span class="name">exit_min_agree</span><span class="annotation">: int | None</span>        =
+<span class="default_value">None</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.exit_min_agree"></a>
+    
+    
+
+                            </div>
+                            <div id="TestConfig.is_bot" class="classattr">
+                                <div class="attr variable">
+            <span class="name">is_bot</span><span class="annotation">: bool</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.is_bot"></a>
+    
+            <div class="docstring"><p>Si es un bot de senales (sin gemelo al azar; v4).</p>
+</div>
+
+
+                            </div>
+                            <div id="TestConfig.all_indicators" class="classattr">
+                                <div class="attr variable">
+            <span class="name">all_indicators</span><span class="annotation">: tuple[str, ...]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TestConfig.all_indicators"></a>
+    
+            <div class="docstring"><p>Los indicadores de entrada y de salida (para saber que velas y monedas cargar).</p>
+</div>
+
+
+                            </div>
                             <div id="TestConfig.to_json" class="classattr">
                                 <div class="attr function">
             
@@ -561,7 +662,7 @@ cierra), ...)</code>, hasta 3, de menor a mayor distancia; reemplazan al TP de l
                     <div class="attr function">
             
         <span class="def">def</span>
-        <span class="name">validate</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">symbols</span>,</span><span class="param">	<span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">indicators</span>,</span><span class="param">	<span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'close'</span>,</span><span class="param">	<span class="n">exit_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'s2_tp2r'</span>,</span><span class="param">	<span class="n">pct_exit</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">window</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">eval_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">direction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'both'</span>,</span><span class="param">	<span class="n">take_profits</span><span class="o">=</span><span class="p">()</span>,</span><span class="param">	<span class="n">breakeven</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">max_open</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n"><a href="#TestConfig">TestConfig</a></span>:</span></span>
+        <span class="name">validate</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="o">*</span>,</span><span class="param">	<span class="n">name</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">symbols</span>,</span><span class="param">	<span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span>,</span><span class="param">	<span class="n">indicators</span>,</span><span class="param">	<span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'close'</span>,</span><span class="param">	<span class="n">exit_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'s2_tp2r'</span>,</span><span class="param">	<span class="n">pct_exit</span><span class="o">=</span><span class="kc">None</span>,</span><span class="param">	<span class="n">window</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>,</span><span class="param">	<span class="n">min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">eval_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span>,</span><span class="param">	<span class="n">margin_usdt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">leverage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">direction</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'both'</span>,</span><span class="param">	<span class="n">take_profits</span><span class="o">=</span><span class="p">()</span>,</span><span class="param">	<span class="n">breakeven</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>,</span><span class="param">	<span class="n">max_open</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>,</span><span class="param">	<span class="n">kind</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'test'</span>,</span><span class="param">	<span class="n">exit_indicators</span><span class="o">=</span><span class="p">()</span>,</span><span class="param">	<span class="n">exit_min_agree</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></span><span class="return-annotation">) -> <span class="n"><a href="#TestConfig">TestConfig</a></span>:</span></span>
 
         
     </div>
@@ -589,6 +690,9 @@ cierra), ...)</code>, hasta 3, de menor a mayor distancia; reemplazan al TP de l
 crecientes entre 0 y <code>MAX_TP_PCT</code>, y los porcentajes suman como mucho 100.</li>
 <li><strong>breakeven:</strong>  solo tiene sentido con TP parciales.</li>
 <li><strong>max_open:</strong>  1 a <code><a href="#MAX_SYMBOLS">MAX_SYMBOLS</a></code>, o <code>None</code>.</li>
+<li><strong>kind:</strong>  uno de <code><a href="#KINDS">KINDS</a></code>. Un <code>bot</code> opera solo largos o solo cortos.</li>
+<li><strong>exit_indicators:</strong>  ids de <code>INDICATORS</code> (solo para un <code>bot</code>; puede ir vacio).</li>
+<li><strong>exit_min_agree:</strong>  1 a la cantidad de indicadores de salida, o <code>None</code>.</li>
 </ul>
 
 <h6 id="returns">Returns:</h6>

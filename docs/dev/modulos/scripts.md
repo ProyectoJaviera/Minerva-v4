@@ -1256,3 +1256,26 @@ la v1 siga abierta, esos archivos no se tocan.
 - **Tablas que crea o altera:** ninguno
 - **Pruebas que lo importan o citan:** `tests/unit/test_verify_v1_identity.py`
 <!-- /hechos:scripts/verify_v1_identity.py -->
+
+### `scripts/bot_signals_check.py`
+
+**Responsabilidad.** Lista las aperturas y cierres que daría un bot de señales con las mismas 800 velas que el corredor, para compararlos con TradingView (v4).
+
+**Funciones y clases clave.** `main()` y `closed_bars()`; la lógica está en `app.live.signals.bot_signals`.
+
+**Invariantes — no romper.** Solo lectura: no lee `.env`, no abre ninguna base y no escribe nada. Solo endpoints públicos de Bitunix.
+
+**Trampas conocidas.** No simula SL ni TP. Con `--tz-offset` muestra también la hora del gráfico (el dueño usa UTC+1).
+
+<!-- hechos:scripts/bot_signals_check.py -->
+**Hechos derivados del código** (los escribe `scripts/build_dev_docs.py`; no se editan):
+
+- **Referencia pdoc:** [`api/scripts/bot_signals_check.html`](../api/scripts/bot_signals_check.html)
+- **Importa (internos):** `app.config`, `app.live.book`, `app.live.config`, `app.live.runner`, `app.live.signals`, `app.market.bitunix_rest`
+- **Lo importan:** ninguno
+- **Configuración que lee:** ninguno
+- **Tablas que lee:** ninguno
+- **Tablas que escribe:** ninguno
+- **Tablas que crea o altera:** ninguno
+- **Pruebas que lo importan o citan:** ninguno
+<!-- /hechos:scripts/bot_signals_check.py -->

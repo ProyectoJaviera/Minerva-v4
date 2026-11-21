@@ -6,6 +6,9 @@ interruptor del bot) solo tocan ese archivo, nunca la medicion ni la cuenta pape
 las mismas defensas que los controles: login, mismo origen y solo JSON. Detener pide ademas la
 palabra `DETENER`. El interruptor (`POST /api/live/bot`) enciende o apaga el corredor; apagar pide
 `APAGAR`.
+
+v4: la pestana «Bots de senales» usa los mismos endpoints con `kind = "bot"`: un bot de senales
+tiene reglas de salida (`exit_indicators`), opera una sola direccion y no tiene gemelo al azar.
 """
 
 from __future__ import annotations
@@ -72,6 +75,9 @@ class CreateTestRequest(BaseModel):
     take_profits: list[tuple[float, float]] = Field(default_factory=list, max_length=MAX_TP_LEVELS)
     breakeven: bool = False
     max_open: int | None = None
+    kind: str = Field(default="test", max_length=8)
+    exit_indicators: list[str] = Field(default_factory=list, max_length=len(INDICATORS))
+    exit_min_agree: int | None = None
 
 
 class StopRequest(BaseModel):
@@ -198,7 +204,8 @@ def _create(path: str, body: CreateTestRequest) -> dict:
                    eval_seconds=body.eval_seconds, margin_usdt=body.margin_usdt,
                    leverage=body.leverage, direction=body.direction,
                    take_profits=body.take_profits, breakeven=body.breakeven,
-                   max_open=body.max_open)
+                   max_open=body.max_open, kind=body.kind,
+                   exit_indicators=body.exit_indicators, exit_min_agree=body.exit_min_agree)
     with LiveStore(path) as store:
         test_id = store.add_test(cfg)
         store.ensure_controls()  # v4: su gemelo de control al azar

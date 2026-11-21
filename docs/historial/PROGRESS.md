@@ -2723,3 +2723,34 @@ Pedido del dueño tras probar la sala: letras blancas en modo oscuro, TP parcial
 - **API:** `POST /api/sala/orders` acepta `take_profits`, `breakeven` y `trail_pct`.
 - **Frontend:** el formulario tiene «Toma de ganancias» (un solo TP / TP parciales / sin TP) y «Trailing %». La posición muestra los niveles (los tocados tachados) y «Trailing» con el stop actual; el gráfico dibuja los TP pendientes y el stop como «Trailing».
 - Sin cambios en el motor paper ni en las pruebas «En vivo».
+
+## v4: funding del corredor ×100 y bots de señales (2026-11-21)
+
+### Corrección: el funding vigente venía en porcentaje
+
+- **Hallazgo** (al revisar la prueba «WAVETREND 4H» del netbook): un corto de TRX con 10 USDT de margen a 10x mostraba 4,44 USDT de funding pagado en dos días.
+- **Causa:** el endpoint `funding_rate/batch` de Bitunix entrega `fundingRate` en **porcentaje**, mientras que `funding_rate/history` lo entrega como **fracción**. Se verificó en vivo el 2026-11-21 con 10 monedas: BNBUSDT batch `0.000568` contra historial `0.00000568`, y XMRUSDT `0.01` contra `0.0001` (×100 exacto). Además, los topes `maxFundingRate` van de `0.3` a `2`. El corredor usaba la tasa del batch como fracción, así que el funding de las pruebas en vivo, de sus gemelos y de la sala manual salía 100 veces más grande.
+- **Cambio:** `app/live/runner.py::parse_funding_batch` divide por 100 la tasa del batch. Es un **cambio de comportamiento** respecto de la v3, que tiene el mismo error, y solo toca el funding: no cambia ninguna entrada ni ninguna salida.
+- **Datos ya guardados:** las operaciones cerradas antes del cambio conservan su funding inflado; no se reescriben. Para comparar netos, tener en cuenta la fecha del cambio.
+- **No se tocó:** `funding_snapshots` (captura de datos) y `contract_specs` guardan la tasa del batch tal cual, como dato crudo; ningún cálculo de PnL las usa como fracción.
+
+### Bots de señales (pestaña nueva)
+
+Pedido del dueño: bots que abran con un evento y cierren con otro, como Cornix o WunderTrading. El ejemplo es la Reversal RSI de Frost (`wt_cross`): la X verde abre un largo y la X roja lo cierra. Se descartaron las alertas de TradingView por webhook, porque exigen un plan pago y exponer el netbook a internet; Minerva calcula los indicadores por su cuenta.
+
+- **Decisiones del dueño:**
+  - Cerrar una posición no abre la contraria.
+  - Los bots no tienen gemelo al azar.
+  - Cada bot tiene una sola dirección; el dueño arma bots separados para largos y cortos.
+- **Modelo:** el bot es una configuración de En vivo con `kind = "bot"`, `exit_indicators` y `exit_min_agree`, guardada en el mismo `live_tests` (JSON de configuración). **No cambia el esquema de la base:** las configuraciones viejas se leen como `kind = "test"`. Comparte el corredor, los ticks, el motor paper y el interruptor del bot. Así no se duplica el motor, y las pruebas existentes y sus gemelos siguen igual.
+- **Reglas del corredor:**
+  - **Cuándo cierra:** al cierre de cada vela, si el bot tiene una posición abierta en esa moneda, evalúa la confluencia de sus indicadores de salida con las velas cerradas (misma `window`). Si da la señal **contraria** a la posición, la salida queda pendiente y se llena en el tick siguiente con motivo `SIGNAL`, igual que una entrada.
+  - **Quién gana:** un SL, TP o liquidación que llegue antes de ese tick gana.
+  - **Entrada omitida:** si en la vela de una entrada la regla de salida también da la contraria, la entrada se omite (`SKIP`).
+  - **Sin TP de respaldo:** con reglas de salida no se usa el TP de respaldo del motor (`open_position(fallback_tp=False)`). El SL sigue siendo obligatorio.
+  - **Salidas no guardadas:** si el corredor se reinicia justo entre la decisión y el tick siguiente, esa salida se pierde (las salidas pendientes no se guardan).
+  - **Sin gemelo:** `ensure_controls` salta los bots.
+- **API:** `POST /api/live/tests` acepta `kind`, `exit_indicators` y `exit_min_agree`. `live_tests.py add --bot --exit-indicators ...` hace lo mismo desde la línea de comandos.
+- **Frontend:** pestaña «Bots de señales» (`LiveTab kind="bot"`), con un formulario que tiene una sección «Reglas de salida» y solo direcciones largo o corto. «En vivo» deja de mostrar los bots. Cada pestaña guarda su propia vista.
+- **Comparar con TradingView:** `scripts/bot_signals_check.py` (con la lógica en `app/live/signals.py`) lista las aperturas y cierres que daría un bot con las mismas 800 velas que el corredor, con la hora en UTC y, con `--tz-offset`, en la del gráfico.
+- **Diagnóstico previo, sin cambio de código:** la prueba [23] «WAVETREND 4H» usa `wt` (cualquier cruce entre wt1 y wt2), no la Reversal RSI. Sus 51 entradas coinciden con su indicador, y solo 1 coincide con una X de Frost. El equivalente de la Reversal RSI es `wt_cross`, el de las pruebas «WAVETREND EX».

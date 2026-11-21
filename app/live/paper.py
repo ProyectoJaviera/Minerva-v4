@@ -139,7 +139,7 @@ def open_position(side: Side, price: float, ts_ms: int, *, sl: float | None, tp:
                   decision_price: float, margin_tiers_json: str | None = None,
                   margin_usdt: float | None = None, leverage: int | None = None,
                   take_profits: list[tuple[float, float]] | None = None,
-                  breakeven: bool = False) -> PaperPosition | OpenRefusal:
+                  breakeven: bool = False, fallback_tp: bool = True) -> PaperPosition | OpenRefusal:
     """Abre una posicion a mercado con el precio de un tick.
 
     Args:
@@ -159,6 +159,8 @@ def open_position(side: Side, price: float, ts_ms: int, *, sl: float | None, tp:
         take_profits: niveles parciales `(precio, fraccion de la cantidad inicial)`, en orden de
             cercania a la entrada.
         breakeven: al tocarse el primer TP parcial, el SL pasa al precio de entrada.
+        fallback_tp: sin TP, TP parciales ni trailing, usa el TP de respaldo del motor. Los bots
+            de senales con reglas de salida lo apagan: cierran por senal (v4).
 
     Returns:
         La posicion, o el motivo del rechazo (tope de riesgo o SL ya cruzado).
@@ -178,7 +180,7 @@ def open_position(side: Side, price: float, ts_ms: int, *, sl: float | None, tp:
             if wrong or not 0 < frac <= 1:
                 return OpenRefusal("TP_INVALID", f"TP parcial {level_price} invalido")
             levels.append([float(level_price), float(frac), False])
-    elif tp is None and trailing is None:
+    elif tp is None and trailing is None and fallback_tp:
         tp = fb_tp
     risk = margin_loss_pct(price, sl, lev)
     if risk > settings.max_sl_margin_loss_pct:
@@ -221,7 +223,8 @@ def close_position(pos: PaperPosition, exit_price: float, ts_ms: int, reason: st
         pos: la posicion.
         exit_price: precio de salida de lo que queda abierto.
         ts_ms: hora de la salida, ms Unix.
-        reason: `SL`, `TRAILING`, `BREAKEVEN`, `LIQUIDATION`, `TP`, `TPn` o `MANUAL`.
+        reason: `SL`, `TRAILING`, `BREAKEVEN`, `LIQUIDATION`, `TP`, `TPn`, `MANUAL` o `SIGNAL`
+            (regla de salida de un bot de senales, v4).
         settings: configuracion (comision y deslizamiento).
 
     Returns:

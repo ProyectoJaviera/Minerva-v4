@@ -8,6 +8,12 @@ monedas. Dos modos:
   entra en la operacion siguiente del mercado.
 - `intrabar`: reevalua cada `eval_seconds` con la vela todavia abierta y entra apenas todos los
   indicadores coinciden, sin esperar el cierre (como mucho una entrada por vela y por moneda).
+
+v4, bots de senales (`kind = "bot"`, pestana «Bots de senales»): ademas de las reglas de entrada
+tienen reglas de **salida** (`exit_indicators`): al cierre de cada vela, si esos indicadores dan la
+senal contraria a la posicion abierta (corto para un largo, largo para un corto), la posicion se
+cierra entera en el tick siguiente (motivo `SIGNAL`). Operan una sola direccion, no tienen gemelo al
+azar y, con reglas de salida, no usan el TP de respaldo del motor (el SL sigue siendo obligatorio).
 """
 
 from __future__ import annotations
@@ -38,6 +44,7 @@ MAX_MARGIN_USDT = 100_000.0
 # esta verificado aqui, asi que se acota a 100x.
 MAX_LEVERAGE = 100
 MAX_TP_LEVELS = 3
+KINDS = ("test", "bot")
 
 
 @dataclass(frozen=True)
@@ -62,6 +69,9 @@ class TestConfig:
             cierra), ...)`, hasta 3, de menor a mayor distancia; reemplazan al TP de la salida.
         breakeven: tras el primer TP parcial el SL pasa al precio de entrada.
         max_open: maximo de posiciones abiertas a la vez en la prueba (`None` = sin tope).
+        kind: `test` (prueba de En vivo, con gemelo al azar) o `bot` (bot de senales, v4).
+        exit_indicators: ids de `INDICATORS` cuya senal contraria cierra la posicion (solo bots).
+        exit_min_agree: cuantos indicadores de salida deben coincidir (`None` = todos).
     """
     __test__ = False  # no es una clase de pruebas de pytest
 
@@ -81,6 +91,19 @@ class TestConfig:
     take_profits: tuple[tuple[float, float], ...] = ()
     breakeven: bool = False
     max_open: int | None = None
+    kind: str = "test"
+    exit_indicators: tuple[str, ...] = ()
+    exit_min_agree: int | None = None
+
+    @property
+    def is_bot(self) -> bool:
+        """Si es un bot de senales (sin gemelo al azar; v4)."""
+        return self.kind == "bot"
+
+    @property
+    def all_indicators(self) -> tuple[str, ...]:
+        """Los indicadores de entrada y de salida (para saber que velas y monedas cargar)."""
+        return tuple(dict.fromkeys(self.indicators + self.exit_indicators))
 
     def to_json(self) -> str:
         """La configuracion como JSON (para guardarla).
@@ -113,6 +136,8 @@ class TestConfig:
             margin_usdt=raw.get("margin_usdt"), leverage=raw.get("leverage"),
             direction=raw.get("direction", "both"), take_profits=raw.get("take_profits") or (),
             breakeven=bool(raw.get("breakeven", False)), max_open=raw.get("max_open"),
+            kind=raw.get("kind", "test"), exit_indicators=raw.get("exit_indicators") or (),
+            exit_min_agree=raw.get("exit_min_agree"),
         )
 
 
@@ -121,7 +146,8 @@ def validate(*, name: str, symbols, timeframe: str, indicators, mode: str = "clo
              min_agree: int | None = None, eval_seconds: int = 15,
              margin_usdt: float | None = None, leverage: int | None = None,
              direction: str = "both", take_profits=(), breakeven: bool = False,
-             max_open: int | None = None) -> TestConfig:
+             max_open: int | None = None, kind: str = "test", exit_indicators=(),
+             exit_min_agree: int | None = None) -> TestConfig:
     """Valida lo que eligio el dueno y devuelve la prueba.
 
     Args:
@@ -142,6 +168,9 @@ def validate(*, name: str, symbols, timeframe: str, indicators, mode: str = "clo
             crecientes entre 0 y `MAX_TP_PCT`, y los porcentajes suman como mucho 100.
         breakeven: solo tiene sentido con TP parciales.
         max_open: 1 a `MAX_SYMBOLS`, o `None`.
+        kind: uno de `KINDS`. Un `bot` opera solo largos o solo cortos.
+        exit_indicators: ids de `INDICATORS` (solo para un `bot`; puede ir vacio).
+        exit_min_agree: 1 a la cantidad de indicadores de salida, o `None`.
 
     Returns:
         La configuracion normalizada (monedas en mayusculas y sin repetir, indicadores en el
@@ -202,6 +231,21 @@ def validate(*, name: str, symbols, timeframe: str, indicators, mode: str = "clo
         raise ValueError("mover el SL a la entrada necesita al menos un TP parcial")
     if max_open is not None and not 1 <= int(max_open) <= MAX_SYMBOLS:
         raise ValueError(f"el maximo de posiciones debe estar entre 1 y {MAX_SYMBOLS}")
+    if kind not in KINDS:
+        raise ValueError(f"tipo invalido: {kind} (usa test o bot)")
+    exit_chosen = set(exit_indicators or ())
+    if exit_chosen and kind != "bot":
+        raise ValueError("las reglas de salida son solo para los bots de senales")
+    if kind == "bot" and direction == "both":
+        raise ValueError("un bot de senales opera una sola direccion: elige largo o corto")
+    exit_unknown = sorted(exit_chosen - set(INDICATORS))
+    if exit_unknown:
+        raise ValueError(f"indicadores de salida invalidos: {exit_unknown}")
+    exits = tuple(i for i in INDICATORS if i in exit_chosen)
+    if exit_min_agree is not None and not 1 <= int(exit_min_agree) <= max(1, len(exits)):
+        raise ValueError(f"minimo de coincidencias de salida fuera de rango: {exit_min_agree}")
+    if exit_min_agree is not None and not exits:
+        raise ValueError("el minimo de coincidencias de salida necesita indicadores de salida")
     return TestConfig(
         name=name, symbols=syms, timeframe=timeframe, indicators=inds, mode=mode,
         exit_name=exit_name, pct_exit=pct, window=int(window),
@@ -209,5 +253,7 @@ def validate(*, name: str, symbols, timeframe: str, indicators, mode: str = "clo
         margin_usdt=None if margin_usdt is None else float(margin_usdt),
         leverage=None if leverage is None else int(leverage), direction=direction,
         take_profits=tps, breakeven=bool(breakeven),
-        max_open=None if max_open is None else int(max_open),
+        max_open=None if max_open is None else int(max_open), kind=kind,
+        exit_indicators=exits,
+        exit_min_agree=None if exit_min_agree is None else int(exit_min_agree),
     )

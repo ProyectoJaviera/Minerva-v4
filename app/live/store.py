@@ -209,6 +209,8 @@ class LiveStore:
     def ensure_controls(self, now_ms: int | None = None) -> list[int]:
         """Crea el gemelo al azar de cada prueba activa que todavia no tiene uno (v4).
 
+        Los bots de senales (`kind = "bot"`) no tienen gemelo.
+
         Args:
             now_ms: instante de creacion; por defecto, el reloj.
 
@@ -223,7 +225,7 @@ class LiveStore:
         now = int(time.time() * 1000) if now_ms is None else now_ms
         created = []
         for test in self.tests(only_active=True):
-            if test.control_of is not None:
+            if test.control_of is not None or test.config.is_bot:
                 continue
             has = self._conn.execute("SELECT 1 FROM live_tests WHERE control_of = ?",
                                      (test.id,)).fetchone()

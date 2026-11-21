@@ -24,6 +24,29 @@ import { loadView, saveView, upnlByTest, visibleTests, type LiveView, type SortK
 // Pestana «En vivo» (v3): pruebas de paper trading hacia adelante con el precio en tiempo real de
 // Bitunix. El dueno elige monedas, marco, indicadores, salida y modo; el corredor (dentro de la app)
 // las opera tick a tick. Solo cuentan las operaciones posteriores a crear la prueba.
+//
+// v4: el mismo componente muestra la pestana «Bots de senales» (`kind="bot"`): bots de una sola
+// direccion con reglas de entrada y reglas de salida (la senal contraria de los indicadores de
+// salida cierra la posicion), sin gemelo al azar. Cada pestana muestra solo lo suyo.
+
+type Kind = "test" | "bot";
+
+const KIND_TEXT: Record<Kind, { one: string; title: string; create: string; empty: string; none: string; viewKey: string }> = {
+  test: {
+    one: "prueba", title: "Pruebas en vivo", create: "Nueva prueba", empty: "Todavía no hay pruebas. Crea la primera con «+ Nueva prueba».",
+    none: "Ninguna prueba cumple los filtros.", viewKey: "minerva.live.view",
+  },
+  bot: {
+    one: "bot", title: "Bots de señales", create: "Nuevo bot", empty: "Todavía no hay bots. Crea el primero con «+ Nuevo bot».",
+    none: "Ningún bot cumple los filtros.", viewKey: "minerva.bots.view",
+  },
+};
+
+function kindOf(t: LiveTestRow): Kind {
+  return t.config.kind === "bot" ? "bot" : "test";
+}
+
+const REASON_LABEL: Record<string, string> = { SIGNAL: "SEÑAL" };
 
 const MODE_LABEL: Record<string, string> = {
   close: "Al cierre de la vela",
@@ -151,8 +174,11 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function CreateForm({ options, onCreated }: { options: LiveOptions; onCreated?: (message: string) => void }) {
+function CreateForm({ options, onCreated, kind = "test" }: { options: LiveOptions; onCreated?: (message: string) => void; kind?: Kind }) {
   const create = useCreateLiveTest();
+  const isBot = kind === "bot";
+  const [exitIndicators, setExitIndicators] = useState<string[]>([]);
+  const [exitMinAgree, setExitMinAgree] = useState("");
   const [name, setName] = useState("");
   const [symbols, setSymbols] = useState(options.default_symbols.join(" "));
   const [timeframe, setTimeframe] = useState(options.timeframes[0] ?? "15m");
@@ -161,7 +187,7 @@ function CreateForm({ options, onCreated }: { options: LiveOptions; onCreated?: 
   const [indicators, setIndicators] = useState<string[]>([]);
   const [minAgree, setMinAgree] = useState("");
   const [windowBars, setWindowBars] = useState(String(options.default_window));
-  const [direction, setDirection] = useState("both");
+  const [direction, setDirection] = useState(kind === "bot" ? "long" : "both");
   const [margin, setMargin] = useState(String(options.margin.default));
   const [leverage, setLeverage] = useState(String(options.leverage.default));
   const [maxOpen, setMaxOpen] = useState("");
@@ -215,10 +241,11 @@ function CreateForm({ options, onCreated }: { options: LiveOptions; onCreated?: 
           : [],
         breakeven: partial && breakeven,
         max_open: num(maxOpen),
+        ...(isBot ? { kind: "bot" as const, exit_indicators: exitIndicators, exit_min_agree: exitIndicators.length ? num(exitMinAgree) : null } : {}),
       },
       {
         onSuccess: (r) => {
-          const msg = `Prueba ${r.id} creada: «${r.name}». Empieza a operar en unos segundos.`;
+          const msg = `${isBot ? "Bot" : "Prueba"} ${r.id} ${isBot ? "creado" : "creada"}: «${r.name}». Empieza a operar en unos segundos.`;
           if (onCreated) onCreated(msg);
           else setCreated(msg);
         },
@@ -228,7 +255,7 @@ function CreateForm({ options, onCreated }: { options: LiveOptions; onCreated?: 
 
   const field = "rounded border border-gray-300 px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100";
   return (
-    <form onSubmit={submit} className="space-y-3" aria-label="Nueva prueba en vivo">
+    <form onSubmit={submit} className="space-y-3" aria-label={isBot ? "Nuevo bot de señales" : "Nueva prueba en vivo"}>
       <Section title="1. Mercado">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Nombre">
@@ -259,7 +286,7 @@ function CreateForm({ options, onCreated }: { options: LiveOptions; onCreated?: 
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Dirección">
             <select className={field} value={direction} onChange={(e) => setDirection(e.target.value)}>
-              {options.directions.map((d) => <option key={d} value={d}>{DIRECTION_LABEL[d] ?? d}</option>)}
+              {options.directions.filter((d) => !isBot || d !== "both").map((d) => <option key={d} value={d}>{DIRECTION_LABEL[d] ?? d}</option>)}
             </select>
           </Field>
           <Field label={`Ventana de los eventos (velas, 1 a ${options.max_window})`}>
@@ -276,6 +303,28 @@ function CreateForm({ options, onCreated }: { options: LiveOptions; onCreated?: 
         <p className="text-xs text-gray-600 dark:text-gray-300">Indicadores y filtros (se entra cuando coinciden)</p>
         <IndicatorPicker options={options.indicators} selected={indicators} onChange={setIndicators} />
       </Section>
+
+      {isBot && (
+        <Section title="Reglas de salida (señal)">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Al cierre de cada vela, si estos indicadores dan la señal <strong>contraria</strong> a la posición abierta (corto para un
+            largo, largo para un corto), la posición se cierra entera en el tick siguiente. Ejemplo: entrada «WaveTrend: cruce en
+            zona extrema» en un bot de largos (X verde) y salida con el mismo indicador (la X roja cierra el largo). Si en la vela
+            de la entrada la salida también da la señal contraria, la entrada se omite. Vacío = el bot sale solo por SL, TP o trailing.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Cuántos deben coincidir para salir (vacío = todos)">
+              <input className={field} value={exitMinAgree} onChange={(e) => setExitMinAgree(e.target.value)} inputMode="numeric" />
+            </Field>
+          </div>
+          <IndicatorPicker options={options.indicators} selected={exitIndicators} onChange={setExitIndicators} />
+          {exitIndicators.length > 0 && (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Con reglas de salida no se usa el TP de respaldo del motor: si no pones TP ni trailing, el bot espera la señal (el SL sigue activo).
+            </p>
+          )}
+        </Section>
+      )}
 
       <Section title="3. Posición">
         <div className="grid gap-3 sm:grid-cols-3">
@@ -389,7 +438,7 @@ function CreateForm({ options, onCreated }: { options: LiveOptions; onCreated?: 
           disabled={create.isPending || indicators.length === 0 || name.trim() === ""}
           className="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
         >
-          Crear prueba
+          {isBot ? "Crear bot" : "Crear prueba"}
         </button>
         {create.isError && <span role="alert" className="text-sm text-red-700 dark:text-red-300">{errorText(create.error)}</span>}
         {created && <span role="status" className="text-sm text-green-700 dark:text-green-300">{created}</span>}
@@ -438,7 +487,7 @@ function TestDetail({ id }: { id: number }) {
                 <tr key={`${t.symbol}-${t.exit_time_ms}`} className="text-gray-800 dark:text-gray-200">
                   <td>{fmtTime(t.exit_time_ms)}</td><td>{t.symbol}</td><td>{t.side}</td><td>{t.entry_price}</td>
                   <td>{t.exit_price.toPrecision(6)}</td>
-                  <td>{t.partials && t.partials.length > 1 ? t.partials.map((pt) => pt[3]).join(" + ") : t.close_reason}</td>
+                  <td>{t.partials && t.partials.length > 1 ? t.partials.map((pt) => REASON_LABEL[pt[3]] ?? pt[3]).join(" + ") : (REASON_LABEL[t.close_reason] ?? t.close_reason)}</td>
                   <td>{fmtUsdt(t.pnl_net_usdt)}</td>
                 </tr>
               ))}
@@ -628,7 +677,10 @@ function configLine(t: LiveTestRow): string {
   const tps = c.take_profits && c.take_profits.length > 0
     ? ` · TP ${c.take_profits.map(([d, cl]) => `${d} %→${cl} %`).join(", ")}${c.breakeven ? " · SL a entrada tras TP1" : ""}`
     : "";
-  return `${c.timeframe} · ${MODE_LABEL[c.mode] ?? c.mode} · ${c.indicators.join(" + ")} · ${DIRECTION_LABEL[c.direction ?? "both"]} · `
+  const exits = c.kind === "bot"
+    ? ` · sale con ${c.exit_indicators && c.exit_indicators.length ? c.exit_indicators.join(" + ") : "solo SL/TP"}`
+    : "";
+  return `${c.timeframe} · ${MODE_LABEL[c.mode] ?? c.mode} · entra con ${c.indicators.join(" + ")}${exits} · ${DIRECTION_LABEL[c.direction ?? "both"]} · `
     + `${c.margin_usdt ?? "-"} USDT x${c.leverage ?? "-"} · SL ${sl}${tps} · ${c.symbols.length} monedas · desde ${fmtTime(t.created_at_ms)}`;
 }
 
@@ -842,18 +894,20 @@ function Toolbar({ view, setView, shown, total, timeframes, onExpandAll, onColla
   );
 }
 
-export function LiveTab() {
+export function LiveTab({ kind = "test" }: { kind?: Kind }) {
+  const text = KIND_TEXT[kind];
   const options = useLiveOptions();
   const tests = useLiveTests();
   const stop = useStopLiveTest();
   const turn = useLiveBotSwitch();
   const [stopping, setStopping] = useState<LiveTestRow | null>(null);
   const [askOff, setAskOff] = useState(false);
-  const [view, setViewState] = useState<LiveView>(loadView);
+  const [view, setViewState] = useState<LiveView>(() => loadView(text.viewKey));
   const [formOpen, setFormOpen] = useState<boolean | null>(null); // null = abierto solo si no hay pruebas
   const [created, setCreated] = useState<string | null>(null);
-  const all = tests.data?.tests ?? [];
-  const live = useLivePositions(all.some((t) => t.status === "active" || t.open_positions > 0));
+  const all = (tests.data?.tests ?? []).filter((t) => kindOf(t) === kind);
+  const anyRunning = (tests.data?.tests ?? []).some((t) => t.status === "active" || t.open_positions > 0);
+  const live = useLivePositions(anyRunning);
   const positions = live.data?.positions ?? [];
   const nowMs = Date.now();
   const upnl = upnlByTest(positions);
@@ -863,14 +917,14 @@ export function LiveTab() {
 
   function setView(next: LiveView) {
     setViewState(next);
-    saveView(next);
+    saveView(next, text.viewKey);
   }
 
   return (
     <div className="space-y-4">
-      <Card title="Pruebas en vivo">
+      <Card title={text.title}>
         {tests.isError ? (
-          <Unavailable error={tests.error} what="Pruebas en vivo" />
+          <Unavailable error={tests.error} what={text.title} />
         ) : tests.data ? (
           <div className="space-y-3">
             <BotPanel
@@ -883,8 +937,9 @@ export function LiveTab() {
             />
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="min-w-0 flex-1 text-xs text-gray-500 dark:text-gray-400">
-                Paper trading hacia adelante con el precio real de Bitunix; nunca órdenes reales. Si creas muchas
-                pruebas y miras solo la que ganó, es sobreajuste hecho hacia adelante.
+                {kind === "bot"
+                  ? "Bots que abren con unos indicadores y cierran con la señal contraria de otros (como Cornix o WunderTrading), en paper con el precio real de Bitunix; nunca órdenes reales. Comparten el bot y el interruptor con «En vivo». Sin gemelo al azar: no dicen si le ganan a la suerte."
+                  : "Paper trading hacia adelante con el precio real de Bitunix; nunca órdenes reales. Si creas muchas pruebas y miras solo la que ganó, es sobreajuste hecho hacia adelante."}
               </p>
               <button
                 type="button"
@@ -892,17 +947,18 @@ export function LiveTab() {
                 onClick={() => { setFormOpen(!showForm); setCreated(null); }}
                 className="rounded bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700"
               >
-                {showForm ? "Cerrar formulario" : "+ Nueva prueba"}
+                {showForm ? "Cerrar formulario" : `+ ${text.create}`}
               </button>
             </div>
             {created && <p role="status" className="text-sm text-green-700 dark:text-green-300">{created}</p>}
             {showForm && (
-              <section aria-label="Nueva prueba" className="rounded border border-blue-200 p-3 dark:border-blue-900">
-                <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">Nueva prueba</h3>
+              <section aria-label={text.create} className="rounded border border-blue-200 p-3 dark:border-blue-900">
+                <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">{text.create}</h3>
                 {options.isError ? (
                   <Unavailable error={options.error} what="Opciones" />
                 ) : options.data ? (
                   <CreateForm
+                    kind={kind}
                     options={options.data}
                     onCreated={(msg) => { setCreated(msg); setFormOpen(false); }}
                   />
@@ -912,7 +968,7 @@ export function LiveTab() {
               </section>
             )}
             {all.length === 0 ? (
-              <p className="text-sm text-gray-500">Todavía no hay pruebas. Crea la primera con «+ Nueva prueba».</p>
+              <p className="text-sm text-gray-500">{text.empty}</p>
             ) : (
               <>
                 <Toolbar
@@ -925,7 +981,7 @@ export function LiveTab() {
                   onCollapseAll={() => setView({ ...view, open: [] })}
                 />
                 {rows.length === 0 ? (
-                  <p className="text-sm text-gray-500">Ninguna prueba cumple los filtros.</p>
+                  <p className="text-sm text-gray-500">{text.none}</p>
                 ) : (
                   <SummaryTable
                     rows={rows}
@@ -958,8 +1014,8 @@ export function LiveTab() {
       )}
       {stopping && (
         <ConfirmDialog
-          title={`Detener la prueba ${stopping.id}`}
-          warning="La prueba deja de operar y sus posiciones abiertas se cierran con el último precio. No se puede reanudar."
+          title={`Detener ${kind === "bot" ? "el bot" : "la prueba"} ${stopping.id}`}
+          warning={`${kind === "bot" ? "El bot deja" : "La prueba deja"} de operar y sus posiciones abiertas se cierran con el último precio. No se puede reanudar.`}
           phrase="DETENER"
           confirmLabel="Detener"
           busy={stop.isPending}

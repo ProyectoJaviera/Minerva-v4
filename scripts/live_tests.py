@@ -79,6 +79,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                      help="TP parcial: distancia %% y %% que cierra, p. ej. --tp 2:50 --tp 4:50")
     add.add_argument("--breakeven", action="store_true", help="SL a la entrada tras el TP1")
     add.add_argument("--max-open", type=int, help="maximo de posiciones abiertas a la vez")
+    add.add_argument("--bot", action="store_true",
+                     help="bot de senales (v4): una direccion, reglas de salida y sin gemelo")
+    add.add_argument("--exit-indicators", nargs="+", default=[],
+                     help="con --bot: su senal contraria cierra la posicion")
+    add.add_argument("--exit-min-agree", type=int)
 
     sub.add_parser("list", help="lista las pruebas")
     rep = sub.add_parser("report", help="resultados de una prueba o de todas")
@@ -134,7 +139,9 @@ def cmd_add(args: argparse.Namespace) -> int:
                        eval_seconds=args.eval_seconds, margin_usdt=args.margin,
                        leverage=args.leverage, direction=args.direction,
                        take_profits=[tuple(float(x) for x in tp.split(":")) for tp in args.tp],
-                       breakeven=args.breakeven, max_open=args.max_open)
+                       breakeven=args.breakeven, max_open=args.max_open,
+                       kind="bot" if args.bot else "test",
+                       exit_indicators=args.exit_indicators, exit_min_agree=args.exit_min_agree)
     except ValueError as exc:
         print(f"Prueba invalida: {exc}")
         return 1
@@ -144,7 +151,12 @@ def cmd_add(args: argparse.Namespace) -> int:
     print(f"Prueba {test_id} creada: '{cfg.name}' en {cfg.timeframe}, modo {cfg.mode}, "
           f"indicadores {', '.join(cfg.indicators)}, {len(cfg.symbols)} monedas, "
           f"salida {cfg.exit_name}.")
-    print("Con su gemelo de control al azar (mismas monedas, marco y salida; entradas sorteadas).")
+    if cfg.is_bot:
+        exits = ", ".join(cfg.exit_indicators) or "ninguna (solo SL/TP/trailing)"
+        print(f"Bot de senales ({cfg.direction}), sin gemelo; reglas de salida: {exits}.")
+    else:
+        print("Con su gemelo de control al azar (mismas monedas, marco y salida; entradas "
+              "sorteadas).")
     print("Empieza a operar cuando el corredor este andando: python scripts/live_tests.py run")
     return 0
 

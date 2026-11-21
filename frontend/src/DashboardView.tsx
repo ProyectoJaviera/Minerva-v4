@@ -29,6 +29,8 @@ const TABS: TabDef[] = [
   { id: "study", label: "Estudio" },
   // v3: pruebas de paper hacia adelante con el precio en tiempo real.
   { id: "live", label: "En vivo" },
+  // v4: bots que abren y cierran por eventos de los indicadores (sin gemelo al azar).
+  { id: "bots", label: "Bots de señales" },
   // v4: trading manual en paper con el precio real, en paneles flotantes.
   { id: "sala", label: "Sala de trading" },
 ];
@@ -49,6 +51,8 @@ function ActiveTab({ id }: { id: string }) {
       return <StudyTab />;
     case "live":
       return <LiveTab />;
+    case "bots":
+      return <LiveTab kind="bot" />;
     case "sala":
       return (
         <Suspense fallback={<p className="text-sm text-gray-500">Cargando la sala…</p>}>

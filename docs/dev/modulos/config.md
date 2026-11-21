@@ -81,7 +81,7 @@ propiedades derivadas (listas separadas por comas, fecha final del backtest en m
 
 - **Referencia pdoc:** [`api/app/config.html`](../api/app/config.html)
 - **Importa (internos):** ninguno
-- **Lo importan:** 84 módulos (api 15, backtesting 2, core 2, execution 1, explorer 1, live 3, llm 5, main 1, manual 1, market 1, memory 3, news 3, replay 1, research 1, scripts 31, telegram 4, trading 9)
+- **Lo importan:** 85 módulos (api 15, backtesting 2, core 2, execution 1, explorer 1, live 3, llm 5, main 1, manual 1, market 1, memory 3, news 3, replay 1, research 1, scripts 32, telegram 4, trading 9)
 - **Configuración que lee:** ninguno
 - **Tablas que lee:** ninguno
 - **Tablas que escribe:** ninguno

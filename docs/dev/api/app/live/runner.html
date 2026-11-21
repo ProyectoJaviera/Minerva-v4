@@ -83,6 +83,9 @@
                     <a class="function" href="#parse_trade_message">parse_trade_message</a>
             </li>
             <li>
+                    <a class="function" href="#parse_funding_batch">parse_funding_batch</a>
+            </li>
+            <li>
                     <a class="class" href="#LiveRunner">LiveRunner</a>
                             <ul class="memberlist">
                         <li>
@@ -128,6 +131,9 @@
                                 <a class="variable" href="#LiveRunner.pending">pending</a>
                         </li>
                         <li>
+                                <a class="variable" href="#LiveRunner.pending_exit">pending_exit</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#LiveRunner.last_price">last_price</a>
                         </li>
                         <li>
@@ -171,6 +177,9 @@
                         </li>
                         <li>
                                 <a class="function" href="#LiveRunner.compute">compute</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#LiveRunner.compute_exit">compute_exit</a>
                         </li>
                         <li>
                                 <a class="function" href="#LiveRunner.evaluate">evaluate</a>
@@ -224,6 +233,14 @@ las posiciones guardadas siguen y el primer tick decide si un SL salto durante l
 <p>v4: cada prueba tiene un gemelo de control al azar (<code>app/live/control.py</code>) que opera con la misma
 configuracion y entradas sorteadas a la misma frecuencia. El corredor lo crea si falta, cuenta las
 velas elegibles y las senales de la prueba, y sortea las entradas del gemelo al cierre de cada vela.</p>
+
+<p>v4, bots de senales (<code>TestConfig.kind = "bot"</code>): sin gemelo. Al cierre de cada vela, si un bot con
+reglas de salida tiene una posicion abierta en esa moneda, evalua sus indicadores de salida con las
+velas cerradas; si dan la senal contraria a la posicion, la cierra entera en el tick SIGUIENTE
+(motivo <code>SIGNAL</code>), igual que una entrada. Si en la vela en que se decide una entrada las reglas de
+salida tambien dan la senal contraria, la entrada se omite (<code>SKIP</code>). Un SL, TP o liquidacion que
+llegue antes del tick de cierre gana. Las salidas pendientes no se guardan: si el corredor se
+reinicia justo entre la decision y el tick siguiente, esa salida se pierde.</p>
 
 <p>Solo usa endpoints publicos de datos. Nunca envia ordenes: todo es paper.</p>
 </div>
@@ -462,6 +479,39 @@ Se usa <code>ts</code> (milisegundos) como hora de todas las operaciones del men
 
 
                 </section>
+                <section id="parse_funding_batch">
+                    <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">parse_funding_batch</span><span class="signature pdoc-code condensed">(<span class="param"><span class="n">rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span></span><span class="return-annotation">) -> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#parse_funding_batch"></a>
+    
+            <div class="docstring"><p>Convierte la respuesta de <code>funding_rate/batch</code> en tasas por intervalo, como fraccion.</p>
+
+<p>El endpoint batch entrega <code>fundingRate</code> en PORCENTAJE, mientras que <code>funding_rate/history</code>
+lo entrega como fraccion. Verificado en vivo el 2026-11-21 con 10 monedas: BNBUSDT batch
+<code>0.000568</code> contra historial <code>0.00000568</code>, XMRUSDT <code>0.01</code> contra <code>0.0001</code> (x100 exacto), y
+topes <code>maxFundingRate</code> de <code>0.3</code> a <code>2</code> (0,3 % a 2 %). Antes se usaba tal cual y el funding de
+las pruebas en vivo salia 100 veces mas grande.</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>rows:</strong>  filas del endpoint (<code>symbol</code>, <code>fundingRate</code>, ...).</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>{symbol: tasa como fraccion}</code>; se omiten las filas sin tasa o mal formadas.</p>
+</blockquote>
+</div>
+
+
+                </section>
                 <section id="LiveRunner">
                     <div class="attr class">
             
@@ -650,6 +700,17 @@ corredor a mano, sin red.</p>
         
     </div>
     <a class="headerlink" href="#LiveRunner.pending"></a>
+    
+    
+
+                            </div>
+                            <div id="LiveRunner.pending_exit" class="classattr">
+                                <div class="attr variable">
+            <span class="name">pending_exit</span><span class="annotation">: dict[tuple[int, str], app.live.runner._PendingExit]</span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.pending_exit"></a>
     
     
 
@@ -909,6 +970,37 @@ posicion abierta y BTC si algun filtro lo necesita.</p>
 
 <blockquote>
   <p><code>(senal, estrategia)</code>; la estrategia da despues el SL, el TP y el trailing.</p>
+</blockquote>
+</div>
+
+
+                            </div>
+                            <div id="LiveRunner.compute_exit" class="classattr">
+                                <div class="attr function">
+                    <div class="decorator decorator-staticmethod">@staticmethod</div>
+
+        <span class="def">def</span>
+        <span class="name">compute_exit</span><span class="signature pdoc-code multiline">(<span class="param">	<span class="n">cfg</span><span class="p">:</span> <span class="n"><a href="config.html#TestConfig">app.live.config.TestConfig</a></span>,</span><span class="param">	<span class="n">frame</span>,</span><span class="param">	<span class="n">btc</span></span><span class="return-annotation">) -> <span class="n"><a href="../strategies/base.html#Signal">app.strategies.base.Signal</a></span>:</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#LiveRunner.compute_exit"></a>
+    
+            <div class="docstring"><p>La senal de las reglas de salida de un bot sobre unas velas (puro; v4).</p>
+
+<h6 id="arguments">Arguments:</h6>
+
+<ul>
+<li><strong>cfg:</strong>  el bot (con <code>exit_indicators</code>).</li>
+<li><strong>frame:</strong>  velas de la moneda.</li>
+<li><strong>btc:</strong>  velas de BTC, o <code>None</code>.</li>
+</ul>
+
+<h6 id="returns">Returns:</h6>
+
+<blockquote>
+  <p><code>LONG</code>/<code>SHORT</code> si los indicadores de salida pasan a coincidir en la ultima vela
+  (misma confluencia que la entrada: <code>window</code> y <code>exit_min_agree</code>), o <code>HOLD</code>.</p>
 </blockquote>
 </div>
 

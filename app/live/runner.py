@@ -20,6 +20,14 @@ v4: cada prueba tiene un gemelo de control al azar (`app/live/control.py`) que o
 configuracion y entradas sorteadas a la misma frecuencia. El corredor lo crea si falta, cuenta las
 velas elegibles y las senales de la prueba, y sortea las entradas del gemelo al cierre de cada vela.
 
+v4, bots de senales (`TestConfig.kind = "bot"`): sin gemelo. Al cierre de cada vela, si un bot con
+reglas de salida tiene una posicion abierta en esa moneda, evalua sus indicadores de salida con las
+velas cerradas; si dan la senal contraria a la posicion, la cierra entera en el tick SIGUIENTE
+(motivo `SIGNAL`), igual que una entrada. Si en la vela en que se decide una entrada las reglas de
+salida tambien dan la senal contraria, la entrada se omite (`SKIP`). Un SL, TP o liquidacion que
+llegue antes del tick de cierre gana. Las salidas pendientes no se guardan: si el corredor se
+reinicia justo entre la decision y el tick siguiente, esa salida se pierde.
+
 Solo usa endpoints publicos de datos. Nunca envia ordenes: todo es paper.
 """
 
@@ -75,6 +83,13 @@ class RestSource(Protocol):
 
 
 @dataclass
+class _PendingExit:
+    signal_time_ms: int
+    decision_price: float
+    detail: str
+
+
+@dataclass
 class _Pending:
     side: Side
     signal_time_ms: int
@@ -115,6 +130,32 @@ def parse_trade_message(msg: dict) -> list[tuple[str, int, float, float, str]]:
             continue
         if price > 0 and qty >= 0:
             out.append((symbol, ts, price, qty, str(d.get("s", ""))))
+    return out
+
+
+def parse_funding_batch(rows: list[dict]) -> dict[str, float]:
+    """Convierte la respuesta de `funding_rate/batch` en tasas por intervalo, como fraccion.
+
+    El endpoint batch entrega `fundingRate` en PORCENTAJE, mientras que `funding_rate/history`
+    lo entrega como fraccion. Verificado en vivo el 2026-11-21 con 10 monedas: BNBUSDT batch
+    `0.000568` contra historial `0.00000568`, XMRUSDT `0.01` contra `0.0001` (x100 exacto), y
+    topes `maxFundingRate` de `0.3` a `2` (0,3 % a 2 %). Antes se usaba tal cual y el funding de
+    las pruebas en vivo salia 100 veces mas grande.
+
+    Args:
+        rows: filas del endpoint (`symbol`, `fundingRate`, ...).
+
+    Returns:
+        `{symbol: tasa como fraccion}`; se omiten las filas sin tasa o mal formadas.
+    """
+    out: dict[str, float] = {}
+    for r in rows:
+        if not isinstance(r, dict) or not isinstance(r.get("symbol"), str):
+            continue
+        try:
+            out[r["symbol"]] = float(r["fundingRate"]) / 100.0
+        except (KeyError, TypeError, ValueError):
+            continue
     return out
 
 
@@ -163,6 +204,8 @@ class LiveRunner:
         self.books: dict[tuple[str, str], CandleBook] = {}
         self.positions: dict[tuple[int, str], PaperPosition] = self.store.positions()
         self.pending: dict[tuple[int, str], _Pending] = {}
+        self.pending_exit: dict[tuple[int, str], _PendingExit] = {}
+        self._due_exit: list[tuple[int, str]] = []
         self.last_price: dict[str, float] = {}
         self.last_tick_ms: dict[str, int] = {}
         self.funding: dict[str, float] = {}
@@ -199,7 +242,7 @@ class LiveRunner:
         """
         out = {s for t in self.tests.values() for s in t.config.symbols}
         out |= {symbol for _, symbol in self.positions}
-        if any(BTC_INDICATORS & set(t.config.indicators) for t in self.tests.values()):
+        if any(BTC_INDICATORS & set(t.config.all_indicators) for t in self.tests.values()):
             out.add(BTC)
         if self.desk is not None:
             out |= self.desk.symbols()
@@ -218,7 +261,7 @@ class LiveRunner:
             cfg = t.config
             for s in cfg.symbols:
                 need.add((s, cfg.timeframe))
-            if BTC_INDICATORS & set(cfg.indicators):
+            if BTC_INDICATORS & set(cfg.all_indicators):
                 need.add((BTC, cfg.timeframe))
         return need
 
@@ -285,6 +328,8 @@ class LiveRunner:
     def _close_test(self, test_id: int) -> None:
         for key in [k for k in self.pending if k[0] == test_id]:
             del self.pending[key]
+        for key in [k for k in self.pending_exit if k[0] == test_id]:
+            del self.pending_exit[key]
         self._twin_due = [d for d in self._twin_due if d[1] != test_id]
         for (tid, symbol), pos in list(self.positions.items()):
             if tid != test_id:
@@ -354,6 +399,22 @@ class LiveRunner:
                                f"{trade.pnl_net_usdt:+.4f}", test_id=test_id, symbol=symbol,
                                now_ms=ts_ms)
 
+        # 1b. Salidas por senal de los bots (v4): se cierran con este tick, posterior a la
+        # decision. Si la posicion ya cerro por SL, TP o liquidacion, la salida se descarta.
+        for (test_id, sym), ex in list(self.pending_exit.items()):
+            if sym != symbol or ts_ms <= ex.signal_time_ms:
+                continue
+            del self.pending_exit[(test_id, sym)]
+            pos = self.positions.get((test_id, sym))
+            if pos is None:
+                continue
+            trade = close_position(pos, price, ts_ms, "SIGNAL", self.settings)
+            self.store.record_trade(test_id, symbol, trade)
+            del self.positions[(test_id, sym)]
+            self.store.log("CLOSE", f"SIGNAL a {price} (decidido a {ex.decision_price}, "
+                           f"{ex.detail}) neto {trade.pnl_net_usdt:+.4f}", test_id=test_id,
+                           symbol=symbol, now_ms=ts_ms)
+
         # 2. Entradas pendientes: se llenan con este tick (posterior a la decision).
         for (test_id, sym), p in list(self.pending.items()):
             if sym != symbol or ts_ms <= p.signal_time_ms:
@@ -386,6 +447,7 @@ class LiveRunner:
             margin_usdt=None if cfg is None else cfg.margin_usdt,
             leverage=None if cfg is None else cfg.leverage,
             take_profits=levels, breakeven=bool(cfg is not None and cfg.breakeven),
+            fallback_tp=not (cfg is not None and cfg.is_bot and cfg.exit_indicators),
         )
         if isinstance(result, OpenRefusal):
             self.store.log("REFUSED", f"{p.side.value} {result.reason}: {result.detail}",
@@ -430,7 +492,7 @@ class LiveRunner:
         if len(frame) <= confluence.WARMUP_BY_TIMEFRAME[cfg.timeframe]:
             return None
         btc = None
-        if BTC_INDICATORS & set(cfg.indicators):
+        if BTC_INDICATORS & set(cfg.all_indicators):
             btc_book = self.books.get((BTC, cfg.timeframe))
             if btc_book is None:
                 return None
@@ -453,6 +515,26 @@ class LiveRunner:
                                    exit_name=cfg.exit_name, btc=btc, min_agree=cfg.min_agree,
                                    pct_exit=cfg.pct_exit)
         return strat.evaluate(frame), strat
+
+    @staticmethod
+    def compute_exit(cfg: TestConfig, frame, btc) -> Signal:
+        """La senal de las reglas de salida de un bot sobre unas velas (puro; v4).
+
+        Args:
+            cfg: el bot (con `exit_indicators`).
+            frame: velas de la moneda.
+            btc: velas de BTC, o `None`.
+
+        Returns:
+            `LONG`/`SHORT` si los indicadores de salida pasan a coincidir en la ultima vela
+            (misma confluencia que la entrada: `window` y `exit_min_agree`), o `HOLD`.
+        """
+        if not cfg.exit_indicators:
+            return Signal.HOLD
+        strat = ConfluenceStrategy(cfg.exit_indicators, cfg.timeframe, window=cfg.window,
+                                   exit_name=cfg.exit_name, btc=btc,
+                                   min_agree=cfg.exit_min_agree, pct_exit=cfg.pct_exit)
+        return strat.evaluate(frame)
 
     def evaluate(self, cfg: TestConfig, symbol: str,
                  include_forming: bool) -> tuple[Signal, ConfluenceStrategy, object] | None:
@@ -523,6 +605,14 @@ class LiveRunner:
         signal, strat, frame = result
         if cfg.direction != "both" and signal.value.lower() != cfg.direction:
             return  # la prueba solo opera largos o solo cortos
+        if cfg.is_bot and cfg.exit_indicators:
+            got = self.frames(cfg, symbol, include_forming)
+            exit_signal = Signal.HOLD if got is None else self.compute_exit(cfg, *got)
+            if exit_signal not in (Signal.HOLD, signal):
+                self.store.log("SKIP", f"{signal.value}: la regla de salida da "
+                               f"{exit_signal.value} en la misma vela", test_id=test_id,
+                               symbol=symbol, now_ms=now_ms)
+                return
         if cfg.max_open is not None:
             open_now = sum(1 for (tid, _s) in list(self.positions) + list(self.pending)
                            if tid == test_id)
@@ -549,8 +639,49 @@ class LiveRunner:
                 continue
             if test.id in self._twin_of:
                 self._control_step(test, symbol, now_ms)
+            if cfg.is_bot and cfg.exit_indicators and (test.id, symbol) in self.positions:
+                self._due_exit.append((test.id, symbol))
             if cfg.mode == "close":
                 self._due_close.append((test.id, symbol))
+
+    async def _decide_exit(self, test_id: int, symbol: str) -> None:
+        """Evalua las reglas de salida de un bot con las velas cerradas y, si dan la senal
+        contraria a la posicion abierta, deja la salida pendiente para el tick siguiente (v4).
+
+        Args:
+            test_id: el bot.
+            symbol: la moneda.
+
+        Efectos:
+            Escribe `live_events` (salida decidida o error).
+        """
+        test = self.tests.get(test_id)
+        key = (test_id, symbol)
+        if test is None or key not in self.positions or key in self.pending_exit:
+            return
+        cfg = test.config
+        now_ms = self._now_ms()
+        got = self.frames(cfg, symbol, include_forming=False)
+        if got is None:
+            return
+        try:
+            if self.inline_eval:
+                exit_signal = self.compute_exit(cfg, *got)
+            else:
+                exit_signal = await asyncio.to_thread(self.compute_exit, cfg, *got)
+        except Exception as exc:  # noqa: BLE001 - un bot roto no detiene a los demas
+            self.store.log("ERROR", f"fallo al evaluar la salida: {type(exc).__name__}: {exc}",
+                           test_id=test_id, symbol=symbol, now_ms=now_ms)
+            return
+        pos = self.positions.get(key)
+        price = self.last_price.get(symbol)
+        if pos is None or price is None or exit_signal == Signal.HOLD \
+                or exit_signal.value == pos.side:
+            return
+        detail = f"regla de salida {'+'.join(cfg.exit_indicators)} da {exit_signal.value}"
+        self.pending_exit[key] = _PendingExit(now_ms, price, detail)
+        self.store.log("EXIT_SIGNAL", f"cerrar {pos.side} con precio {price}: {detail}",
+                       test_id=test_id, symbol=symbol, now_ms=now_ms)
 
     # --- gemelo de control al azar (v4) ---
 
@@ -678,6 +809,10 @@ class LiveRunner:
         # `intrabar` que ya cumplieron su intervalo (las mas atrasadas primero). Tope por segundo
         # para no saturar un equipo chico: lo que no entra espera al segundo siguiente.
         budget = self.max_evals_per_cycle
+        while self._due_exit and budget > 0:
+            test_id, symbol = self._due_exit.pop(0)
+            budget -= 1
+            await self._decide_exit(test_id, symbol)
         while self._due_close and budget > 0:
             test_id, symbol = self._due_close.pop(0)
             budget -= 1
@@ -721,8 +856,7 @@ class LiveRunner:
             self._next_funding = now + FUNDING_SECONDS
             try:
                 rows = await self.rest.get_funding_rate_batch()
-                self.funding = {r["symbol"]: float(r["fundingRate"]) for r in rows
-                                if isinstance(r, dict) and r.get("fundingRate") is not None}
+                self.funding = parse_funding_batch(rows)
             except Exception as exc:  # noqa: BLE001 - sin funding la operacion queda aproximada
                 logger.warning("no se pudo leer el funding vigente: %s", exc)
 
@@ -757,6 +891,8 @@ class LiveRunner:
         """
         self.paused = True
         self.pending.clear()
+        self.pending_exit.clear()
+        self._due_exit.clear()
         self._due_close.clear()
         self._twin_due.clear()
         for (test_id, symbol), pos in list(self.positions.items()):

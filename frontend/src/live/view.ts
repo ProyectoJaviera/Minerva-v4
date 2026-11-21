@@ -21,9 +21,9 @@ export const VIEW_KEY = "minerva.live.view";
 
 const SORT_KEYS: SortKey[] = ["id", "name", "timeframe", "status", "trades", "pf", "net", "winrate", "open", "upnl", "diff"];
 
-export function loadView(): LiveView {
+export function loadView(key: string = VIEW_KEY): LiveView {
   try {
-    const raw = localStorage.getItem(VIEW_KEY);
+    const raw = localStorage.getItem(key);
     if (!raw) return DEFAULT_VIEW;
     const v = JSON.parse(raw) as Partial<LiveView>;
     return {
@@ -39,9 +39,9 @@ export function loadView(): LiveView {
   }
 }
 
-export function saveView(view: LiveView): void {
+export function saveView(view: LiveView, key: string = VIEW_KEY): void {
   try {
-    localStorage.setItem(VIEW_KEY, JSON.stringify(view));
+    localStorage.setItem(key, JSON.stringify(view));
   } catch {
     // sin almacenamiento (modo privado, bloqueado): la vista vale solo para esta visita
   }
